@@ -5,8 +5,8 @@ import io.github.takenoko4096.bcl.ast.BinaryOperation
 import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.ast.Label
 import io.github.takenoko4096.bcl.ast.Node
+import io.github.takenoko4096.bcl.ast.Type
 import io.github.takenoko4096.bcl.ast.UnaryOperation
-import io.github.takenoko4096.bcl.ast.expression.ArrayExpression
 import io.github.takenoko4096.bcl.ast.expression.AssignmentExpression
 import io.github.takenoko4096.bcl.ast.expression.BinaryExpression
 import io.github.takenoko4096.bcl.ast.expression.CharExpression
@@ -25,7 +25,7 @@ import io.github.takenoko4096.bcl.ast.statement.ContinueStatement
 import io.github.takenoko4096.bcl.ast.statement.ForStatement
 import io.github.takenoko4096.bcl.ast.statement.IfElseStatement
 import io.github.takenoko4096.bcl.ast.statement.ReturnStatement
-import io.github.takenoko4096.bcl.ast.statement.ScoreAliasStatement
+import io.github.takenoko4096.bcl.ast.statement.VarStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.tokenizer.`!is`
@@ -555,8 +555,6 @@ class BclParser(private val tokens: List<Token>) {
         return when (current.type) {
             TokenType.SYMBOL -> {
                 if (current `is` Symbol.PARENTHESIS_START) group()
-                else if (current `is` Symbol.BRACE_START) lambda()
-                else if (current `is` Symbol.ARRAY_START) array()
                 else throw exception("factorとして予期しないトークンです: $current")
             }
             TokenType.CHAR -> char()
@@ -682,44 +680,19 @@ class BclParser(private val tokens: List<Token>) {
         return expr
     }
 
-    private fun array(): ArrayExpression {
-        val s = getStartPosOnCurrentToken()
-        expectIgnoreNewLine(Symbol.ARRAY_START)
-
-        val elements = mutableListOf<Expression>()
-
-        if (peekIgnoreNewLine() `is` Symbol.ARRAY_END) {
-            nextIgnoreNewLine()
-            return ArrayExpression(s..getEndPosOnPreviousToken(), elements)
-        }
-
-        while (!isOverIgnoreNewLine()) {
-            elements.add(expression())
-
-            if (peekIgnoreNewLine() `is` Symbol.COMMA) {
-                nextIgnoreNewLine()
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.ARRAY_END) {
-                nextIgnoreNewLine()
-                return ArrayExpression(s..getEndPosOnPreviousToken(), elements)
-            }
-            else {
-                throw exception("配列リテラルの解析中に無効なトークンを検出しました: ${peekIgnoreNewLine()}")
-            }
-        }
-
-        throw exception("配列リテラルの解析に失敗しました: 角括弧が閉じられていません")
-    }
-
     private fun selector() {
         val s = getStartPosOnCurrentToken()
 
     }
 
+    private fun type(): Type {
+
+    }
+
     private fun statement(): Statement? {
         return if (peekIgnoreNewLine() `is` Keyword.IF) ifElse()
-        else if (peekIgnoreNewLine() `is` Keyword.SCORE || peekIgnoreNewLine() `is` Keyword.CONST) scoreAlias()
-        else if (peekIgnoreNewLine() `is` Keyword.FN) fn()
+        else if (peekIgnoreNewLine() `is` Keyword.VAR || peekIgnoreNewLine() `is` Keyword.CONST) `var`()
+        else if (peekIgnoreNewLine() `is` Keyword.MACRO) fn()
         else if (peekIgnoreNewLine() `is` Keyword.RETURN) `return`()
         else if (peekIgnoreNewLine() `is` Keyword.FOR) `for`()
         else if (peekIgnoreNewLine() `is` Keyword.CONTINUE) `continue`()
@@ -776,7 +749,7 @@ class BclParser(private val tokens: List<Token>) {
         return IfElseStatement(s..getEndPosOnPreviousToken(), cond, thenBlock, null)
     }
 
-    private fun scoreAlias(): ScoreAliasStatement {
+    private fun `var`(): VarStatement {
         val s = getStartPosOnCurrentToken()
 
         val isReadonly = if (peekIgnoreNewLine() `is` Keyword.CONST) {
@@ -785,43 +758,36 @@ class BclParser(private val tokens: List<Token>) {
         }
         else false
 
-        expectIgnoreNewLine(Keyword.SCORE)
+        expectIgnoreNewLine(Keyword.VAR)
 
         val identifier = readIgnoreNewLine(TokenType.WORD)
 
         expectIgnoreNewLine(Symbol.ASSIGN)
 
-        val holder = scoreHolder()
-        val objective = readIgnoreNewLine(TokenType.WORD)
+        val expr = expression()
 
         requireSeparator()
 
-        return ScoreAliasStatement(s..getEndPosOnPreviousToken(), isReadonly, identifier, holder, objective)
+        return VarStatement(s..getEndPosOnPreviousToken(), isReadonly, identifier, expr)
     }
 
     private fun fn(): FnStatement {
-        expectIgnoreNewLine(Keyword.FN)
+        expectIgnoreNewLine(Keyword.MACRO)
 
         val identifier = readIgnoreNewLine(TokenType.WORD)
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
 
-        val parameters = mutableListOf<UntypedFnStatement.UntypedFunctionParameter>()
+        val parameters = mutableListOf<FnStatement.UntypedFunctionParameter>()
 
         if (peekIgnoreNewLine() `!is` Symbol.PARENTHESIS_END) do {
             val name = readIgnoreNewLine(TokenType.WORD)
-            parameters.add(UntypedFnStatement.UntypedFunctionParameter(name, typeAnnotation))
+            parameters.add(FnStatement.UntypedFunctionParameter(name, typeAnnotation))
         }
         while (peekIgnoreNewLine() `is` Symbol.COMMA)
 
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
 
-        val returnTypeAnnotation = if (peekIgnoreNewLine() `is` Symbol.COLON) {
-            nextIgnoreNewLine()
-            typeAnnotation()
-        }
-        else null
-
-        return UntypedFnStatement(accessModifier, templates, identifier, parameters, returnTypeAnnotation, block(true))
+        return FnStatement(identifier, parameters, block(true))
     }
 
     private fun `return`(): ReturnStatement {

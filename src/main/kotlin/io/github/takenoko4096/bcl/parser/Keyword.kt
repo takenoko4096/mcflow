@@ -1,9 +1,9 @@
 package io.github.takenoko4096.bcl.parser
 
 enum class Keyword(val value: String) {
-    SCORE("score"),
+    VAR("var"),
     CONST("const"),
-    FN("fn"),
+    MACRO("macro"),
     RETURN("return"),
     IF("if"),
     ELSE("else"),
