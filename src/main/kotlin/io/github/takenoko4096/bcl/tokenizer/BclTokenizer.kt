@@ -1,9 +1,7 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-import io.github.takenoko4096.bcl.BclException
-
-class BclTokenizer(script: String) {
-    private val text: String = script
+class BclTokenizer(text: String) {
+    private val text: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
@@ -13,6 +11,8 @@ class BclTokenizer(script: String) {
 
     private var lastLineStartCursor: Int = 0
 
+    private var id = 0
+
     /**
      * カーソルが文字列外であれば`true`
      */
@@ -20,13 +20,13 @@ class BclTokenizer(script: String) {
         return cursor >= text.length
     }
 
-    private fun exception(message: String, cause: Throwable? = null): BclException {
-        return BclTokenizationException(message, text, cursor, getCurrentSourcePosition(), cause)
+    private fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenizationException {
+        return BclTokenizationException(message, text, start..getCurrentSourcePosition(), cause)
     }
 
     private fun peek(): Char {
         if (isOver()) {
-            throw exception("コード外に到達しました")
+            throw exception(getCurrentSourcePosition(), "コード外に到達しました")
         }
 
         return text[cursor]
@@ -69,15 +69,16 @@ class BclTokenizer(script: String) {
         return true
     }
 
-    private fun skipWhitespace(): Boolean {
-        if (isOver()) return false
+    private fun skipWhitespace(): WhitespaceSkipResult {
+        if (isOver()) return WhitespaceSkipResult(false, null)
 
         var currentChar = peek()
-        var includeLinebreak = false
+        var result = WhitespaceSkipResult(false, null)
 
         while (currentChar in KeyChar.WHITESPACE_CHARS) {
-            if (currentChar == KeyChar.LINEBREAK) {
-                includeLinebreak = true
+            if (!result.foundWhitespace) result = WhitespaceSkipResult(true, result.linebreak)
+            if (result.linebreak == null && currentChar == KeyChar.LINEBREAK) {
+                result = WhitespaceSkipResult(result.foundWhitespace, getCurrentSourcePosition())
             }
 
             next()
@@ -85,19 +86,19 @@ class BclTokenizer(script: String) {
             currentChar = peek()
         }
 
-        return includeLinebreak
+        return result
     }
 
     private fun getCurrentSourcePosition(): SourcePosition {
-        return SourcePosition(line, cursor - lastLineStartCursor)
+        return SourcePosition(line, cursor - lastLineStartCursor, cursor)
     }
 
-    private fun tokenOf(type: TokenType, value: String, start: SourcePosition): Token {
-        return Token(type, value, start..getCurrentSourcePosition())
+    private fun tokenOf(type: TokenType, value: String, start: SourcePosition, end: SourcePosition): Token {
+        return Token(id++, type, value, start..end)
     }
 
-    private fun tokenOf(symbol: Symbol, start: SourcePosition): Token {
-        return Token(TokenType.SYMBOL, symbol.value, start..getCurrentSourcePosition())
+    private fun tokenOf(symbol: Symbol, start: SourcePosition, end: SourcePosition): Token {
+        return Token(id++, TokenType.SYMBOL, symbol.value, start..end)
     }
 
     private fun digits(radix: Int): String {
@@ -127,7 +128,7 @@ class BclTokenizer(script: String) {
             for (entry in Radix.entries) {
                 if (peek(1) == null) return@run Radix.DECIMAL
 
-                if (peek(1) == entry.char) {
+                if (peek(1) == entry.char && peek(2) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<entry.value)) {
                     // sb.append(peek())
                     next()
                     // sb.append(peek())
@@ -140,31 +141,37 @@ class BclTokenizer(script: String) {
         }
 
         val intPart = digits(radix.value)
+
+        if (intPart.isEmpty()) {
+            throw exception(start, "空の数値リテラルは無効です")
+        }
+
         sb.append(intPart)
 
-        if (!isOver() && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL) && radix.value == 10) {
-            if (test(Symbol.RANGE.value)) {
-                return tokenOf(radix.apply(NumberType.INT.default(true)), sb.toString(), start)
-            }
-
+        if (!isOver() && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL) && radix.value == 10 && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)) {
             sb.append(peek())
             next()
             sb.append(digits(10))
 
             return if (peek() == NumberType.FLOAT.char) {
                 // sb.append(peek())
+                val end = getCurrentSourcePosition()
                 next()
-                tokenOf(TokenType.FLOAT, sb.toString(), start)
+                tokenOf(TokenType.FLOAT, sb.toString(), start, end)
             }
             else if (peek() == NumberType.DOUBLE.char) {
                 // sb.append(peek())
+                val end = getCurrentSourcePosition()
                 next()
-                tokenOf(TokenType.DOUBLE, sb.toString(), start)
+                tokenOf(TokenType.DOUBLE, sb.toString(), start, end)
             }
             else {
-                tokenOf(TokenType.DOUBLE, sb.toString(), start)
+                val end = getCurrentSourcePosition()
+                tokenOf(TokenType.DOUBLE, sb.toString(), start, end)
             }
         }
+
+        var end = getCurrentSourcePosition()
 
         val suffix1 = peek(0)
         val suffix2 = peek(1)
@@ -174,12 +181,10 @@ class BclTokenizer(script: String) {
         var isEndWithValidTypeSuffix = false
 
         for (numberType in NumberType.entries) {
-            if (suffix2 == numberType.char) {
+            if (suffix1 in setOf(KeyChar.SIGNED, KeyChar.UNSIGNED) && suffix2 == numberType.char) {
                 type = numberType
 
-                if (suffix1 == null) {
-                    throw exception("NEVER HAPPENS")
-                }
+                suffix1!!
 
                 if (!suffix1.isJavaIdentifierStart()) {
                     break
@@ -189,16 +194,22 @@ class BclTokenizer(script: String) {
                     KeyChar.SIGNED -> true
                     KeyChar.UNSIGNED -> false
                     else -> {
-                        throw exception("${KeyChar.SIGNED}/${KeyChar.UNSIGNED} が期待されましたが、無効な数値接尾辞が検出されました: '$suffix1'")
+                        throw exception(start, "${KeyChar.SIGNED}/${KeyChar.UNSIGNED} が期待されましたが、無効な数値接尾辞が検出されました: '$suffix1'")
                     }
                 }
 
                 // sb.append(peek())
+                end = getCurrentSourcePosition()
                 next()
                 isEndWithValidTypeSuffix = true
                 break
             }
             else if (suffix1 == numberType.char) {
+                if (suffix2?.isJavaIdentifierPart() == true) {
+                    next()
+                    throw exception(start, "無効な数値接尾辞です: $suffix2")
+                }
+
                 type = numberType
                 signed = true
                 isEndWithValidTypeSuffix = true
@@ -211,53 +222,22 @@ class BclTokenizer(script: String) {
 
             if (isEndWithValidTypeSuffix) {
                 // sb.append(peek())
+                end = getCurrentSourcePosition()
                 next()
             }
 
             type
         }
         catch (error: IllegalArgumentException) {
-            throw exception("基数が ${radix.value} の数値リテラルに型接尾辞 '${type.char}' は付与できません", error)
+            throw exception(start, "基数が ${radix.value} の数値リテラルに型接尾辞 '${type.char}' は付与できません", error)
         }
 
         return tokenOf(
             tokenType,
             sb.toString(),
-            start
+            start,
+            end
         )
-    }
-
-    /**
-     * ' は削除
-     */
-    private fun char(): Token {
-        val sb = StringBuilder()
-
-        val start = getCurrentSourcePosition()
-
-        if (peek() != KeyChar.CHAR_QUOTE) {
-            throw exception("文字が ${KeyChar.CHAR_QUOTE} で開始されていません")
-        }
-
-        // sb.append(peek())
-        next()
-
-        val char = peek()
-        sb.append(peek())
-        next()
-
-        if (peek() == KeyChar.CHAR_QUOTE) {
-            // sb.append(peek())
-            next()
-        }
-        else if (char == KeyChar.CHAR_QUOTE) {
-            throw exception("空の文字は無効です")
-        }
-        else {
-            throw exception("文字は ${KeyChar.CHAR_QUOTE} で閉じる必要があります")
-        }
-
-        return tokenOf(TokenType.CHAR, sb.toString(), start)
     }
 
     /**
@@ -268,8 +248,8 @@ class BclTokenizer(script: String) {
 
         val start = getCurrentSourcePosition()
 
-        if (peek() !in KeyChar.STRING_QUOTE_CHARS) {
-            throw exception("文字列の初めにはクォートが必要ですが、'${peek()}' が見つかりました")
+        if (peek() !in KeyChar.QUOTE_CHARS) {
+            throw exception(start, "文字列の初めにはクォートが必要ですが、'${peek()}' が見つかりました")
         }
 
         val quote = peek()
@@ -277,15 +257,28 @@ class BclTokenizer(script: String) {
         next()
 
         if (peek() == quote) {
+            if (quote == KeyChar.CHAR_QUOTE) {
+                throw exception(start, "空の文字リテラルは存在しません")
+            }
+
             // sb.append(quote)
+            val end = getCurrentSourcePosition()
             next()
-            return tokenOf(TokenType.STRING, sb.toString(), start)
+            return tokenOf(TokenType.STRING, sb.toString(), start, end)
         }
+
+        var end: SourcePosition
 
         while (true) {
             if (peek() == quote) {
                 // クォートだったら解析終了
                 // sb.append(peek())
+
+                if (quote == KeyChar.CHAR_QUOTE && sb.length > 1) {
+                    throw exception(start, "長さが2以上の文字リテラルは存在しません")
+                }
+
+                end = getCurrentSourcePosition()
                 next()
                 break
             }
@@ -294,13 +287,8 @@ class BclTokenizer(script: String) {
                 // エスケープだったら次の文字を今回のループにおける文字とする
                 var c = peek()
 
-                if (c == 'n') {
-                    // これは流石に改行
-                    c = '\n'
-                }
-                else if (c == 'r') {
-                    // これは流石にキャリッジリターン
-                    c = '\r'
+                if (c in KeyChar.CONTROL_CHARS) {
+                    c = KeyChar.CONTROL_CHARS[c]!!
                 }
 
                 sb.append(c)
@@ -313,11 +301,15 @@ class BclTokenizer(script: String) {
             }
 
             if (isOver()) {
-                throw exception("文字列の解析中にコードの末尾に到達しました: $sb")
+                throw exception(start, "文字列の解析中にコードの末尾に到達しました: $sb")
             }
         }
 
-        return tokenOf(TokenType.STRING, sb.toString(), start)
+        if (quote == KeyChar.SPECIAL_STRING_QUOTE) {
+            return tokenOf(TokenType.IDENTIFIER, sb.toString(), start, end)
+        }
+
+        return tokenOf(TokenType.STRING, sb.toString(), start, end)
     }
 
     private fun skipComment() {
@@ -359,29 +351,34 @@ class BclTokenizer(script: String) {
             next()
         }
         else {
-            throw exception("識別子として無効な文字です: '$current'")
+            throw exception(start, "識別子として無効な文字です: '$current'")
         }
+
+        var end = getCurrentSourcePosition()
 
         while (!isOver()) {
             current = peek()
 
             if (current.isJavaIdentifierPart()) {
                 sb.append(current)
+                end = getCurrentSourcePosition()
                 next()
             }
             else break
         }
 
-        return tokenOf(TokenType.WORD, sb.toString(), start)
+        return tokenOf(TokenType.WORD, sb.toString(), start, end)
     }
 
     private fun token(previous: Token?): Token? {
-        val noSeparator = previous?.type !in setOf(TokenType.WORD, TokenType.SYMBOL, null)
+        val start = getCurrentSourcePosition()
 
-        val linebreak = skipWhitespace()
+        val result = skipWhitespace()
 
-        if (linebreak) {
-            return tokenOf(Symbol.NEWLINE, getCurrentSourcePosition())
+        val noSeparator = previous != null && previous.type != TokenType.SYMBOL && !result.foundWhitespace
+
+        if (result.linebreak != null) {
+            return tokenOf(Symbol.NEWLINE, result.linebreak, result.linebreak)
         }
 
         skipComment()
@@ -390,17 +387,9 @@ class BclTokenizer(script: String) {
             return null
         }
 
-        if (peek() == KeyChar.CHAR_QUOTE) {
+        if (peek() in KeyChar.QUOTE_CHARS) {
             if (noSeparator) {
-                throw exception("区切りが必要です")
-            }
-
-            return char()
-        }
-
-        if (peek() in KeyChar.STRING_QUOTE_CHARS) {
-            if (noSeparator) {
-                throw exception("区切りが必要です")
+                throw exception(start, "区切りが必要です")
             }
 
             return string()
@@ -408,22 +397,33 @@ class BclTokenizer(script: String) {
 
         if (peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             if (noSeparator) {
-                throw exception("区切りが必要です")
+                throw exception(start, "区切りが必要です")
             }
 
             return number()
         }
 
-        for (symbol in Symbol.entries.sortedByDescending { it.value.length }) {
+        a@for (symbol in Symbol.entries.sortedByDescending { it.value.length }) {
             val start = getCurrentSourcePosition()
-            if (testThenAdvance(symbol.value)) {
-                return tokenOf(symbol, start)
+
+            for ((index, char) in symbol.value.withIndex()) {
+                if (peek(index) != char) {
+                    continue@a
+                }
             }
+
+            var end = getCurrentSourcePosition()
+            for (i in 0..<symbol.value.length) {
+                end = getCurrentSourcePosition()
+                next()
+            }
+
+            return tokenOf(symbol, start, end)
         }
 
-        /*if (noSeparator) {
-            throw exception("区切りが必要です")
-        }*/
+        if (noSeparator) {
+            throw exception(start, "トークン $previous の直後には区切りが必要です")
+        }
 
         return word()
     }

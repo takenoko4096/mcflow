@@ -28,5 +28,6 @@ enum class TokenType {
     STRING,
 
     SYMBOL,
-    WORD;
+    WORD,
+    IDENTIFIER;
 }

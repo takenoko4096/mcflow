@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-data class SourcePosition(val line: Int, val column: Int) {
+data class SourcePosition(val line: Int, val column: Int, val index: Int) {
     operator fun rangeTo(end: SourcePosition): SourceSpan {
         return SourceSpan(this, end)
     }

@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.parser
 enum class Keyword(val value: String) {
     VAR("var"),
     CONST("const"),
-    MACRO("macro"),
+    SET("set"),
     RETURN("return"),
     IF("if"),
     ELSE("else"),

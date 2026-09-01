@@ -19,7 +19,7 @@ object KeyChar {
     const val ESCAPE = '\\'
 
     val WHITESPACE_CHARS = setOf(SPACE, TAB, LINEBREAK)
-    val STRING_QUOTE_CHARS = setOf(STRING_QUOTE, SPECIAL_STRING_QUOTE)
+    val QUOTE_CHARS = setOf(STRING_QUOTE, SPECIAL_STRING_QUOTE)
     val NUMBER_CHAR_SEQUENCE = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
 
     const val LINE_COMMENT_SEQUENCE = "//"
@@ -28,4 +28,11 @@ object KeyChar {
 
     const val WINDOWS_LINE_SEPARATOR_SEQUENCE = "$CARRIAGE_RETURN$LINEBREAK"
     const val MAC_LINE_SEPARATOR = CARRIAGE_RETURN
+
+    val CONTROL_CHARS = mapOf(
+        'r' to '\r',
+        'n' to '\n',
+        't' to '\t',
+        '\\' to '\\'
+    )
 }

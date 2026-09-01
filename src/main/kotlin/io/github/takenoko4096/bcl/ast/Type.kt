@@ -7,7 +7,7 @@ enum class Type(val value: String) {
     FLOAT("float"),
     DOUBLE("double"),
     STRING("str"),
-    SELECTOR("selec"),
+    SELECTOR("selector"),
     POSITION("pos"),
     ROTATION("rot"),
     ITEM_TYPE("item_type"),
