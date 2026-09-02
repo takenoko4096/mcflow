@@ -12,7 +12,13 @@ open class TokenSeqReader(
     protected val tokens: List<Token>,
     private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?) -> BclTokenSeqReadException
 ) {
-    protected var cursor: Int = 0
+    var cursor: Int = 0
+
+    fun clone(): TokenSeqReader {
+        val cpy = TokenSeqReader(text, tokens, exceptionConstructor)
+        cpy.cursor = cursor
+        return cpy
+    }
 
     fun isOver(): Boolean {
         return cursor >= tokens.size

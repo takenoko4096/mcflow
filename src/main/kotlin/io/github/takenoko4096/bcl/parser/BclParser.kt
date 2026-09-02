@@ -1,13 +1,10 @@
 package io.github.takenoko4096.bcl.parser
 
-import io.github.takenoko4096.bcl.ast.TypeAnnotation
 import io.github.takenoko4096.bcl.ast.AssignmentOperation
 import io.github.takenoko4096.bcl.ast.BinaryOperation
 import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.ast.Label
 import io.github.takenoko4096.bcl.ast.Node
-import io.github.takenoko4096.bcl.ast.Parameter
-import io.github.takenoko4096.bcl.ast.Type
 import io.github.takenoko4096.bcl.ast.UnaryOperation
 import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
 import io.github.takenoko4096.bcl.ast.expression.AssignmentExpression
@@ -19,11 +16,9 @@ import io.github.takenoko4096.bcl.ast.expression.UnaryExpression
 import io.github.takenoko4096.bcl.ast.expression.VariableExpression
 import io.github.takenoko4096.bcl.ast.statement.BreakStatement
 import io.github.takenoko4096.bcl.ast.statement.ContinueStatement
-import io.github.takenoko4096.bcl.ast.statement.ForStatement
 import io.github.takenoko4096.bcl.ast.statement.IfElseStatement
 import io.github.takenoko4096.bcl.ast.statement.ReturnStatement
 import io.github.takenoko4096.bcl.ast.statement.SetStatement
-import io.github.takenoko4096.bcl.ast.statement.VarStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
@@ -481,25 +476,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         }
     }
 
-    private fun typeAnnotation(): TypeAnnotation {
-        val start = getCurrentTokenStartPosition()
-
-        val t = peekIgnoreNewLine()
-
-        if (t.type != TokenType.WORD) {
-            throw exception(start, "型注釈の解釈に失敗しました: 予期しないトークンです ($t)")
-        }
-
-        for (type in Type.entries) {
-            if (t.value == type.value) {
-                return TypeAnnotation(type, start..getPreviousTokenEndPosition())
-            }
-        }
-
-        throw exception(start, "型注釈の解釈に失敗しました: 不明な型です ($t)")
-    }
-
-    private fun newLineReader(): TokenSeqReader {
+    private fun singleCommandLineReader(): TokenSeqReader {
         val tokens = mutableListOf<Token>()
         var current: Token
 
@@ -509,6 +486,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
 
             if (current `is` Symbol.ESCAPE && peek() `is` Symbol.NEWLINE) {
                 next()
+                continue
             }
 
             if (current `is` Symbol.NEWLINE) {
@@ -522,20 +500,11 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
     }
 
     private fun command(): CommandLineParseResult {
-        val start = getCurrentTokenStartPosition()
-
         if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
             nextIgnoreNewLine()
         }
 
-        val name = read(TokenType.WORD)
-        val commandArgumentsReader = newLineReader()
-
-        return CommandLineParseResult(start..getPreviousTokenEndPosition(), name, tokens)
-    }
-
-    private fun selector() {
-        val start = getCurrentTokenStartPosition()
+        return dispatcher.parse(singleCommandLineReader())
     }
 
     private fun statement(): Statement {
@@ -546,10 +515,8 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         }
 
         return if (peekIgnoreNewLine() `is` Keyword.IF) ifElse()
-        else if (peekIgnoreNewLine() `is` Keyword.VAR || peekIgnoreNewLine() `is` Keyword.CONST) `var`()
         else if (peekIgnoreNewLine() `is` Keyword.SET) set()
         else if (peekIgnoreNewLine() `is` Keyword.RETURN) `return`()
-        else if (peekIgnoreNewLine() `is` Keyword.FOR) `for`()
         else if (peekIgnoreNewLine() `is` Keyword.CONTINUE) `continue`()
         else if (peekIgnoreNewLine() `is` Keyword.BREAK) `break`()
         else if (peekIgnoreNewLine() `is` Keyword.WHILE) `while`()
@@ -608,37 +575,6 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         return IfElseStatement(s..getPreviousTokenEndPosition(), cond, thenBlock, null)
     }
 
-    private fun `var`(): VarStatement {
-        val s = getCurrentTokenStartPosition()
-
-        val isReadonly = if (peekIgnoreNewLine() `is` Keyword.CONST) {
-            nextIgnoreNewLine()
-            true
-        }
-        else false
-
-        expectIgnoreNewLine(Keyword.VAR)
-
-        val identifier = readIgnoreNewLine(TokenType.WORD)
-
-        val typeAnnotation: TypeAnnotation?
-        if (peekIgnoreNewLine() `is` Symbol.COLON) {
-            nextIgnoreNewLine()
-            typeAnnotation = typeAnnotation()
-        }
-        else {
-            typeAnnotation = null
-        }
-
-        expectIgnoreNewLine(Symbol.ASSIGN)
-
-        val expr = calculatable()
-
-        requireSeparator()
-
-        return VarStatement(s..getPreviousTokenEndPosition(), isReadonly, typeAnnotation, identifier, expr)
-    }
-
     private fun set(): SetStatement {
         val start = getCurrentTokenStartPosition()
 
@@ -647,16 +583,17 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         val identifier = readIgnoreNewLine(TokenType.WORD)
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
 
-        val parameters = mutableListOf<Parameter>()
+        val parameters = mutableListOf<String>()
 
-        if (peekIgnoreNewLine() `!is` Symbol.PARENTHESIS_END) do {
-            val name = readIgnoreNewLine(TokenType.WORD)
-            val annot = typeAnnotation()
-            parameters.add(Parameter(start..getPreviousTokenEndPosition(), name, annot))
+        if (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_START) {
+            if (peekIgnoreNewLine() `!is` Symbol.PARENTHESIS_END) do {
+                val name = readIgnoreNewLine(TokenType.WORD)
+                parameters.add(name)
+            }
+            while (peekIgnoreNewLine() `is` Symbol.COMMA)
+
+            expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         }
-        while (peekIgnoreNewLine() `is` Symbol.COMMA)
-
-        expectIgnoreNewLine(Symbol.PARENTHESIS_END)
 
         return SetStatement(start..getPreviousTokenEndPosition(), identifier, parameters, block(true))
     }
@@ -681,20 +618,6 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         else {
             return ReturnStatement(s..getPreviousTokenEndPosition(), null)
         }
-    }
-
-    private fun `for`(): ForStatement {
-        val s = getCurrentTokenStartPosition()
-        expectIgnoreNewLine(Keyword.FOR)
-        val label = labelNullable()
-        expectIgnoreNewLine(Symbol.PARENTHESIS_START)
-        val name = readIgnoreNewLine(TokenType.WORD)
-        expectIgnoreNewLine(Keyword.IN)
-        val iterable = calculatable()
-        expectIgnoreNewLine(Symbol.PARENTHESIS_END)
-        val block = block(true)
-
-        return ForStatement(s..getPreviousTokenEndPosition(), label, name, iterable, block)
     }
 
     private fun `while`(): WhileStatement {

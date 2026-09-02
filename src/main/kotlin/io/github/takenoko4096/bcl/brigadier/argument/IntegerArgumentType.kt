@@ -18,15 +18,9 @@ class IntegerArgumentType : ArgumentType<Int>("int") {
             TokenType.INT -> IntExpression(value.toInt(), range)
             TokenType.INT_RAD16 -> IntExpression(value.toInt(16), range)
             TokenType.UINT_RAD2 -> IntExpression(value.toUInt(2).toInt(), range)
-            TokenType.UINT_RAD8 -> {
-                IntExpression(value.toUInt(8).toInt(), range)
-            }
-            TokenType.UINT -> {
-                IntExpression(value.toUInt().toInt(), range)
-            }
-            TokenType.UINT_RAD16 -> {
-                IntExpression(value.toUInt(16).toInt(), range)
-            }
+            TokenType.UINT_RAD8 -> IntExpression(value.toUInt(8).toInt(), range)
+            TokenType.UINT -> IntExpression(value.toUInt().toInt(), range)
+            TokenType.UINT_RAD16 -> IntExpression(value.toUInt(16).toInt(), range)
             else -> throw reader.exception(start, "数値リテラルの解析に失敗しました: 不明または未実装の種類のトークンです: $type")
         }
     }
