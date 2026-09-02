@@ -709,15 +709,15 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
             }
 
             val arg = commandArgument(node, startOfArg)
-            node = node.child
+            node = node.children
             arguments.add(arg)
         }
 
         return CommandLine(start..getPreviousTokenEndPosition(), name, arguments)
     }
 
-    private fun commandArgument(node: ArgumentNode, start: SourcePosition): Argument {
-        when (node) {
+    private fun commandArgument(previous: ArgumentNode, start: SourcePosition): Argument {
+        when (previous) {
             is LiteralArgumentNode -> {
 
             }
