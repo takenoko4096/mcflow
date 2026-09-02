@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl
+package io.github.takenoko4096.bcl.server
 
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.services.LanguageServer

@@ -9,15 +9,11 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.ast.Parameter
 import io.github.takenoko4096.bcl.ast.Type
 import io.github.takenoko4096.bcl.ast.UnaryOperation
-import io.github.takenoko4096.bcl.ast.argument.FloatArgument
-import io.github.takenoko4096.bcl.ast.argument.IntArgument
-import io.github.takenoko4096.bcl.ast.argument.NumberArgument
-import io.github.takenoko4096.bcl.ast.argument.UIntArgument
-import io.github.takenoko4096.bcl.ast.command.CommandLine
+import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
 import io.github.takenoko4096.bcl.ast.expression.AssignmentExpression
 import io.github.takenoko4096.bcl.ast.expression.BinaryExpression
-import io.github.takenoko4096.bcl.ast.Calculatable
-import io.github.takenoko4096.bcl.ast.argument.Argument
+import io.github.takenoko4096.bcl.ast.expression.Expression
+import io.github.takenoko4096.bcl.ast.expression.IntExpression
 import io.github.takenoko4096.bcl.ast.expression.MacroCallExpression
 import io.github.takenoko4096.bcl.ast.expression.UnaryExpression
 import io.github.takenoko4096.bcl.ast.expression.VariableExpression
@@ -31,191 +27,22 @@ import io.github.takenoko4096.bcl.ast.statement.VarStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
-import io.github.takenoko4096.bcl.brigadier.node.ArgumentNode
-import io.github.takenoko4096.bcl.brigadier.node.LiteralArgumentNode
-import io.github.takenoko4096.bcl.brigadier.node.RequiredArgumentNode
+import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.`!is`
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 import io.github.takenoko4096.bcl.tokenizer.`is`
 
-class BclParser(private val text: String, private val tokens: List<Token>, private val dispatcher: CommandDispatcher) {
-    private var cursor: Int = 0
-
-    private fun isOver(): Boolean {
-        return cursor >= tokens.size
-    }
-
-    private fun peek(): Token {
-        if (isOver()) {
-            throw exception(getCurrentTokenStartPosition(), "コード外に到達しました")
-        }
-
-        return tokens[cursor]
-    }
-
-    private fun peek(offset: Int): Token? {
-        return tokens.getOrNull(cursor + offset)
-    }
-
-    private fun getClamped(offset: Int): Token {
-        return if (cursor + offset < 0) {
-            tokens.first()
-        }
-        else if (cursor + offset > tokens.lastIndex) {
-            tokens.last()
-        }
-        else {
-            tokens[cursor + offset]
-        }
-    }
-
-    private fun next() {
-        cursor++
-    }
-
-    private fun expect(symbol: Symbol) {
-        val start = getCurrentTokenStartPosition()
-        if (peek() `is` symbol) {
-            next()
-        }
-        else {
-            val v = peek().value
-            next()
-            throw exception(start, "予期しないトークンです: $v")
-        }
-    }
-
-    private fun isOverIgnoreNewLine(): Boolean {
-        var i = 0
-        var token: Token?
-        do {
-            token = peek(i) ?: return true
-            i++
-        }
-        while (token `is` Symbol.NEWLINE)
-
-        return false
-    }
-
-    private fun peekIgnoreNewLine(): Token {
-        val start = getCurrentTokenStartPosition()
-        var i = 0
-        var token: Token?
-        do {
-            token = peek(i) ?: throw exception(start, "コード外に到達しました")
-            i++
-        }
-        while (token `is` Symbol.NEWLINE)
-
-        return token
-    }
-
-    private fun peekIgnoreNewLine(offset: Int): Token? {
-        var i = 0
-        var token: Token? = null
-        var count = 0
-
-        while (count <= offset) {
-            do {
-                token = peek(i) ?: return null
-                i++
-            }
-            while (token `is` Symbol.NEWLINE)
-
-            count++
-        }
-
-        return token
-    }
-
-    private fun skipNewLine() {
-        while (!isOver() && peek() `is` Symbol.NEWLINE) {
-            next()
-        }
-    }
-
-    private fun nextIgnoreNewLine() {
-        skipNewLine()
-        next()
-    }
-
-    private fun expectIgnoreNewLine(symbol: Symbol) {
-        val start = getCurrentTokenStartPosition()
-        if (peekIgnoreNewLine() `is` symbol) {
-            nextIgnoreNewLine()
-        }
-        else {
-            val v = peekIgnoreNewLine().value
-            nextIgnoreNewLine()
-            throw exception(start, "${symbol.value} が期待されましたが、予期しないトークンが見つかりました: $v")
-        }
-    }
-
-    private fun expectIgnoreNewLine(keyword: Keyword) {
-        val start = getCurrentTokenStartPosition()
-        if (isOverIgnoreNewLine()) {
-            throw exception(start, "期待されたトークン ${keyword.value} に対してコード外への到達が返されました")
-        }
-
-        if (peekIgnoreNewLine() `is` keyword) {
-            nextIgnoreNewLine()
-        }
-        else {
-            val v = peekIgnoreNewLine().value
-            nextIgnoreNewLine()
-            throw exception(start, "期待されたトークン ${keyword.value} に対して予期しないトークンです: $v")
-        }
-    }
-
-    private fun read(type: TokenType): String {
-        val start = getCurrentTokenStartPosition()
-        val current = peek()
-        if (current.type == type) {
-            next()
-            return current.value
-        }
-        else {
-            next()
-            throw exception(start, "$type のトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type}")
-        }
-    }
-
-    private fun readIgnoreNewLine(type: TokenType): String {
-        val start = getCurrentTokenStartPosition()
-        val current = peekIgnoreNewLine()
-        if (current.type == type) {
-            nextIgnoreNewLine()
-            return current.value
-        }
-        else {
-            nextIgnoreNewLine()
-            throw exception(start, "$type のトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type}")
-        }
-    }
-
-    private fun getCurrentTokenStartPosition(): SourcePosition {
-        return getClamped(0).sourceSpan.start
-    }
-
-    private fun getPreviousTokenEndPosition(): SourcePosition {
-        return getClamped(-1).sourceSpan.end
-    }
-
-    private fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclParseException {
-        return BclParseException(message, text, start..getPreviousTokenEndPosition(), cause)
-    }
-
-    private fun calculatable(): Calculatable {
+class BclParser(text: String, tokens: List<Token>, private val dispatcher: CommandDispatcher) : TokenSeqReader(text, tokens, ::BclParseException) {
+    private fun calculatable(): Expression {
         skipNewLine()
         val expr = assignment()
         skipNewLine()
         return expr
     }
 
-    private fun assignment(): Calculatable {
+    private fun assignment(): Expression {
         val start = getCurrentTokenStartPosition()
 
         var node = logicalOr()
@@ -288,7 +115,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun logicalOr(): Calculatable {
+    private fun logicalOr(): Expression {
         val s = getCurrentTokenStartPosition()
 
         var node = logicalAnd()
@@ -304,7 +131,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun logicalAnd(): Calculatable {
+    private fun logicalAnd(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = comparison()
 
@@ -319,7 +146,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun comparison(): Calculatable {
+    private fun comparison(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = bitOr()
 
@@ -362,7 +189,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun bitOr(): Calculatable {
+    private fun bitOr(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = bitXor()
 
@@ -377,7 +204,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun bitXor(): Calculatable {
+    private fun bitXor(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = bitAnd()
 
@@ -392,7 +219,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun bitAnd(): Calculatable {
+    private fun bitAnd(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = bitShift()
 
@@ -407,7 +234,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun bitShift(): Calculatable {
+    private fun bitShift(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = arithmetic()
 
@@ -437,7 +264,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun arithmetic(): Calculatable {
+    private fun arithmetic(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = term()
 
@@ -460,7 +287,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun term(): Calculatable {
+    private fun term(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = power()
 
@@ -488,7 +315,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun power(): Calculatable {
+    private fun power(): Expression {
         val s = getCurrentTokenStartPosition()
         var node = prefixUnary()
 
@@ -503,7 +330,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         return node
     }
 
-    private fun prefixUnary(): Calculatable {
+    private fun prefixUnary(): Expression {
         if (isOverIgnoreNewLine()) {
             return factor()
         }
@@ -538,7 +365,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
     /**
      * リテラル・ラムダ・変数参照・関数呼び出し
      */
-    private fun factor(): Calculatable {
+    private fun factor(): Expression {
         val start = getCurrentTokenStartPosition()
 
         if (isOverIgnoreNewLine()) {
@@ -558,7 +385,7 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         }
     }
 
-    private fun referenceOrMacroCall(): Calculatable {
+    private fun referenceOrMacroCall(): Expression {
         val s = getCurrentTokenStartPosition()
         val access = readIgnoreNewLine(TokenType.WORD)
 
@@ -574,19 +401,19 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
     /**
      * グループ化された式を予測
      */
-    private fun group(): Calculatable {
+    private fun group(): Expression {
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
         val expr = calculatable()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         return expr
     }
 
-    private fun macroArguments(): List<Calculatable> {
+    private fun macroArguments(): List<Expression> {
         val start = getCurrentTokenStartPosition()
 
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
 
-        val args = mutableListOf<Calculatable>()
+        val args = mutableListOf<Expression>()
 
         while (!isOverIgnoreNewLine()) {
             if (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_END) {
@@ -611,46 +438,42 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         throw exception(start, "関数呼び出しの引数の解析に失敗しました: 丸括弧が閉じられていません")
     }
 
-    private fun number(): NumberArgument {
+    private fun number(): IntExpression {
         val s = getCurrentTokenStartPosition()
         val current = peekIgnoreNewLine()
 
         return when (current.type) {
             TokenType.INT_RAD2 -> {
                 nextIgnoreNewLine()
-                IntArgument(s..getPreviousTokenEndPosition(), current.value.toInt(2))
+                IntExpression(current.value.toInt(2), s..getPreviousTokenEndPosition())
             }
             TokenType.INT_RAD8 -> {
                 nextIgnoreNewLine()
-                IntArgument(s..getPreviousTokenEndPosition(), current.value.toInt(8))
+                IntExpression(current.value.toInt(8), s..getPreviousTokenEndPosition())
             }
             TokenType.INT -> {
                 nextIgnoreNewLine()
-                IntArgument(s..getPreviousTokenEndPosition(), current.value.toInt())
+                IntExpression(current.value.toInt(), s..getPreviousTokenEndPosition())
             }
             TokenType.INT_RAD16 -> {
                 nextIgnoreNewLine()
-                IntArgument(s..getPreviousTokenEndPosition(), current.value.toInt(16))
+                IntExpression(current.value.toInt(16), s..getPreviousTokenEndPosition())
             }
             TokenType.UINT_RAD2 -> {
                 nextIgnoreNewLine()
-                UIntArgument(s..getPreviousTokenEndPosition(), current.value.toUInt(2))
+                IntExpression(current.value.toUInt(2).toInt(), s..getPreviousTokenEndPosition())
             }
             TokenType.UINT_RAD8 -> {
                 nextIgnoreNewLine()
-                UIntArgument(s..getPreviousTokenEndPosition(), current.value.toUInt(8))
+                IntExpression(current.value.toUInt(8).toInt(), s..getPreviousTokenEndPosition())
             }
             TokenType.UINT -> {
                 nextIgnoreNewLine()
-                UIntArgument(s..getPreviousTokenEndPosition(), current.value.toUInt())
+                IntExpression(current.value.toUInt().toInt(), s..getPreviousTokenEndPosition())
             }
             TokenType.UINT_RAD16 -> {
                 nextIgnoreNewLine()
-                UIntArgument(s..getPreviousTokenEndPosition(), current.value.toUInt(16))
-            }
-            TokenType.FLOAT -> {
-                nextIgnoreNewLine()
-                FloatArgument(s..getPreviousTokenEndPosition(), current.value.toFloat())
+                IntExpression(current.value.toUInt(16).toInt(), s..getPreviousTokenEndPosition())
             }
             else -> {
                 throw exception(s, "数値リテラルの解析に失敗しました: 不明または未実装の種類のトークンです: ${current.type}")
@@ -676,29 +499,13 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
         throw exception(start, "型注釈の解釈に失敗しました: 不明な型です ($t)")
     }
 
-    private fun command(): CommandLine {
-        val start = getCurrentTokenStartPosition()
-
-        if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
-            nextIgnoreNewLine()
-        }
-
-        val name = read(TokenType.WORD)
-        val command = dispatcher.getCommand(name) ?: throw exception(start, "不明なコマンド名です: $name")
-
-        val arguments = mutableListOf<Argument>()
-
-        var startOfArg: SourcePosition
+    private fun newLineReader(): TokenSeqReader {
+        val tokens = mutableListOf<Token>()
         var current: Token
-        var node: ArgumentNode? = command.root
 
         while (!isOverIgnoreNewLine()) {
-            if (node == null) {
-                break
-            }
-
-            startOfArg = getCurrentTokenStartPosition()
-            current = peek(); next()
+            current = peek()
+            next()
 
             if (current `is` Symbol.ESCAPE && peek() `is` Symbol.NEWLINE) {
                 next()
@@ -708,23 +515,23 @@ class BclParser(private val text: String, private val tokens: List<Token>, priva
                 break
             }
 
-            val arg = commandArgument(node, startOfArg)
-            node = node.children
-            arguments.add(arg)
+            tokens.add(current)
         }
 
-        return CommandLine(start..getPreviousTokenEndPosition(), name, arguments)
+        return TokenSeqReader(text, tokens,::BclParseException)
     }
 
-    private fun commandArgument(previous: ArgumentNode, start: SourcePosition): Argument {
-        when (previous) {
-            is LiteralArgumentNode -> {
+    private fun command(): CommandLineParseResult {
+        val start = getCurrentTokenStartPosition()
 
-            }
-            is RequiredArgumentNode -> {
-
-            }
+        if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
+            nextIgnoreNewLine()
         }
+
+        val name = read(TokenType.WORD)
+        val commandArgumentsReader = newLineReader()
+
+        return CommandLineParseResult(start..getPreviousTokenEndPosition(), name, tokens)
     }
 
     private fun selector() {

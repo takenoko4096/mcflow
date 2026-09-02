@@ -11,19 +11,18 @@ object Test {
 
         val text =
             """
-            execute as @e[type=player, name=Steve, hasitem={item=apple, data=1, amount = 2..5}] at @s run {
-                say a
-                say b
-                kill
-            }
-            
-            @return 0
-            
-            @continue #a
-            
             set main() {
-                /say hello, world!
+                /say hello
+                /kill @e[type=!player]
+                
+                @while (x == 0) {
+                    @break
+                }
             }
+            
+            macro mul2(int x) -> int = x * 2;
+            
+            scoreboard players set #X mul2(1)
             """
 
         println(
