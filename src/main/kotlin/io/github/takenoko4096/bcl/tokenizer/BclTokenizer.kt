@@ -264,7 +264,7 @@ class BclTokenizer(text: String) {
             // sb.append(quote)
             val end = getCurrentSourcePosition()
             next()
-            return tokenOf(TokenType.STRING, sb.toString(), start, end)
+            return tokenOf(TokenType.DOUBLE_QUOTED, sb.toString(), start, end)
         }
 
         var end: SourcePosition
@@ -306,10 +306,10 @@ class BclTokenizer(text: String) {
         }
 
         if (quote == KeyChar.SPECIAL_STRING_QUOTE) {
-            return tokenOf(TokenType.IDENTIFIER, sb.toString(), start, end)
+            return tokenOf(TokenType.BACK_QUOTED, sb.toString(), start, end)
         }
 
-        return tokenOf(TokenType.STRING, sb.toString(), start, end)
+        return tokenOf(TokenType.DOUBLE_QUOTED, sb.toString(), start, end)
     }
 
     private fun skipComment() {

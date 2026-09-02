@@ -24,10 +24,10 @@ enum class TokenType {
     FLOAT,
     DOUBLE,
 
-    CHAR,
-    STRING,
-
-    SYMBOL,
+    SINGLE_QUOTED,
+    DOUBLE_QUOTED,
+    BACK_QUOTED,
     WORD,
-    IDENTIFIER;
+
+    SYMBOL
 }

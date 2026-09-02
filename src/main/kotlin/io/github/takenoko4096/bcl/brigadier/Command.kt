@@ -1,4 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier
 
-class Command {
-}
+import io.github.takenoko4096.bcl.brigadier.node.LiteralArgumentNode
+
+class Command(
+    val description: String,
+    val root: LiteralArgumentNode
+)
