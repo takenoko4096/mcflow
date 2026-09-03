@@ -29,7 +29,7 @@ import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 import io.github.takenoko4096.bcl.tokenizer.`is`
 
-class BclParser(text: String, tokens: List<Token>, private val dispatcher: CommandDispatcher) : TokenSeqReader(text, tokens, ::BclParseException) {
+class BclParser(text: String, tokens: List<Token>, private val dispatcher: CommandDispatcher, private val extension: Boolean) : TokenSeqReader(text, tokens, ::BclParseException) {
     private fun calculatable(): Expression {
         skipNewLine()
         val expr = assignment()
@@ -713,7 +713,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             throw exception(peekSafely(-1).sourceSpan.start, "命令のパースに失敗しました: コード外に到達しました")
         }
 
-        val node = if (peekIgnoreNewLine() `is` Symbol.AT) {
+        val node = if (extension && peekIgnoreNewLine() `is` Symbol.AT) {
             nextIgnoreNewLine()
             statement()
         }

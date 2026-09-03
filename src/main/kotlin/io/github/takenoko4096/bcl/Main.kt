@@ -64,7 +64,8 @@ fun main() {
     val parseResult = BclParser(
         text,
         BclTokenizer(text).tokenize(),
-        dispatcher
+        dispatcher,
+        true
     ).parse()
 
     for (node in parseResult.nodes.filterIsInstance<CommandLineParseResult>()) {
