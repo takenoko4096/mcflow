@@ -370,12 +370,45 @@ class BclTokenizer(text: String) {
         return tokenOf(TokenType.WORD, sb.toString(), start, end)
     }
 
+    private fun coordinate(marker: Char, type: TokenType): Token {
+        val start = getCurrentSourcePosition()
+
+        if (peek() != marker) {
+            next()
+            throw exception(start, "座標入力は $marker で開始されることが期待されましたが、 ${peek()} が見つかりました")
+        }
+
+        next()
+
+        if (peek() == KeyChar.MINUS) {
+            val sb = StringBuilder()
+            if (peek() == KeyChar.MINUS) {
+                sb.append(KeyChar.MINUS)
+                next()
+            }
+
+            sb.append(number().value)
+
+            return tokenOf(type, sb.toString(), start, getCurrentSourcePosition())
+        }
+        else if (peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
+            return tokenOf(type, number().value, start, getCurrentSourcePosition())
+        }
+        else {
+            return tokenOf(type, "0", start, getCurrentSourcePosition())
+        }
+    }
+
     private fun token(previous: Token?): Token? {
         val start = getCurrentSourcePosition()
 
         val result = skipWhitespace()
 
-        val noSeparator = previous != null && previous.type != TokenType.SYMBOL && !result.foundWhitespace
+        val noSeparator = previous != null
+            && previous.type != TokenType.SYMBOL
+            && previous.type != TokenType.COORDINATE_LOCAL
+            && previous.type != TokenType.COORDINATE_RELATIVE
+            && !result.foundWhitespace
 
         if (result.linebreak != null) {
             return tokenOf(Symbol.NEWLINE, result.linebreak, result.linebreak)
@@ -401,6 +434,14 @@ class BclTokenizer(text: String) {
             }
 
             return number()
+        }
+
+        if (peek() == KeyChar.COORDINATE_RELATIVE) {
+            return coordinate(KeyChar.COORDINATE_RELATIVE, TokenType.COORDINATE_RELATIVE)
+        }
+
+        if (peek() == KeyChar.COORDINATE_LOCAL) {
+            return coordinate(KeyChar.COORDINATE_LOCAL, TokenType.COORDINATE_LOCAL)
         }
 
         a@for (symbol in Symbol.entries.sortedByDescending { it.value.length }) {

@@ -1,0 +1,81 @@
+{
+    "sourceSpan": "line 1, column 0 to line 9, column 5",
+    "CLASS_NAME": "Block",
+    "nodes": [
+        {
+            "arguments": {},
+            "command": "Command(description=return an integer value., aliases=[ret]) literal<executable=false> {int=literal<executable=true> {}, string=literal<executable=true> {}, fail=literal<executable=true> {}}",
+            "CLASS_NAME": "Successful",
+            "destination": "fail",
+            "sourceSpan": "line 1, column 5 to line 2, column 8"
+        },
+        {
+            "arguments": {
+                "int": {
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType@41975e01",
+                    "value": 0,
+                    "sourceSpan": "line 3, column 9 to line 4, column 0",
+                    "CLASS_NAME": "Argument"
+                }
+            },
+            "command": "Command(description=return an integer value., aliases=[ret]) literal<executable=false> {int=literal<executable=true> {}, string=literal<executable=true> {}, fail=literal<executable=true> {}}",
+            "CLASS_NAME": "Successful",
+            "destination": "int",
+            "sourceSpan": "line 3, column 5 to line 4, column 0"
+        },
+        {
+            "arguments": {
+                "string": {
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@dcf3e99",
+                    "value": "any",
+                    "sourceSpan": "line 4, column 9 to line 4, column 11",
+                    "CLASS_NAME": "Argument"
+                }
+            },
+            "command": "Command(description=return an integer value., aliases=[ret]) literal<executable=false> {int=literal<executable=true> {}, string=literal<executable=true> {}, fail=literal<executable=true> {}}",
+            "CLASS_NAME": "Successful",
+            "destination": "string",
+            "sourceSpan": "line 4, column 5 to line 4, column 11"
+        },
+        {
+            "CLASS_NAME": "SetStatement",
+            "parameters": [],
+            "identifier": "main",
+            "block": {
+                "sourceSpan": "line 6, column 15 to line 9, column 5",
+                "CLASS_NAME": "Block",
+                "nodes": [
+                    {
+                        "arguments": {
+                            "int": {
+                                "type": "io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType@41975e01",
+                                "value": 0,
+                                "sourceSpan": "line 7, column 13 to line 8, column 0",
+                                "CLASS_NAME": "Argument"
+                            }
+                        },
+                        "command": "Command(description=return an integer value., aliases=[ret]) literal<executable=false> {int=literal<executable=true> {}, string=literal<executable=true> {}, fail=literal<executable=true> {}}",
+                        "CLASS_NAME": "Successful",
+                        "destination": "int",
+                        "sourceSpan": "line 7, column 9 to line 8, column 0"
+                    },
+                    {
+                        "arguments": {
+                            "string": {
+                                "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@1ee0005",
+                                "value": "iam ame!!!!!!",
+                                "sourceSpan": "line 8, column 13 to line 8, column 27",
+                                "CLASS_NAME": "Argument"
+                            }
+                        },
+                        "command": "Command(description=saying!, aliases=[shaberu]) literal<executable=false> {string=literal<executable=true> {}}",
+                        "CLASS_NAME": "Successful",
+                        "destination": "string",
+                        "sourceSpan": "line 8, column 9 to line 8, column 27"
+                    }
+                ]
+            },
+            "sourceSpan": "line 6, column 6 to line 6, column 13"
+        }
+    ]
+}

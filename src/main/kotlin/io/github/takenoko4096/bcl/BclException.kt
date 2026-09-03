@@ -3,12 +3,16 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
-abstract class BclException protected constructor(message: String, cause: Throwable?) : RuntimeException(message, cause) {
+abstract class BclException protected constructor(
+    val description: String,
+    text: String,
+    val span: SourceSpan,
+    cause: Throwable?
+) : RuntimeException(getPointedMessage(description, text, span), cause) {
     companion object {
         const val ERROR_POINTER_SPAN_SIZE = 48
 
-        @JvmStatic
-        protected fun getPointedMessage(message: String, text: String, span: SourceSpan): String {
+        fun getPointedMessage(message: String, text: String, span: SourceSpan): String {
             val i0 = span.start.index
             val i1 = span.end.index
 

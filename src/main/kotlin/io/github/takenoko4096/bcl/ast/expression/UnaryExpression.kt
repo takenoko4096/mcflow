@@ -6,5 +6,5 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class UnaryExpression(
     sourceSpan: SourceSpan,
     val operation: UnaryOperation,
-    val target: Calculatable
+    val target: Expression
 ) : Expression(sourceSpan)

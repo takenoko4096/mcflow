@@ -8,4 +8,4 @@ abstract class BclTokenSeqReadException(
     text: String,
     span: SourceSpan,
     cause: Throwable?
-) : BclException(getPointedMessage(message, text, span), cause)
+) : BclException(message, text, span, cause)

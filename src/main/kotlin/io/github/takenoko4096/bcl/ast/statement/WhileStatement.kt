@@ -9,6 +9,6 @@ class WhileStatement(
     sourceSpan: SourceSpan,
     val prioritizeBlockEvaluation: Boolean,
     val label: Label?,
-    val condition: Calculatable,
+    val condition: Expression,
     val block: Block
 ) : Statement(sourceSpan)

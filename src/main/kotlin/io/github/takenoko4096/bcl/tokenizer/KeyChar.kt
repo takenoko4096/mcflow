@@ -35,4 +35,8 @@ object KeyChar {
         't' to '\t',
         '\\' to '\\'
     )
+
+    const val COORDINATE_RELATIVE = '~'
+    const val COORDINATE_LOCAL = '^'
+    const val MINUS = '-'
 }

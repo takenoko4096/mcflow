@@ -29,5 +29,8 @@ enum class TokenType {
     BACK_QUOTED,
     WORD,
 
-    SYMBOL
+    SYMBOL,
+
+    COORDINATE_RELATIVE,
+    COORDINATE_LOCAL,
 }

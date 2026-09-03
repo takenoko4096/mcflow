@@ -7,5 +7,5 @@ class AssignmentExpression(
     sourceSpan: SourceSpan,
     val operation: AssignmentOperation,
     val target: VariableExpression,
-    val value: Calculatable
+    val value: Expression
 ) : Expression(sourceSpan)

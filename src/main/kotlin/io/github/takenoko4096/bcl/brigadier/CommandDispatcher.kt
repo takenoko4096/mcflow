@@ -2,76 +2,203 @@ package io.github.takenoko4096.bcl.brigadier
 
 import io.github.takenoko4096.bcl.ast.Argument
 import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.RootCommandNodeBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.TokenType
+import kotlin.collections.contains
+import kotlin.collections.set
 
 class CommandDispatcher {
-    private val commands = mutableSetOf<Command>()
+    private val commands = mutableMapOf<String, Command>()
 
     fun getCommand(name: String): Command? {
-        return commands.find { it.root.literal == name }
+        return commands[name]
     }
 
-    fun parse(reader: TokenSeqReader): CommandLineParseResult {
+    fun register(name: String, configurator: RootCommandNodeBuilder.() -> Unit): Command {
+        val builder = RootCommandNodeBuilder()
+        builder.configurator()
+        val cmd = builder.command()
+        if (name in commands) {
+            throw IllegalArgumentException()
+        }
+        commands[name] = cmd
+        for (string in cmd.aliases) {
+            if (string in commands) {
+                throw IllegalArgumentException()
+            }
+            commands[string] = cmd
+        }
+        return cmd
+    }
+
+    private data class ParseState(
+        val reader: TokenSeqReader,
+        val arguments: Map<String, Argument<*>>,
+        val destination: String,
+        val literalCount: Int
+    )
+
+    private data class Potential(
+        val state: ParseState,
+        val diagnostics: List<Diagnostic>
+    )
+
+    fun parse(text: String, reader: TokenSeqReader): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
         val name = reader.read(TokenType.WORD)
 
         val command = getCommand(name)
-            ?: run {
-                val span = start..reader.getPreviousTokenEndPosition()
+            ?: return CommandLineParseResult.Failure(
+                null,
+                name,
+                listOf(
+                    Diagnostic(
+                        text,
+                        "不明なコマンド名です: $name",
+                        start..reader.getPreviousTokenEndPosition()
+                    )
+                ),
+                start..reader.getPreviousTokenEndPosition()
+            )
 
-                return CommandLineParseResult.Failure(
-                    listOf(Diagnostic("不明なコマンド名です: $name", span)),
-                    span
+        val initialState = ParseState(
+            reader = reader.clone(),
+            arguments = emptyMap(),
+            destination = name,
+            literalCount = 1
+        )
+
+        val potentials = dispatch(
+            text,
+            initialState,
+            command.root.children
+        )
+
+        if (potentials.isNotEmpty()) {
+            val best = selectBest(potentials)
+
+            return if (best.diagnostics.isEmpty()) {
+                CommandLineParseResult.Successful(
+                    command,
+                    best.state.destination,
+                    best.state.arguments,
+                    start..best.state.reader.getPreviousTokenEndPosition()
                 )
             }
-
-        val arguments = mutableMapOf<String, Argument<*>>()
-        val diagnostics = mutableListOf<Diagnostic>()
-        dispatch(reader, arguments, diagnostics, command.root.children)
-
-        val end = reader.getPreviousTokenEndPosition()
-
-        return if (diagnostics.isEmpty()) {
-            CommandLineParseResult.Successful(command, arguments, start..end)
+            else {
+                CommandLineParseResult.Failure(
+                    command,
+                    best.state.destination,
+                    best.diagnostics,
+                    start..best.state.reader.getPreviousTokenEndPosition()
+                )
+            }
         }
-        else {
-            CommandLineParseResult.Failure(diagnostics, start..end)
-        }
+
+        val diagnostics = potentials.flatMap { it.diagnostics }
+
+        return CommandLineParseResult.Failure(
+            command,
+            destination = "?",
+            diagnostics,
+            start..diagnostics.maxBy { it.sourceSpan.end.index }.sourceSpan.end
+        )
     }
 
-    private fun dispatch(reader: TokenSeqReader, arguments: MutableMap<String, Argument<*>>, diagnostics: MutableList<Diagnostic>, children: Set<CommandNode>) {
-        val t = reader.peek()
+    private fun selectBest(potentials: List<Potential>): Potential {
+        return potentials.maxWith(
+            compareBy<Potential> { it.state.reader.isOver() }
+                .thenBy { it.diagnostics.isEmpty() }
+                .thenBy { it.state.literalCount }
+                .thenBy { it.state.reader.cursor }
+        )
+    }
 
-        for (node in children.filterIsInstance<LiteralCommandNode>()) {
-            if (t.type == TokenType.WORD && t.value == node.literal) {
-                reader.next()
-                return dispatch(reader, arguments, diagnostics, node.children)
-            }
-        }
+    private fun dispatch(text: String, state: ParseState, children: Map<String, CommandNode>): List<Potential> {
+        val potentials = mutableListOf<Potential>()
 
-        val currentCursor = reader.cursor
-        var argument: Argument<*>
-        for (node in children.filterIsInstance<ArgumentCommandNode<*>>()) {
+        for ((name, node) in children) {
+            val candidateReader = state.reader.clone()
+            val candidateArguments = state.arguments.toMutableMap()
+
+            val nextState = ParseState(
+                candidateReader,
+                candidateArguments,
+                name,
+                state.literalCount + if (node is LiteralCommandNode) 1 else 0
+            )
+
             try {
-                argument = node.type.parse(reader)
+                when (node) {
+                    is LiteralCommandNode -> {
+                        val token = candidateReader.peek()
+
+                        if (token.type != TokenType.WORD || token.value != name) {
+                            continue
+                        }
+
+                        candidateReader.next()
+                    }
+
+                    is ArgumentCommandNode<*> -> {
+                        val argument = node.type.parse(candidateReader)
+                        candidateArguments[name] = argument
+                    }
+                }
             }
-            catch (_: BclTokenSeqReadException) {
-                reader.cursor = currentCursor
+            catch (e: BclTokenSeqReadException) {
+                potentials += Potential(
+                    nextState,
+                    listOf(
+                        Diagnostic("引数が正しくありません", text, e.span)
+                    )
+                )
                 continue
             }
 
-            arguments[node.name] = argument
-            return dispatch(reader, arguments, diagnostics, node.children)
+            if (node.children.isEmpty()) {
+                if (node.executable) {
+                    potentials += if (!candidateReader.isOver()) {
+                        Potential(
+                            nextState,
+                            listOf(
+                                Diagnostic("予期しない引数です", text, candidateReader.peek().sourceSpan)
+                            )
+                        )
+                    } else Potential(
+                        nextState,
+                        listOf()
+                    )
+                }
+                else if (candidateReader.isOver()) {
+                    potentials += Potential(
+                        nextState,
+                        listOf(
+                            Diagnostic("引数が不足しています", text, candidateReader.peekSafely(offset = -1).sourceSpan)
+                        )
+                    )
+                }
+                else {
+                    potentials += Potential(
+                        nextState,
+                        listOf(
+                            Diagnostic("予期しない引数です", text, candidateReader.peek().sourceSpan)
+                        )
+                    )
+                }
+            }
+            else {
+                val nextPotentials = dispatch(text, nextState, node.children)
+                potentials += nextPotentials
+            }
         }
 
-        diagnostics.add(Diagnostic(
-            "...(書き途中)"
-        ))
+        return potentials
     }
 }

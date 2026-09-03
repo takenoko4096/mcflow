@@ -6,7 +6,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class IfElseStatement(
     sourceSpan: SourceSpan,
-    val condition: Calculatable,
+    val condition: Expression,
     val thenBlock: Block,
     val elseBlock: Block?
 ) : Statement(sourceSpan)

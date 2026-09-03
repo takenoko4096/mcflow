@@ -5,5 +5,5 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class MacroCallExpression(
     sourceSpan: SourceSpan,
     val identifier: String,
-    val arguments: List<Calculatable>
+    val arguments: List<Expression>
 ) : Expression(sourceSpan)

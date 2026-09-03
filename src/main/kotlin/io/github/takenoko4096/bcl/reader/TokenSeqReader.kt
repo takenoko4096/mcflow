@@ -36,7 +36,7 @@ open class TokenSeqReader(
         return tokens.getOrNull(cursor + offset)
     }
 
-    fun getClamped(offset: Int): Token {
+    fun peekSafely(offset: Int): Token {
         return if (cursor + offset < 0) {
             tokens.first()
         }
@@ -81,7 +81,10 @@ open class TokenSeqReader(
         var i = 0
         var token: Token?
         do {
-            token = peek(i) ?: throw exception(start, "コード外に到達しました")
+            token = peek(i) ?: run {
+                for (j in 0..i) next()
+                throw exception(start, "コード外に到達しました")
+            }
             i++
         }
         while (token `is` Symbol.NEWLINE)
@@ -146,41 +149,133 @@ open class TokenSeqReader(
         }
     }
 
-    fun read(type: TokenType): String {
+    fun read(vararg types: TokenType): String {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、コード外に到達しました")
+        }
+
         val start = getCurrentTokenStartPosition()
         val current = peek()
-        if (current.type == type) {
+        if (current.type in types) {
             next()
             return current.value
         }
         else {
             next()
-            throw exception(start, "$type のトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type}")
+            throw exception(start, "$types のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
         }
     }
 
-    fun readIgnoreNewLine(type: TokenType): String {
+    fun readIgnoreNewLine(vararg types: TokenType): String {
+        if (isOverIgnoreNewLine()) {
+            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、コード外に到達しました")
+        }
+
         val start = getCurrentTokenStartPosition()
         val current = peekIgnoreNewLine()
-        if (current.type == type) {
+        if (current.type in types) {
             nextIgnoreNewLine()
             return current.value
         }
         else {
             nextIgnoreNewLine()
-            throw exception(start, "$type のトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type}")
+            throw exception(start, "$types のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
         }
     }
 
     fun getCurrentTokenStartPosition(): SourcePosition {
-        return getClamped(0).sourceSpan.start
+        return peekSafely(0).sourceSpan.start
     }
 
     fun getPreviousTokenEndPosition(): SourcePosition {
-        return getClamped(-1).sourceSpan.end
+        return peekSafely(-1).sourceSpan.end
+    }
+
+    fun readInteger(): Int {
+        val start = getCurrentTokenStartPosition()
+
+        val scale: Int
+        val t = peek()
+        if (t.type == TokenType.SYMBOL) {
+            scale = if (t `is` Symbol.PLUS) {
+                1
+            }
+            else if (t `is` Symbol.MINUS) {
+                -1
+            }
+            else {
+                next()
+                throw exception(start, "整数の解析に失敗しました: 不明なトークンです: $t")
+            }
+
+            next()
+        }
+        else {
+            scale = 1
+        }
+
+        val u = peek()
+
+        val v = when (u.type) {
+            TokenType.INT_RAD2 -> u.value.toInt(2) * scale
+            TokenType.INT_RAD8 -> u.value.toInt(8) * scale
+            TokenType.INT -> u.value.toInt() * scale
+            TokenType.INT_RAD16 -> u.value.toInt(16) * scale
+            TokenType.UINT_RAD2 -> u.value.toUInt(2).toInt() * scale
+            TokenType.UINT_RAD8 -> u.value.toUInt(8).toInt() * scale
+            TokenType.UINT -> u.value.toUInt().toInt() * scale
+            TokenType.UINT_RAD16 -> u.value.toUInt(16).toInt() * scale
+            else -> {
+                next()
+                throw exception(start, "整数の解析に失敗しました: 不明なトークンです: $u")
+            }
+        }
+
+        next()
+
+        return v
+    }
+
+    fun readQuotedString(): String {
+        return read(TokenType.DOUBLE_QUOTED)
+    }
+
+    fun readWord(): String {
+        return read(TokenType.WORD)
+    }
+
+    fun readUnquotableString(): String {
+        return read(TokenType.DOUBLE_QUOTED, TokenType.WORD)
+    }
+
+    fun readBool(): Boolean {
+        val start = getCurrentTokenStartPosition()
+        val word = readWord()
+
+        next()
+        return when (word) {
+            "true" -> true
+            "false" -> false
+            else -> {
+                throw exception(start, "真偽値の解析に失敗しました: 不明なトークンです: $word")
+            }
+        }
+    }
+
+    fun readAllRemainingAsString(): String {
+        return tokens.slice(cursor..<tokens.size).reduce { previous, current ->
+            val spacer = " ".repeat(current.sourceSpan.start.index - previous.sourceSpan.end.index - 1)
+            Token(-1, TokenType.WORD, previous.value + spacer + current.value, previous.sourceSpan.start..current.sourceSpan.end)
+        }.also { cursor = tokens.size }.value
+    }
+
+    fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenSeqReadException {
+        return exceptionConstructor(message, text, sourceSpan, cause)
     }
 
     fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenSeqReadException {
         return exceptionConstructor(message, text, start..getPreviousTokenEndPosition(), cause)
     }
+
+    fun getTokens2() = tokens
 }

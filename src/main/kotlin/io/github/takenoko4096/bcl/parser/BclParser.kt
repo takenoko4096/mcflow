@@ -477,10 +477,14 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
     }
 
     private fun singleCommandLineReader(): TokenSeqReader {
+        val start = getCurrentTokenStartPosition()
+
         val tokens = mutableListOf<Token>()
         var current: Token
 
-        while (!isOverIgnoreNewLine()) {
+        skipNewLine()
+
+        while (!isOver()) {
             current = peek()
             next()
 
@@ -496,6 +500,10 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             tokens.add(current)
         }
 
+        if (tokens.isEmpty()) {
+            throw exception(start, "は？")
+        }
+
         return TokenSeqReader(text, tokens,::BclParseException)
     }
 
@@ -504,7 +512,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             nextIgnoreNewLine()
         }
 
-        return dispatcher.parse(singleCommandLineReader())
+        return dispatcher.parse(text, singleCommandLineReader())
     }
 
     private fun statement(): Statement {
@@ -581,7 +589,6 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         expectIgnoreNewLine(Keyword.SET)
 
         val identifier = readIgnoreNewLine(TokenType.WORD)
-        expectIgnoreNewLine(Symbol.PARENTHESIS_START)
 
         val parameters = mutableListOf<String>()
 
@@ -700,12 +707,22 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
     }
 
     private fun node(): Node {
+        val start = getCurrentTokenStartPosition()
+
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan.start, "命令のパースに失敗しました: コード外に到達しました")
+        }
+
         val node = if (peekIgnoreNewLine() `is` Symbol.AT) {
             nextIgnoreNewLine()
             statement()
         }
-        else {
+        else if (peekIgnoreNewLine().type == TokenType.WORD) {
             command()
+        }
+        else {
+            nextIgnoreNewLine()
+            throw exception(start, "命令のパースに失敗しました: 不明な命令です: ${peekSafely(-1)}")
         }
 
         while (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.SEMICOLON) {

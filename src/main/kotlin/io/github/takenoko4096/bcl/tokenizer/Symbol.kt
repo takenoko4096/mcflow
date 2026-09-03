@@ -36,7 +36,7 @@ enum class Symbol(val value: String, val expressionStartable: Boolean) {
     LOGICAL_AND("&&", false),
     LOGICAL_OR("||", false),
     LOGICAL_NOT('!', true),
-    BIT_NOT('~', true),
+    BIT_NOT("~!", true),
     BIT_AND('&', false),
     BIT_OR('|', false),
     BIT_XOR('^', false),

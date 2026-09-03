@@ -5,5 +5,5 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class ReturnStatement(
     sourceSpan: SourceSpan,
-    val value: Calculatable?
+    val value: Expression?
 ) : Statement(sourceSpan)
