@@ -21,7 +21,7 @@ fun main() {
 
         aliases("ret")
 
-        "int_val"(IntegerArgumentType()) {
+        "int_val"(IntegerArgumentType.unlimited()) {
             executable()
         }
 
@@ -39,10 +39,10 @@ fun main() {
 
         aliases("shaberu")
 
-        "greedy_str"(StringArgumentType.word()) {
+        "greedy_str"(StringArgumentType.greedy()) {
             executable()
 
-            "count"(IntegerArgumentType()) {
+            "count"(IntegerArgumentType.unlimited()) {
                 executable()
             }
         }
@@ -51,7 +51,8 @@ fun main() {
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
-    say 0
+        ret 0x12L
+    say a b c fffffffffffffff g g 0x1238
     @set main() {
         scoreboard players set @s a 1 
     }

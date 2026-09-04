@@ -6,6 +6,6 @@ data class SourcePosition(val line: Int, val column: Int, val index: Int) {
     }
 
     override fun toString(): String {
-        return "line $line, column $column"
+        return "line $line, column ${column + 1}"
     }
 }

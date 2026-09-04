@@ -7,7 +7,6 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
-import java.util.Arrays
 
 open class TokenSeqReader(
     val sourceCode: String,
@@ -197,7 +196,7 @@ open class TokenSeqReader(
         return peekSafely(-1).sourceSpan.end
     }
 
-    fun readInteger(): Int {
+    fun readInteger(signedDecimalOnly: Boolean = true): Int {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan.end, "整数が期待されましたが、入力が不足しています")
         }
@@ -237,11 +236,15 @@ open class TokenSeqReader(
             TokenType.UINT_RAD16 -> u.value.toUInt(16).toInt() * scale
             else -> {
                 next()
-                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.value}'")
+                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
         }
 
         next()
+
+        if (signedDecimalOnly && u.type != TokenType.INT) {
+            throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+        }
 
         return v
     }
@@ -273,16 +276,10 @@ open class TokenSeqReader(
     }
 
     fun readAllRemainingAsString(): String {
-        val sliced = tokens.slice(cursor..<tokens.size)
-
-        if (sliced.isEmpty()) {
-            throw exception(peekSafely(-1).sourceSpan, "文字列の読み取りに失敗しました: 入力が不足しています")
-        }
-
-        return sliced.reduce { previous, current ->
-            val spacer = " ".repeat(current.sourceSpan.start.index - previous.sourceSpan.end.index - 1)
-            Token(-1, TokenType.WORD, previous.value + spacer + current.value, previous.sourceSpan.start..current.sourceSpan.end)
-        }.also { cursor = tokens.size }.value
+        val remainingSpan = getRemainingSourceSpan()
+        val string = sourceCode.slice(remainingSpan.start.index..remainingSpan.end.index)
+        cursor = tokens.size
+        return string
     }
 
     fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenSeqReadException {
@@ -294,8 +291,6 @@ open class TokenSeqReader(
     }
 
     protected fun createCommandLineSubReader(): TokenSeqReader {
-        val start = getCurrentTokenStartPosition()
-
         val tokens = mutableListOf<Token>()
         var current: Token
 
@@ -315,10 +310,6 @@ open class TokenSeqReader(
             }
 
             tokens.add(current)
-        }
-
-        if (tokens.isEmpty()) {
-            throw exception(start, "は？")
         }
 
         return TokenSeqReader(sourceCode, tokens,::BclParseException)

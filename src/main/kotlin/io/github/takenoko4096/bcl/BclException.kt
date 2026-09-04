@@ -36,7 +36,7 @@ abstract class BclException protected constructor(
 
             val area = "$a$m$b\n" + " ".repeat(a.length) + "^".repeat(m.length)
 
-            return "$message @line ${span.start.line}, column ${span.start.column} to line ${span.end.line}, column ${span.end.column}; \n$area"
+            return "$message @$span; \n$area"
         }
     }
 }

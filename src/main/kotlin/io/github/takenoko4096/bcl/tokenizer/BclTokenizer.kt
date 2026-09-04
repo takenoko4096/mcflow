@@ -37,9 +37,10 @@ class BclTokenizer(text: String) {
     }
 
     private fun next() {
+        val current = peek()
         cursor++
 
-        if (peek(0) == KeyChar.LINEBREAK) {
+        if (current == KeyChar.LINEBREAK) {
             line++
             lastLineStartCursor = cursor
         }
@@ -148,7 +149,13 @@ class BclTokenizer(text: String) {
 
         sb.append(intPart)
 
-        if (!isOver() && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL) && radix.value == 10 && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)) {
+        // (0 == 小数点 or 指数指定 'e') and 10進 and (1 <: 10進)
+        // 小数とか型付きのときとか
+        if (!isOver()
+            && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL)
+            && radix.value == 10
+            && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)
+        ) {
             sb.append(peek())
             next()
             sb.append(digits(10))
@@ -171,7 +178,10 @@ class BclTokenizer(text: String) {
             }
         }
 
+        // TODO ちょっと汚い
+        cursor--
         var end = getCurrentSourcePosition()
+        cursor++
 
         val suffix1 = peek(0)
         val suffix2 = peek(1)
@@ -204,7 +214,7 @@ class BclTokenizer(text: String) {
                 isEndWithValidTypeSuffix = true
                 break
             }
-            else if (suffix1 == numberType.char) {
+            else if (suffix1?.lowercaseChar() == numberType.char) {
                 if (suffix2?.isJavaIdentifierPart() == true) {
                     next()
                     throw exception(start, "無効な数値接尾辞です: $suffix2")
@@ -348,13 +358,14 @@ class BclTokenizer(text: String) {
 
         if (current.isJavaIdentifierStart()) {
             sb.append(current)
-            next()
         }
         else {
+            next()
             throw exception(start, "識別子として無効な文字です: '$current'")
         }
 
         var end = getCurrentSourcePosition()
+        next()
 
         while (!isOver()) {
             current = peek()

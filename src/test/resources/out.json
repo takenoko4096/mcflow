@@ -1,40 +1,54 @@
 {
+    "sourceSpan": "line 1, column 1 to line 6, column 5",
     "CLASS_NAME": "Block",
     "nodes": [
         {
-            "command": "Command</say [shaberu]>",
-            "CLASS_NAME": "Failure",
-            "destination": "greedy_str",
-            "sourceSpan": "line 1, column 5 to line 2, column 0",
+            "destination": "int_val",
+            "sourceSpan": "line 2, column 9 to line 2, column 17",
             "diagnostics": [
-                "引数が正しくありません ([WORD] のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: INT ((INT) [[ 0 ]])) @line 1, column 9 to line 2, column 0; 
- say 0  @set main() { scoreboard players set 
-     ^^"
-            ]
+                "引数が正しくありません (整数の読み取りに失敗しました: 不明なトークンです: '0x12L') @line 2, column 13 to line 2, column 17; 
+ ret 0x12L say a b c fffffffffffffff g g 0x1238 @se
+     ^^^^^"
+            ],
+            "command": "Command</return [ret]>",
+            "CLASS_NAME": "Failure"
         },
         {
-            "CLASS_NAME": "SetStatement",
-            "parameters": [],
+            "destination": "greedy_str",
+            "sourceSpan": "line 3, column 5 to line 3, column 40",
+            "arguments": {
+                "greedy_str": {
+                    "CLASS_NAME": "Argument",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@15615099",
+                    "value": "a b c fffffffffffffff g g 0x1238",
+                    "sourceSpan": "line 3, column 9 to line 3, column 40"
+                }
+            },
+            "command": "Command</say [shaberu]>",
+            "CLASS_NAME": "Successful"
+        },
+        {
             "identifier": "main",
             "block": {
+                "sourceSpan": "line 4, column 17 to line 6, column 5",
                 "CLASS_NAME": "Block",
                 "nodes": [
                     {
-                        "command": null,
-                        "CLASS_NAME": "Failure",
                         "destination": "scoreboard",
-                        "sourceSpan": "line 3, column 9 to line 3, column 18",
+                        "sourceSpan": "line 5, column 9 to line 5, column 18",
                         "diagnostics": [
-                            "不明なコマンド名です: scoreboard @line 3, column 9 to line 3, column 18; 
- say 0 @set main() { scoreboard players set @s a 1 } 
-                     ^^^^^^^^^^"
-                        ]
+                            "不明なコマンド名です: scoreboard @line 5, column 9 to line 5, column 18; 
+fffffffffff g g 0x1238 @set main() { scoreboard players set @s a 1 } 
+                                     ^^^^^^^^^^"
+                        ],
+                        "command": null,
+                        "CLASS_NAME": "Failure"
                     }
-                ],
-                "sourceSpan": "line 2, column 17 to line 4, column 5"
+                ]
             },
-            "sourceSpan": "line 2, column 6 to line 2, column 15"
+            "sourceSpan": "line 4, column 6 to line 4, column 15",
+            "CLASS_NAME": "SetStatement",
+            "parameters": []
         }
-    ],
-    "sourceSpan": "line 1, column 0 to line 4, column 5"
+    ]
 }
