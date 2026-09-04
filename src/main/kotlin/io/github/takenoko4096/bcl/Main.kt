@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
 import io.github.takenoko4096.bcl.parser.BclParser
@@ -23,6 +24,10 @@ fun main() {
 
         "int_val"(IntegerArgumentType.unlimited()) {
             executable()
+
+            "flg"(BooleanArgumentType()) {
+                executable()
+            }
         }
 
         "string_val"(StringArgumentType.isolated()) {
@@ -51,7 +56,7 @@ fun main() {
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
-        ret 0x12L
+        ret 12 false
     say a b c fffffffffffffff g g 0x1238
     @set main() {
         scoreboard players set @s a 1 
