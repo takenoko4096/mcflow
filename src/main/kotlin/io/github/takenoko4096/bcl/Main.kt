@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.ast.Node
-import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
@@ -21,16 +21,16 @@ fun main() {
 
         aliases("ret")
 
-        "int"(IntegerArgumentType()) {
-            executes()
+        "int_val"(IntegerArgumentType()) {
+            executable()
         }
 
-        "string"(StringArgumentType.isolated()) {
-            executes()
+        "string_val"(StringArgumentType.isolated()) {
+            executable()
         }
 
         "fail" {
-            executes()
+            executable()
         }
     }
 
@@ -39,20 +39,21 @@ fun main() {
 
         aliases("shaberu")
 
-        "string"(StringArgumentType.greedy()) {
-            executes()
+        "greedy_str"(StringArgumentType.word()) {
+            executable()
+
+            "count"(IntegerArgumentType()) {
+                executable()
+            }
         }
     }
 
+    println(dispatcher.getCommand("say")!!.getAllUsages())
+
     val text = """
-    return \
-    fail
-    ret 0
-    ret any
-    
-    @set main {
-        ret 0
-        say i am a me!!!!!!
+    say 0
+    @set main() {
+        scoreboard players set @s a 1 
     }
     """
 

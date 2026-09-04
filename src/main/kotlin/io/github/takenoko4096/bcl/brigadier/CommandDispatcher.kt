@@ -1,7 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier
 
 import io.github.takenoko4096.bcl.ast.Argument
-import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.RootCommandNodeBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
@@ -20,7 +19,7 @@ class CommandDispatcher {
     }
 
     fun register(name: String, configurator: RootCommandNodeBuilder.() -> Unit): Command {
-        val builder = RootCommandNodeBuilder()
+        val builder = RootCommandNodeBuilder(name)
         builder.configurator()
         val cmd = builder.command()
         if (name in commands) {
@@ -48,7 +47,7 @@ class CommandDispatcher {
         val diagnostics: List<Diagnostic>
     )
 
-    fun parse(text: String, reader: TokenSeqReader): CommandLineParseResult {
+    fun parse(reader: TokenSeqReader): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
         val name = reader.read(TokenType.WORD)
@@ -59,8 +58,8 @@ class CommandDispatcher {
                 name,
                 listOf(
                     Diagnostic(
-                        text,
                         "不明なコマンド名です: $name",
+                        reader.sourceCode,
                         start..reader.getPreviousTokenEndPosition()
                     )
                 ),
@@ -75,7 +74,7 @@ class CommandDispatcher {
         )
 
         val potentials = dispatch(
-            text,
+            reader.sourceCode,
             initialState,
             command.root.children
         )
@@ -156,13 +155,41 @@ class CommandDispatcher {
                 potentials += Potential(
                     nextState,
                     listOf(
-                        Diagnostic("引数が正しくありません", text, e.span)
+                        Diagnostic("引数が正しくありません (${e.description})", text, e.span)
                     )
                 )
                 continue
             }
 
-            if (node.children.isEmpty()) {
+            // 2. node自身で終了する可能性
+            if (node.executable) {
+                potentials += Potential(
+                    nextState,
+                    if (candidateReader.isOver()) {
+                        emptyList()
+                    }
+                    else {
+                        listOf(
+                            Diagnostic(
+                                "予期しない引数です: ${candidateReader.peek()}",
+                                candidateReader.sourceCode,
+                                candidateReader.getRemainingSourceSpan()
+                            )
+                        )
+                    }
+                )
+            }
+
+            // 3. さらに子へ進む可能性
+            if (node.children.isNotEmpty()) {
+                potentials += dispatch(
+                    text,
+                    nextState,
+                    node.children
+                )
+            }
+
+            /*if (node.children.isEmpty()) {
                 if (node.executable) {
                     potentials += if (!candidateReader.isOver()) {
                         Potential(
@@ -196,7 +223,7 @@ class CommandDispatcher {
             else {
                 val nextPotentials = dispatch(text, nextState, node.children)
                 potentials += nextPotentials
-            }
+            }*/
         }
 
         return potentials

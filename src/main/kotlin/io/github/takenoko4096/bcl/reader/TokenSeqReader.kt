@@ -1,23 +1,29 @@
 package io.github.takenoko4096.bcl.reader
 
+import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
+import java.util.Arrays
 
 open class TokenSeqReader(
-    protected val text: String,
+    val sourceCode: String,
     protected val tokens: List<Token>,
     private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?) -> BclTokenSeqReadException
 ) {
     var cursor: Int = 0
 
     fun clone(): TokenSeqReader {
-        val cpy = TokenSeqReader(text, tokens, exceptionConstructor)
+        val cpy = TokenSeqReader(sourceCode, tokens, exceptionConstructor)
         cpy.cursor = cursor
         return cpy
+    }
+
+    fun getRemainingSourceSpan(): SourceSpan {
+        return getCurrentTokenStartPosition()..tokens.last().sourceSpan.end
     }
 
     fun isOver(): Boolean {
@@ -162,13 +168,13 @@ open class TokenSeqReader(
         }
         else {
             next()
-            throw exception(start, "$types のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
+            throw exception(start, "${types.contentToString()} のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
         }
     }
 
     fun readIgnoreNewLine(vararg types: TokenType): String {
         if (isOverIgnoreNewLine()) {
-            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、コード外に到達しました")
+            throw exception(peekSafely(-1).sourceSpan, "${types.contentToString()} のうちいずれかのトークンが期待されましたが、コード外に到達しました")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -179,7 +185,7 @@ open class TokenSeqReader(
         }
         else {
             nextIgnoreNewLine()
-            throw exception(start, "$types のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
+            throw exception(start, "${types.contentToString()} のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
         }
     }
 
@@ -192,6 +198,10 @@ open class TokenSeqReader(
     }
 
     fun readInteger(): Int {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan.end, "整数が期待されましたが、入力が不足しています")
+        }
+
         val start = getCurrentTokenStartPosition()
 
         val scale: Int
@@ -205,7 +215,7 @@ open class TokenSeqReader(
             }
             else {
                 next()
-                throw exception(start, "整数の解析に失敗しました: 不明なトークンです: $t")
+                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${t.value}'")
             }
 
             next()
@@ -227,7 +237,7 @@ open class TokenSeqReader(
             TokenType.UINT_RAD16 -> u.value.toUInt(16).toInt() * scale
             else -> {
                 next()
-                throw exception(start, "整数の解析に失敗しました: 不明なトークンです: $u")
+                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.value}'")
             }
         }
 
@@ -257,25 +267,60 @@ open class TokenSeqReader(
             "true" -> true
             "false" -> false
             else -> {
-                throw exception(start, "真偽値の解析に失敗しました: 不明なトークンです: $word")
+                throw exception(start, "真偽値の読み取りに失敗しました: 不明なトークンです: $word")
             }
         }
     }
 
     fun readAllRemainingAsString(): String {
-        return tokens.slice(cursor..<tokens.size).reduce { previous, current ->
+        val sliced = tokens.slice(cursor..<tokens.size)
+
+        if (sliced.isEmpty()) {
+            throw exception(peekSafely(-1).sourceSpan, "文字列の読み取りに失敗しました: 入力が不足しています")
+        }
+
+        return sliced.reduce { previous, current ->
             val spacer = " ".repeat(current.sourceSpan.start.index - previous.sourceSpan.end.index - 1)
             Token(-1, TokenType.WORD, previous.value + spacer + current.value, previous.sourceSpan.start..current.sourceSpan.end)
         }.also { cursor = tokens.size }.value
     }
 
     fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenSeqReadException {
-        return exceptionConstructor(message, text, sourceSpan, cause)
+        return exceptionConstructor(message, sourceCode, sourceSpan, cause)
     }
 
     fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenSeqReadException {
-        return exceptionConstructor(message, text, start..getPreviousTokenEndPosition(), cause)
+        return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause)
     }
 
-    fun getTokens2() = tokens
+    protected fun createCommandLineSubReader(): TokenSeqReader {
+        val start = getCurrentTokenStartPosition()
+
+        val tokens = mutableListOf<Token>()
+        var current: Token
+
+        skipNewLine()
+
+        while (!isOver()) {
+            current = peek()
+            next()
+
+            if (current `is` Symbol.ESCAPE && peek() `is` Symbol.NEWLINE) {
+                next()
+                continue
+            }
+
+            if (current `is` Symbol.NEWLINE) {
+                break
+            }
+
+            tokens.add(current)
+        }
+
+        if (tokens.isEmpty()) {
+            throw exception(start, "は？")
+        }
+
+        return TokenSeqReader(sourceCode, tokens,::BclParseException)
+    }
 }

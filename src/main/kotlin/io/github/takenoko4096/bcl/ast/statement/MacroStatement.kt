@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.ast.statement
 
-import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class MacroStatement(

@@ -6,7 +6,7 @@ import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.ast.Label
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.ast.UnaryOperation
-import io.github.takenoko4096.bcl.ast.command.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.ast.expression.AssignmentExpression
 import io.github.takenoko4096.bcl.ast.expression.BinaryExpression
 import io.github.takenoko4096.bcl.ast.expression.Expression
@@ -30,7 +30,7 @@ import io.github.takenoko4096.bcl.tokenizer.TokenType
 import io.github.takenoko4096.bcl.tokenizer.`is`
 
 class BclParser(text: String, tokens: List<Token>, private val dispatcher: CommandDispatcher, private val extension: Boolean) : TokenSeqReader(text, tokens, ::BclParseException) {
-    private fun calculatable(): Expression {
+    private fun expression(): Expression {
         skipNewLine()
         val expr = assignment()
         skipNewLine()
@@ -398,7 +398,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
      */
     private fun group(): Expression {
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
-        val expr = calculatable()
+        val expr = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         return expr
     }
@@ -416,7 +416,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
                 return args
             }
 
-            args.add(calculatable())
+            args.add(expression())
 
             if (peekIgnoreNewLine() `is` Symbol.COMMA) {
                 nextIgnoreNewLine()
@@ -476,43 +476,12 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         }
     }
 
-    private fun singleCommandLineReader(): TokenSeqReader {
-        val start = getCurrentTokenStartPosition()
-
-        val tokens = mutableListOf<Token>()
-        var current: Token
-
-        skipNewLine()
-
-        while (!isOver()) {
-            current = peek()
-            next()
-
-            if (current `is` Symbol.ESCAPE && peek() `is` Symbol.NEWLINE) {
-                next()
-                continue
-            }
-
-            if (current `is` Symbol.NEWLINE) {
-                break
-            }
-
-            tokens.add(current)
-        }
-
-        if (tokens.isEmpty()) {
-            throw exception(start, "は？")
-        }
-
-        return TokenSeqReader(text, tokens,::BclParseException)
-    }
-
-    private fun command(): CommandLineParseResult {
+    private fun command(/*macros: Map<String, String>*/): CommandLineParseResult {
         if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
             nextIgnoreNewLine()
         }
 
-        return dispatcher.parse(text, singleCommandLineReader())
+        return dispatcher.parse(createCommandLineSubReader())
     }
 
     private fun statement(): Statement {
@@ -555,7 +524,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         expectIgnoreNewLine(Keyword.IF)
 
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
-        val cond = calculatable()
+        val cond = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
 
         val thenBlock = if (peekIgnoreNewLine() `is` Symbol.BRACE_START) {
@@ -593,11 +562,13 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         val parameters = mutableListOf<String>()
 
         if (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_START) {
+            nextIgnoreNewLine()
+
             if (peekIgnoreNewLine() `!is` Symbol.PARENTHESIS_END) do {
                 val name = readIgnoreNewLine(TokenType.WORD)
                 parameters.add(name)
             }
-            while (peekIgnoreNewLine() `is` Symbol.COMMA)
+            while ((peekIgnoreNewLine() `is` Symbol.COMMA).also { if (it) nextIgnoreNewLine() })
 
             expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         }
@@ -618,7 +589,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             return ReturnStatement(s..getPreviousTokenEndPosition(), null)
         }
         else if (peek().type != TokenType.SYMBOL || peek().value in Symbol.getExpressionStartableSymbols().map(Symbol::value)) {
-            val expr = calculatable()
+            val expr = expression()
             if (peekIgnoreNewLine() `is` Symbol.SEMICOLON) nextIgnoreNewLine()
             return ReturnStatement(s..getPreviousTokenEndPosition(), expr)
         }
@@ -632,7 +603,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         expectIgnoreNewLine(Keyword.WHILE)
         val label = labelNullable()
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
-        val condition = calculatable()
+        val condition = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
 
         return WhileStatement(s..getPreviousTokenEndPosition(), false, label, condition, block(true))
@@ -645,7 +616,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         val block = block(true)
         expectIgnoreNewLine(Keyword.WHILE)
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
-        val condition = calculatable()
+        val condition = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         requireSeparator()
 

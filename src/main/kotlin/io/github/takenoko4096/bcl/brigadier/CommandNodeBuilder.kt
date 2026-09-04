@@ -22,7 +22,7 @@ sealed class CommandNodeBuilder {
         }
     }
 
-    class RootCommandNodeBuilder : LiteralCommandNodeBuilder() {
+    class RootCommandNodeBuilder(private val name: String) : LiteralCommandNodeBuilder() {
         private var description: String = ""
 
         private var aliases: Set<String> = setOf()
@@ -36,7 +36,7 @@ sealed class CommandNodeBuilder {
         }
 
         fun command(): Command {
-            return Command(description, aliases, build())
+            return Command(name, description, aliases, build())
         }
     }
 
@@ -52,7 +52,7 @@ sealed class CommandNodeBuilder {
         children[this] = argumentCommandNodeBuilderBuilder.build()
     }
 
-    fun executes() {
+    fun executable() {
         executable = true
     }
 

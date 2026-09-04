@@ -11,10 +11,7 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
             Mode.QUOTED -> reader.readQuotedString()
             Mode.UNQUOTABLE -> reader.readUnquotableString()
             Mode.WORD -> reader.readWord()
-            Mode.GREEDY -> {
-                println("span: " + reader.getTokens2().map { it.sourceSpan }.flatMap { listOf(it.start, it.end) }.map { it.index })
-                reader.readAllRemainingAsString()
-            }
+            Mode.GREEDY -> reader.readAllRemainingAsString()
         }
 
         return Argument(this, string, start..reader.getPreviousTokenEndPosition())

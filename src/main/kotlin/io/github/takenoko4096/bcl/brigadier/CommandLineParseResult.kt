@@ -1,9 +1,7 @@
-package io.github.takenoko4096.bcl.ast.command
+package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.ast.Argument
-import io.github.takenoko4096.bcl.brigadier.Command
-import io.github.takenoko4096.bcl.brigadier.Diagnostic
+import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class CommandLineParseResult(sourceSpan: SourceSpan) : Node(sourceSpan) {
