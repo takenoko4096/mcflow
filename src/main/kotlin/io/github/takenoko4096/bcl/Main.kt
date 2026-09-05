@@ -52,7 +52,8 @@ fun main() {
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
-        //ret fail
+        /ret 1.4
+        say i am a pen!!!!!!!!
     """.trimIndent()
 
     val r = JsonReflector(Node::class.java)
@@ -68,10 +69,7 @@ fun main() {
     ).parse()
 
     for (node in parseResult.nodes.filterIsInstance<CommandLineParseResult>()) {
-        when (node) {
-            is CommandLineParseResult.Failure -> println(node.diagnostics)
-            is CommandLineParseResult.Successful -> println(node)
-        }
+        println(node)
     }
 
     val o = r.reflect(parseResult)

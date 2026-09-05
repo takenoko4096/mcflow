@@ -8,6 +8,7 @@ repositories {
 }
 
 dependencies {
+    implementation("io.github.takenoko4096:sungrazer:0.1.0")
     implementation("io.github.takenoko4096:mojangson-bridge:0.2.0")
     implementation(kotlin("reflect"))
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:1.0.0")

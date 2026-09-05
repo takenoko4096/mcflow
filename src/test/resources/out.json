@@ -1,17 +1,33 @@
 {
-    "sourceSpan": "line 1, column 1 to line 1, column 10",
+    "sourceSpan": "line 1, column 1 to line 2, column 22",
+    "CLASS_NAME": "Block",
     "nodes": [
         {
-            "command": null,
+            "command": "Command</return [ret]>",
             "diagnostics": [
-                "コマンド名の読み取りに失敗しました: WORD のトークンが期待されましたが、 SYMBOL のトークン '/' が見つかりました @line 1, column 2; 
-//ret fail
- ^"
+                "引数が正しくありません (整数の読み取りに失敗しました: 不明なトークンです: '1.4'？)
+<int_val: integer> | fail のいずれかが期待されています @line 1, column 6 to line 1, column 8; 
+/ret 1.4;say i am a pen!!!!!!!!
+     ^^^"
             ],
-            "sourceSpan": "line 1, column 2 to line 1, column 10",
-            "destination": null,
+            "arguments": {},
+            "destination": "<int_val: integer>",
+            "sourceSpan": "line 1, column 2 to line 1, column 8",
             "CLASS_NAME": "Failure"
+        },
+        {
+            "destination": "<greedy_str: string>",
+            "sourceSpan": "line 2, column 1 to line 2, column 22",
+            "arguments": {
+                "greedy_str": {
+                    "CLASS_NAME": "Argument",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@4926097b",
+                    "value": "i am a pen!!!!!!!!",
+                    "sourceSpan": "line 2, column 5 to line 2, column 22"
+                }
+            },
+            "command": "Command</say [shaberu]>",
+            "CLASS_NAME": "Successful"
         }
-    ],
-    "CLASS_NAME": "Block"
+    ]
 }

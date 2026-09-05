@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
-import io.github.takenoko4096.bcl.ast.Argument
+import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class IntegerArgumentType(

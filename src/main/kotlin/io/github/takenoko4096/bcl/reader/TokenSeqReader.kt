@@ -275,6 +275,33 @@ open class TokenSeqReader(
         }
     }
 
+    fun readCoordinateComponent(): CoordinateComponent {
+        val start = getCurrentTokenStartPosition()
+        val t = peek()
+
+        when (t.type) {
+            TokenType.FLOAT, TokenType.INT -> {
+                next()
+                return CoordinateComponent.Absolute(t.value.toFloat())
+            }
+            TokenType.COORDINATE_RELATIVE -> {
+                next()
+                return CoordinateComponent.Relative(t.value.toFloat())
+            }
+            TokenType.COORDINATE_LOCAL -> {
+                next()
+                return CoordinateComponent.Local(t.value.toFloat())
+            }
+            else -> {
+                next()
+                throw exception(
+                    start,
+                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.FLOAT}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
+                )
+            }
+        }
+    }
+
     fun readAllRemainingAsString(): String {
         val remainingSpan = getRemainingSourceSpan()
         val string = sourceCode.slice(remainingSpan.start.index..remainingSpan.end.index)

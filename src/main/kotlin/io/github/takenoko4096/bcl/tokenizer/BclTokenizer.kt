@@ -173,8 +173,11 @@ class BclTokenizer(text: String) {
                 tokenOf(TokenType.DOUBLE, sb.toString(), start, end)
             }
             else {
+                cursor--
                 val end = getCurrentSourcePosition()
-                tokenOf(TokenType.DOUBLE, sb.toString(), start, end)
+                cursor++
+                // TODO 下に同じ
+                tokenOf(TokenType.FLOAT, sb.toString(), start, end)
             }
         }
 

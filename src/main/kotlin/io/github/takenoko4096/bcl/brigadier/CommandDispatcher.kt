@@ -42,6 +42,7 @@ class CommandDispatcher {
             return CommandLineParseResult.Failure(
                 null,
                 null,
+                emptyMap(),
                 listOf(
                     BclDiagnostic(
                         "コマンド名の読み取りに失敗しました: ${TokenType.WORD} のトークンが期待されましたが、 ${token.type} のトークン '${token.value}' が見つかりました",
@@ -59,7 +60,8 @@ class CommandDispatcher {
         val command = getCommand(name)
             ?: return CommandLineParseResult.Failure(
                 null,
-                name,
+                null,
+                emptyMap(),
                 listOf(
                     BclDiagnostic(
                         "不明なコマンド名です: $name",
@@ -73,7 +75,7 @@ class CommandDispatcher {
         val initialState = DispatcherParseState(
             reader = reader.clone(),
             arguments = emptyMap(),
-            destination = name,
+            destination = command.root,
             literalCount = 1
         )
 
@@ -98,6 +100,7 @@ class CommandDispatcher {
                 CommandLineParseResult.Failure(
                     command,
                     best.state.destination,
+                    best.state.arguments,
                     best.diagnostics,
                     start..best.state.reader.getPreviousTokenEndPosition()
                 )
@@ -108,7 +111,8 @@ class CommandDispatcher {
 
         return CommandLineParseResult.Failure(
             command,
-            destination = "?",
+            destination = null,
+            emptyMap(),
             diagnostics,
             start..diagnostics.maxBy { it.sourceSpan.end.index }.sourceSpan.end
         )
@@ -133,7 +137,7 @@ class CommandDispatcher {
             val nextState = DispatcherParseState(
                 candidateReader,
                 candidateArguments,
-                name,
+                node,
                 state.literalCount + if (node is LiteralCommandNode) 1 else 0
             )
 
