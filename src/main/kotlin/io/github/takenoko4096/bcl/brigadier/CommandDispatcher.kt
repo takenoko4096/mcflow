@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.ast.Argument
 import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.RootCommandNodeBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
@@ -35,29 +34,34 @@ class CommandDispatcher {
         return cmd
     }
 
-    private data class ParseState(
-        val reader: TokenSeqReader,
-        val arguments: Map<String, Argument<*>>,
-        val destination: String,
-        val literalCount: Int
-    )
-
-    private data class Potential(
-        val state: ParseState,
-        val diagnostics: List<Diagnostic>
-    )
-
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
-        val name = reader.read(TokenType.WORD)
+        val token = reader.peek()
+        if (token.type != TokenType.WORD) {
+            return CommandLineParseResult.Failure(
+                null,
+                null,
+                listOf(
+                    BclDiagnostic(
+                        "コマンド名の読み取りに失敗しました: ${TokenType.WORD} のトークンが期待されましたが、 ${token.type} のトークン '${token.value}' が見つかりました",
+                        reader.sourceCode,
+                        token.sourceSpan
+                    )
+                ),
+                reader.getRemainingSourceSpan()
+            )
+        }
+
+        reader.next()
+        val name = token.value
 
         val command = getCommand(name)
             ?: return CommandLineParseResult.Failure(
                 null,
                 name,
                 listOf(
-                    Diagnostic(
+                    BclDiagnostic(
                         "不明なコマンド名です: $name",
                         reader.sourceCode,
                         start..reader.getPreviousTokenEndPosition()
@@ -66,7 +70,7 @@ class CommandDispatcher {
                 start..reader.getPreviousTokenEndPosition()
             )
 
-        val initialState = ParseState(
+        val initialState = DispatcherParseState(
             reader = reader.clone(),
             arguments = emptyMap(),
             destination = name,
@@ -110,23 +114,23 @@ class CommandDispatcher {
         )
     }
 
-    private fun selectBest(potentials: List<Potential>): Potential {
+    private fun selectBest(potentials: List<RoutePotential>): RoutePotential {
         return potentials.maxWith(
-            compareBy<Potential> { it.state.reader.isOver() }
+            compareBy<RoutePotential> { it.state.reader.isOver() }
                 .thenBy { it.diagnostics.isEmpty() }
                 .thenBy { it.state.literalCount }
                 .thenBy { it.state.reader.cursor }
         )
     }
 
-    private fun dispatch(text: String, state: ParseState, children: Map<String, CommandNode>): List<Potential> {
-        val potentials = mutableListOf<Potential>()
+    private fun dispatch(text: String, state: DispatcherParseState, children: Map<String, CommandNode>): List<RoutePotential> {
+        val potentials = mutableListOf<RoutePotential>()
 
         for ((name, node) in children) {
             val candidateReader = state.reader.clone()
             val candidateArguments = state.arguments.toMutableMap()
 
-            val nextState = ParseState(
+            val nextState = DispatcherParseState(
                 candidateReader,
                 candidateArguments,
                 name,
@@ -152,25 +156,39 @@ class CommandDispatcher {
                 }
             }
             catch (e: BclTokenSeqReadException) {
-                potentials += Potential(
+                potentials += RoutePotential(
                     nextState,
                     listOf(
-                        Diagnostic("引数が正しくありません (${e.description})", text, e.span)
+                        BclDiagnostic(
+                            """
+                            引数が正しくありません (${e.description}？)
+                            ${
+                                if (children.size == 1) {
+                                    children.values.first().toString() + " が期待されています"
+                                }
+                                else {
+                                    children.map { it.value.toString() }.joinToString(" | ", postfix = " のいずれかが期待されています")
+                                }
+                            }
+                            """.trimIndent(),
+                            text,
+                            e.span
+                        )
                     )
                 )
                 continue
             }
 
-            // 2. node自身で終了する可能性
+            // node自身で終了する可能性
             if (node.executable) {
-                potentials += Potential(
+                potentials += RoutePotential(
                     nextState,
                     if (candidateReader.isOver()) {
                         emptyList()
                     }
                     else {
                         listOf(
-                            Diagnostic(
+                            BclDiagnostic(
                                 "予期しない引数です: ${candidateReader.peek()}",
                                 candidateReader.sourceCode,
                                 candidateReader.getRemainingSourceSpan()
@@ -180,7 +198,7 @@ class CommandDispatcher {
                 )
             }
 
-            // 3. さらに子へ進む可能性
+            // さらに子へ進む可能性
             if (node.children.isNotEmpty()) {
                 potentials += dispatch(
                     text,

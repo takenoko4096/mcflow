@@ -22,7 +22,7 @@ object KeyChar {
     val QUOTE_CHARS = setOf(STRING_QUOTE, SPECIAL_STRING_QUOTE)
     val NUMBER_CHAR_SEQUENCE = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
 
-    const val LINE_COMMENT_SEQUENCE = "//"
+    const val LINE_COMMENT_SEQUENCE = "#"
     const val BLOCK_COMMENT_START_SEQUENCE = "/*"
     const val BLOCK_COMMENT_END_SEQUENCE = "*/"
 
@@ -39,4 +39,10 @@ object KeyChar {
     const val COORDINATE_RELATIVE = '~'
     const val COORDINATE_LOCAL = '^'
     const val MINUS = '-'
+
+    val COMMAND_UNQUOTED_LITERAL_START = "[a-zA-Z_]".toRegex()
+
+    val COMMAND_UNQUOTED_LITERAL_PART = "[a-zA-Z0-9_\\-]".toRegex()
+
+    val COMMAND_UNQUOTED_LITERAL = "^[a-zA-Z_][a-zA-Z0-9_\\-]+$".toRegex()
 }

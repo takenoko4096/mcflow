@@ -19,11 +19,8 @@ class Command(
     private fun getChildrenUsagesOf(node: CommandNode, parent: String): List<String> {
         val usages = mutableListOf<String>()
 
-        for ((key, value) in node.children) {
-            val usage = when (value) {
-                is LiteralCommandNode -> "$parent $key"
-                is ArgumentCommandNode<*> -> "$parent <$key: ${value.type.identifier}>"
-            }
+        for ((_, value) in node.children) {
+            val usage = "$parent $value"
 
             if (value.executable) {
                 usages.add(usage)

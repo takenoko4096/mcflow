@@ -5,7 +5,7 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class CommandLineParseResult(sourceSpan: SourceSpan) : Node(sourceSpan) {
-    class Successful(val command: Command, val destination: String, val arguments: Map<String, Argument<*>>, sourceSpan: SourceSpan) : CommandLineParseResult(sourceSpan)
+    class Successful(val command: Command, val destination: String?, val arguments: Map<String, Argument<*>>, sourceSpan: SourceSpan) : CommandLineParseResult(sourceSpan)
 
-    class Failure(val command: Command?, val destination: String, val diagnostics: List<Diagnostic>, sourceSpan: SourceSpan) : CommandLineParseResult(sourceSpan)
+    class Failure(val command: Command?, val destination: String?, val diagnostics: List<BclDiagnostic>, sourceSpan: SourceSpan) : CommandLineParseResult(sourceSpan)
 }

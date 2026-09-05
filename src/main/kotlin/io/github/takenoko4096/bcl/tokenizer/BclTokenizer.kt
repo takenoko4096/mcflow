@@ -356,7 +356,7 @@ class BclTokenizer(text: String) {
 
         var current = peek()
 
-        if (current.isJavaIdentifierStart()) {
+        if (KeyChar.COMMAND_UNQUOTED_LITERAL_START.matches(current.toString())) {
             sb.append(current)
         }
         else {
@@ -370,7 +370,7 @@ class BclTokenizer(text: String) {
         while (!isOver()) {
             current = peek()
 
-            if (current.isJavaIdentifierPart()) {
+            if (KeyChar.COMMAND_UNQUOTED_LITERAL_PART.matches(current.toString())) {
                 sb.append(current)
                 end = getCurrentSourcePosition()
                 next()

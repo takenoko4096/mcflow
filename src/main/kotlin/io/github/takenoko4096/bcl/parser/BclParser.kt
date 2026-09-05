@@ -477,10 +477,6 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
     }
 
     private fun command(/*macros: Map<String, String>*/): CommandLineParseResult {
-        if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
-            nextIgnoreNewLine()
-        }
-
         return dispatcher.parse(createCommandLineSubReader())
     }
 
@@ -655,7 +651,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         val start = getCurrentTokenStartPosition()
 
         if (isOverIgnoreNewLine()) {
-            throw exception(start, "ブロックが期待されましたが、コード外に到達しました")
+            throw exception(start, "ブロックが期待されましたが、トークンが不足しています")
         }
 
         if (requireBraces) expectIgnoreNewLine(Symbol.BRACE_START)
@@ -687,6 +683,10 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
         val node = if (extension && peekIgnoreNewLine() `is` Symbol.AT) {
             nextIgnoreNewLine()
             statement()
+        }
+        else if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
+            nextIgnoreNewLine()
+            command()
         }
         else if (peekIgnoreNewLine().type == TokenType.WORD) {
             command()

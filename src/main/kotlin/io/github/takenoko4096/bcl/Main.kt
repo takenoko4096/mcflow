@@ -30,10 +30,6 @@ fun main() {
             }
         }
 
-        "string_val"(StringArgumentType.isolated()) {
-            executable()
-        }
-
         "fail" {
             executable()
         }
@@ -56,12 +52,8 @@ fun main() {
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
-        ret 12 false
-    say a b c fffffffffffffff g g 0x1238
-    @set main() {
-        scoreboard players set @s a 1 
-    }
-    """
+        //ret fail
+    """.trimIndent()
 
     val r = JsonReflector(Node::class.java)
 

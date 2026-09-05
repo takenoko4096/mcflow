@@ -1,63 +1,17 @@
 {
+    "sourceSpan": "line 1, column 1 to line 1, column 10",
     "nodes": [
         {
-            "CLASS_NAME": "Successful",
-            "command": "Command</return [ret]>",
-            "arguments": {
-                "int_val": {
-                    "sourceSpan": "line 2, column 13 to line 2, column 14",
-                    "value": 12,
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType@58d25a40",
-                    "CLASS_NAME": "Argument"
-                },
-                "flg": {
-                    "sourceSpan": "line 2, column 16 to line 2, column 20",
-                    "value": false,
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType@6996db8",
-                    "CLASS_NAME": "Argument"
-                }
-            },
-            "sourceSpan": "line 2, column 9 to line 2, column 20",
-            "destination": "flg"
-        },
-        {
-            "CLASS_NAME": "Successful",
-            "command": "Command</say [shaberu]>",
-            "arguments": {
-                "greedy_str": {
-                    "sourceSpan": "line 3, column 9 to line 3, column 40",
-                    "value": "a b c fffffffffffffff g g 0x1238",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@7fbe847c",
-                    "CLASS_NAME": "Argument"
-                }
-            },
-            "sourceSpan": "line 3, column 5 to line 3, column 40",
-            "destination": "greedy_str"
-        },
-        {
-            "identifier": "main",
-            "parameters": [],
-            "CLASS_NAME": "SetStatement",
-            "sourceSpan": "line 4, column 6 to line 4, column 15",
-            "block": {
-                "nodes": [
-                    {
-                        "CLASS_NAME": "Failure",
-                        "command": null,
-                        "diagnostics": [
-                            "不明なコマンド名です: scoreboard @line 5, column 9 to line 5, column 18; 
-fffffffffff g g 0x1238 @set main() { scoreboard players set @s a 1 } 
-                                     ^^^^^^^^^^"
-                        ],
-                        "sourceSpan": "line 5, column 9 to line 5, column 18",
-                        "destination": "scoreboard"
-                    }
-                ],
-                "CLASS_NAME": "Block",
-                "sourceSpan": "line 4, column 17 to line 6, column 5"
-            }
+            "command": null,
+            "diagnostics": [
+                "コマンド名の読み取りに失敗しました: WORD のトークンが期待されましたが、 SYMBOL のトークン '/' が見つかりました @line 1, column 2; 
+//ret fail
+ ^"
+            ],
+            "sourceSpan": "line 1, column 2 to line 1, column 10",
+            "destination": null,
+            "CLASS_NAME": "Failure"
         }
     ],
-    "CLASS_NAME": "Block",
-    "sourceSpan": "line 1, column 1 to line 6, column 5"
+    "CLASS_NAME": "Block"
 }

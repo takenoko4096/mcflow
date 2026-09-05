@@ -23,15 +23,15 @@ abstract class BclException protected constructor(
             val endB = ((i1 + 1) + ERROR_POINTER_SPAN_SIZE).coerceIn(0..text.lastIndex)
 
             val a = text.slice(startA..endA)
-                .replace(KeyChar.LINEBREAK, KeyChar.SPACE)
+                .replace(KeyChar.LINEBREAK, ';')
                 .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
 
             val m = text.slice(i0..i1)
-                .replace(KeyChar.LINEBREAK, KeyChar.SPACE)
+                .replace(KeyChar.LINEBREAK, ';')
                 .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
 
             val b = text.slice(startB..endB)
-                .replace(KeyChar.LINEBREAK, KeyChar.SPACE)
+                .replace(KeyChar.LINEBREAK, ';')
                 .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
 
             val area = "$a$m$b\n" + " ".repeat(a.length) + "^".repeat(m.length)

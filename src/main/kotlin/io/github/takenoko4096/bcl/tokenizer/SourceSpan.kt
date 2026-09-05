@@ -8,7 +8,7 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     }
 
     override fun toString(): String {
-        return "$start to $end"
+        return if (start == end) start.toString() else "$start to $end"
     }
 
     fun getStringFromSourceCode(sourceCode: String) = sourceCode.slice(start.index..end.index)
