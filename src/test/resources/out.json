@@ -1,67 +1,68 @@
 {
     "CLASS_NAME": "Block",
+    "sourceSpan": "line 1, column 1 to line 4, column 22",
     "nodes": [
         {
-            "destination": "<int_val: integer>",
-            "sourceSpan": "line 1, column 2 to line 1, column 8",
-            "CLASS_NAME": "Failure",
+            "CLASS_NAME": "Successful",
             "command": "Command</return [ret]>",
-            "diagnostics": [
-                "引数が正しくありません (整数の読み取りに失敗しました: 不明なトークンです: '1.4')
-<int_val: integer> | fail のいずれかが期待されています @line 1, column 6 to line 1, column 8; 
-/ret 1.4;setblock ~ ~ ~ nonminecraft:air;difficulty peace
-     ^^^"
-            ],
-            "arguments": {}
+            "arguments": {
+                "int_val": {
+                    "sourceSpan": "line 1, column 6 to line 1, column 10",
+                    "value": -5.55,
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@33833882",
+                    "CLASS_NAME": "Argument"
+                }
+            },
+            "sourceSpan": "line 1, column 2 to line 1, column 10",
+            "destination": "<int_val: float>"
         },
         {
+            "CLASS_NAME": "Failure",
+            "sourceSpan": "line 2, column 1 to line 2, column 34",
+            "destination": "<id: block_type>",
             "arguments": {
                 "pos": {
-                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
-                    "sourceSpan": "line 2, column 10 to line 2, column 14",
-                    "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@48cf768c"
-                },
-                "id": {
-                    "value": "NamespacedIdentifier(namespace=nonminecraft, value=air)",
-                    "sourceSpan": "line 2, column 15 to line 2, column 31",
-                    "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.IdentifierArgument@59f95c5d"
+                    "sourceSpan": "line 2, column 10 to line 2, column 17",
+                    "value": "Coordinate(~0.0 ~0.0 ~0.1)",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@368239c8",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</setblock>",
-            "CLASS_NAME": "Successful",
-            "destination": "<id: identifier>",
-            "sourceSpan": "line 2, column 1 to line 2, column 31"
+            "diagnostics": [
+                "引数が正しくありません (block_type として無効な識別子です: nonminecraft:air)
+<id: block_type> が期待されています @line 2, column 19 to line 2, column 34; 
+/ret -5.55;setblock ~ ~ ~0.1 nonminecraft:air;difficulty peaceful;say i am a pen!!!!!!!!
+                             ^^^^^^^^^^^^^^^^"
+            ],
+            "command": "Command</setblock>"
         },
         {
+            "CLASS_NAME": "Successful",
+            "command": "Command</difficulty>",
             "arguments": {
                 "mode": {
-                    "value": "PEACEFUL",
                     "sourceSpan": "line 3, column 12 to line 3, column 19",
-                    "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@5ccd43c2"
+                    "value": "PEACEFUL",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@16f65612",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</difficulty>",
-            "CLASS_NAME": "Successful",
-            "destination": "<mode: enum>",
-            "sourceSpan": "line 3, column 1 to line 3, column 19"
+            "sourceSpan": "line 3, column 1 to line 3, column 19",
+            "destination": "<mode: enum>"
         },
         {
+            "CLASS_NAME": "Successful",
+            "command": "Command</say [shaberu]>",
             "arguments": {
                 "greedy_str": {
-                    "value": "i am a pen!!!!!!!!",
                     "sourceSpan": "line 4, column 5 to line 4, column 22",
-                    "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@4aa8f0b4"
+                    "value": "i am a pen!!!!!!!!",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@311d617d",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</say [shaberu]>",
-            "CLASS_NAME": "Successful",
-            "destination": "<greedy_str: string>",
-            "sourceSpan": "line 4, column 1 to line 4, column 22"
+            "sourceSpan": "line 4, column 1 to line 4, column 22",
+            "destination": "<greedy_str: string>"
         }
-    ],
-    "sourceSpan": "line 1, column 1 to line 4, column 22"
+    ]
 }

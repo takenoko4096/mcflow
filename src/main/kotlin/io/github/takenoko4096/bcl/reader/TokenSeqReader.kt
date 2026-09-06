@@ -217,37 +217,17 @@ open class TokenSeqReader(
 
         val start = getCurrentTokenStartPosition()
 
-        val scale: Int
-        val t = peek()
-        if (t.type == TokenType.SYMBOL) {
-            scale = if (t `is` Symbol.PLUS) {
-                1
-            }
-            else if (t `is` Symbol.MINUS) {
-                -1
-            }
-            else {
-                next()
-                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${t.value}'")
-            }
-
-            next()
-        }
-        else {
-            scale = 1
-        }
-
         val u = peek()
 
         val v = when (u.type) {
-            TokenType.INT_RAD2 -> u.value.toInt(2) * scale
-            TokenType.INT_RAD8 -> u.value.toInt(8) * scale
-            TokenType.INT -> u.value.toInt() * scale
-            TokenType.INT_RAD16 -> u.value.toInt(16) * scale
-            TokenType.UINT_RAD2 -> u.value.toUInt(2).toInt() * scale
-            TokenType.UINT_RAD8 -> u.value.toUInt(8).toInt() * scale
-            TokenType.UINT -> u.value.toUInt().toInt() * scale
-            TokenType.UINT_RAD16 -> u.value.toUInt(16).toInt() * scale
+            TokenType.INT_RAD2 -> u.value.toInt(2)
+            TokenType.INT_RAD8 -> u.value.toInt(8)
+            TokenType.INT -> u.value.toInt()
+            TokenType.INT_RAD16 -> u.value.toInt(16)
+            TokenType.UINT_RAD2 -> u.value.toUInt(2).toInt()
+            TokenType.UINT_RAD8 -> u.value.toUInt(8).toInt()
+            TokenType.UINT -> u.value.toUInt().toInt()
+            TokenType.UINT_RAD16 -> u.value.toUInt(16).toInt()
             else -> {
                 next()
                 throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
@@ -261,6 +241,14 @@ open class TokenSeqReader(
         }
 
         return v
+    }
+
+    fun readFloat(): Float {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan.end, "浮動小数点数が期待されましたが、入力が不足しています")
+        }
+
+        return read(TokenType.DECIMAL, TokenType.INT).toFloat()
     }
 
     fun readQuotedString(): String {
@@ -291,50 +279,43 @@ open class TokenSeqReader(
 
     fun readCoordinateComponent(blockCenterCorrection: Boolean = false): CoordinateComponent {
         val start = getCurrentTokenStartPosition()
-        var t = peek()
-        var sign = 1
-
-        if (t `is` Symbol.MINUS) {
-            next()
-            t = peek()
-            sign = -1
-        }
+        val t = peek()
 
         when (t.type) {
             TokenType.INT -> {
                 next()
-                return CoordinateComponent.Absolute(sign * t.value.toFloat() + if (blockCenterCorrection) 0.5f else 0f)
+                return CoordinateComponent.Absolute(t.value.toFloat() + if (blockCenterCorrection) 0.5f else 0f)
             }
-            TokenType.FLOAT -> {
+            TokenType.DECIMAL -> {
                 next()
-                return CoordinateComponent.Absolute(sign * t.value.toFloat())
+                return CoordinateComponent.Absolute(t.value.toFloat())
             }
             TokenType.COORDINATE_RELATIVE -> {
                 next()
-                return CoordinateComponent.Relative(sign * t.value.toFloat())
+                return CoordinateComponent.Relative(t.value.toFloat())
             }
             TokenType.COORDINATE_LOCAL -> {
                 next()
-                return CoordinateComponent.Local(sign * t.value.toFloat())
+                return CoordinateComponent.Local(t.value.toFloat())
             }
             else -> {
                 next()
                 throw exception(
                     start,
-                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.FLOAT}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
+                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.DECIMAL}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
                 )
             }
         }
     }
 
-    fun readNamespacedIdentifier(): NamespacedIdentifier {
+    fun readNamespacedIdentifier(defaultNamespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
         val t = peek()
 
         val value = when (t.type) {
             TokenType.WORD -> {
                 next()
-                NamespacedIdentifier.minecraft(t.value)
+                NamespacedIdentifier(defaultNamespace, t.value)
             }
             TokenType.WITH_COLON -> {
                 next()

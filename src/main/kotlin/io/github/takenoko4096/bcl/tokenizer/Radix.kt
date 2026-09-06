@@ -25,8 +25,9 @@ enum class Radix(val char: Char?, val value: Int) {
             TokenType.LONG -> TokenType.LONG
             TokenType.UINT -> TokenType.UINT
             TokenType.ULONG -> TokenType.ULONG
-            TokenType.FLOAT -> TokenType.FLOAT
-            TokenType.DOUBLE -> TokenType.DOUBLE
+            TokenType.DECIMAL -> TokenType.DECIMAL
+            TokenType.DECIMAL_POSTFIX_FLOAT -> TokenType.DECIMAL_POSTFIX_FLOAT
+            TokenType.DECIMAL_POSTFIX_DOUBLE -> TokenType.DECIMAL_POSTFIX_DOUBLE
             else -> throw IllegalArgumentException(original.toString())
         }
     },

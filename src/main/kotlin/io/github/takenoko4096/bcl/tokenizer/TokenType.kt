@@ -21,8 +21,9 @@ enum class TokenType {
     ULONG,
     ULONG_RAD16,
 
-    FLOAT,
-    DOUBLE,
+    DECIMAL,
+    DECIMAL_POSTFIX_FLOAT,
+    DECIMAL_POSTFIX_DOUBLE,
 
     SINGLE_QUOTED,
     DOUBLE_QUOTED,

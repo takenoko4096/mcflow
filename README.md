@@ -9,7 +9,10 @@
   - `@calculate`, `@define`
 - BedrockBrigadier
   - より多くの `ArgumentType` の実装
-    - `Selector`, `BlockStateMap` `Json`
+    - `AbstractJson`
+    - `Selector`
+    - `BlockProperties`
+    - `RawText`
 
 ## 制約
 

@@ -1,8 +1,12 @@
 package io.github.takenoko4096.bcl.brigadier.value
 
-enum class Difficluty {
+enum class Difficluty : StringRepresentable {
     NORMAL,
     EASY,
     HARD,
-    PEACEFUL
+    PEACEFUL;
+
+    override fun getString(): String {
+        return name.lowercase()
+    }
 }

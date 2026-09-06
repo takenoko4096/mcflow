@@ -21,12 +21,16 @@ class BclTokenizer(text: String) {
     }
 
     private fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenizationException {
-        return BclTokenizationException(message, text, start..getCurrentSourcePosition(), cause)
+        return exception(start..getCurrentSourcePosition(), message, cause)
+    }
+
+    private fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenizationException {
+        return BclTokenizationException(message, text, sourceSpan, cause)
     }
 
     private fun peek(): Char {
         if (isOver()) {
-            throw exception(getCurrentSourcePosition(), "コード外に到達しました")
+            throw exception(getCurrentSourcePosition()..getCurrentSourcePosition(), "コード外に到達しました")
         }
 
         return text[cursor]
@@ -94,6 +98,13 @@ class BclTokenizer(text: String) {
         return SourcePosition(line, cursor - lastLineStartCursor, cursor)
     }
 
+    private fun getSourcePositionAtBack(): SourcePosition {
+        cursor--
+        val p = getCurrentSourcePosition()
+        cursor++
+        return p
+    }
+
     private fun tokenOf(type: TokenType, value: String, start: SourcePosition, end: SourcePosition): Token {
         return Token(id++, type, value, start..end)
     }
@@ -117,11 +128,17 @@ class BclTokenizer(text: String) {
 
     /**
      * 0b, 0o, 0x, s(signed), u(unsigned), b, s, i, l, f, d は邪魔なのでここで削除する
+     * 単項演算子マイナスも含む
      */
     private fun number(): Token {
         val sb = StringBuilder()
 
         val start = getCurrentSourcePosition()
+
+        if (peek() == KeyChar.MINUS) {
+            sb.append(KeyChar.MINUS)
+            next()
+        }
 
         val radix = run {
             if (peek() != KeyChar.NONDECIMAL_MARKER) return@run Radix.DECIMAL
@@ -144,7 +161,8 @@ class BclTokenizer(text: String) {
         val intPart = digits(radix.value)
 
         if (intPart.isEmpty()) {
-            throw exception(start, "空の数値リテラルは無効です")
+            val end = getSourcePositionAtBack()
+            throw exception(start..end, "数字を含まない数値リテラルは無効です")
         }
 
         sb.append(intPart)
@@ -164,27 +182,21 @@ class BclTokenizer(text: String) {
                 // sb.append(peek())
                 val end = getCurrentSourcePosition()
                 next()
-                tokenOf(TokenType.FLOAT, sb.toString(), start, end)
+                tokenOf(TokenType.DECIMAL_POSTFIX_FLOAT, sb.toString(), start, end)
             }
             else if (peek() == NumberType.DOUBLE.char) {
                 // sb.append(peek())
                 val end = getCurrentSourcePosition()
                 next()
-                tokenOf(TokenType.DOUBLE, sb.toString(), start, end)
+                tokenOf(TokenType.DECIMAL_POSTFIX_DOUBLE, sb.toString(), start, end)
             }
             else {
-                cursor--
-                val end = getCurrentSourcePosition()
-                cursor++
-                // TODO 下に同じ
-                tokenOf(TokenType.FLOAT, sb.toString(), start, end)
+                val end = getSourcePositionAtBack()
+                tokenOf(TokenType.DECIMAL, sb.toString(), start, end)
             }
         }
 
-        // TODO ちょっと汚い
-        cursor--
-        var end = getCurrentSourcePosition()
-        cursor++
+        var end = getSourcePositionAtBack()
 
         val suffix1 = peek(0)
         val suffix2 = peek(1)
@@ -262,7 +274,7 @@ class BclTokenizer(text: String) {
         val start = getCurrentSourcePosition()
 
         if (peek() !in KeyChar.QUOTE_CHARS) {
-            throw exception(start, "文字列の初めにはクォートが必要ですが、'${peek()}' が見つかりました")
+            throw exception(start..start, "文字列の初めにはクォートが必要ですが、'${peek()}' が見つかりました")
         }
 
         val quote = peek()
@@ -394,27 +406,17 @@ class BclTokenizer(text: String) {
 
         next()
 
-        if (peek() == KeyChar.MINUS) {
-            val sb = StringBuilder()
-            if (peek() == KeyChar.MINUS) {
-                sb.append(KeyChar.MINUS)
-                next()
+        if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
+            val numToken = number()
+
+            if (numToken.type == TokenType.DECIMAL_POSTFIX_FLOAT || numToken.type == TokenType.DECIMAL_POSTFIX_DOUBLE) {
+                val end = getSourcePositionAtBack()
+                throw exception(start..end, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(text)}'")
             }
 
-            sb.append(number().value)
+            val number = numToken.value
 
-            cursor--
-            val end = getCurrentSourcePosition()
-            cursor++
-
-            return tokenOf(type, sb.toString(), start, end)
-        }
-        else if (peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
-            val number = number().value
-
-            cursor--
-            val end = getCurrentSourcePosition()
-            cursor++
+            val end = getSourcePositionAtBack()
 
             return tokenOf(type, number, start, end)
         }
@@ -424,9 +426,9 @@ class BclTokenizer(text: String) {
     }
 
     private fun token(previous: Token?): Token? {
-        val start = getCurrentSourcePosition()
-
         val result = skipWhitespace()
+
+        val start = getCurrentSourcePosition()
 
         val noSeparator = previous != null
             && previous.type != TokenType.SYMBOL
@@ -446,15 +448,15 @@ class BclTokenizer(text: String) {
 
         if (peek() in KeyChar.QUOTE_CHARS) {
             if (noSeparator) {
-                throw exception(start, "区切りが必要です")
+                throw exception(start..getCurrentSourcePosition(), "区切りが必要です")
             }
 
             return string()
         }
 
-        if (peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
+        if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             if (noSeparator) {
-                throw exception(start, "区切りが必要です")
+                throw exception(start..getCurrentSourcePosition(), "区切りが必要です")
             }
 
             return number()
@@ -487,15 +489,13 @@ class BclTokenizer(text: String) {
         }
 
         if (noSeparator) {
-            throw exception(start, "トークン $previous の直後には区切りが必要です")
+            throw exception(start..getCurrentSourcePosition(), "トークン $previous の直後には区切りが必要です")
         }
 
         val word = word()
         if (testThenAdvance(Symbol.COLON.value)) {
             val value = word()
-            cursor--
-            val end = getCurrentSourcePosition()
-            cursor++
+            val end = getSourcePositionAtBack()
             return tokenOf(TokenType.WITH_COLON, "${word.value}:${value.value}", start, end)
         }
         else {

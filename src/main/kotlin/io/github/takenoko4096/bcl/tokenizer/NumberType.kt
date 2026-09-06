@@ -13,12 +13,12 @@ enum class NumberType(val char: Char) {
     },
     FLOAT('f') {
         override fun default(signed: Boolean): TokenType {
-            return TokenType.FLOAT
+            return TokenType.DECIMAL_POSTFIX_FLOAT
         }
     },
     DOUBLE('d') {
         override fun default(signed: Boolean): TokenType {
-            return TokenType.DOUBLE
+            return TokenType.DECIMAL_POSTFIX_DOUBLE
         }
     };
 

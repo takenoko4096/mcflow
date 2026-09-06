@@ -9,6 +9,6 @@ class ArgumentCommandNode<T>(
     children: Map<String, CommandNode>
 ) : CommandNode(name, executable, children) {
     override fun toString(): String {
-        return "<$name: ${type.identifier}>"
+        return "<$name: ${type.name}>"
     }
 }

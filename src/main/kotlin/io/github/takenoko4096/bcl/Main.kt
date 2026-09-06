@@ -5,14 +5,14 @@ import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.IdentifierArgument
+import io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.json.JsonFile
 import java.io.PrintStream
 
@@ -26,7 +26,7 @@ fun main() {
 
         aliases("ret")
 
-        "int_val"(IntegerArgumentType.unlimited()) {
+        "int_val"(FloatArgumentType.float()) {
             executable()
 
             "flg"(BooleanArgumentType()) {
@@ -55,7 +55,7 @@ fun main() {
 
     dispatcher.register("setblock") {
         "pos"(PositionArgumentType()) {
-            "id"(IdentifierArgument()) {
+            "id"(BlockTypeArgumentType()) {
                 executable()
             }
         }
@@ -70,8 +70,8 @@ fun main() {
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
-        /ret 1.4
-        setblock ~ ~ ~ nonminecraft:air
+        /ret -5.55
+        setblock ~ ~ ~0.1 nonminecraft:air
         difficulty peaceful
         say i am a pen!!!!!!!!
     """.trimIndent()
@@ -96,5 +96,10 @@ fun main() {
 
     f.write(o)
 
-    println(BclTokenizer("execute as@a[tag=a]at@s facing^1^^run tp~1~~2~~true").tokenize().map(Token::value))
+    val s = "execute as@a[tag=a]at@s facing^1^^run tp~-1~~-2~~true"
+    println(
+        BclTokenizer(s)
+            .tokenize()
+            .map { it.sourceSpan.getStringFromSourceCode(s) }
+    )
 }

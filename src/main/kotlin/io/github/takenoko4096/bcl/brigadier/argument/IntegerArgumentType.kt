@@ -8,9 +8,15 @@ class IntegerArgumentType(
     private val signedDecimalOnly: Boolean
 ) : ArgumentType<Int>("integer") {
     override fun parse(reader: TokenSeqReader): Argument<Int> {
-        val s = reader.getCurrentTokenStartPosition()
+        val start = reader.getCurrentTokenStartPosition()
         val i = reader.readInteger(signedDecimalOnly)
-        return Argument(this, i, s..reader.getPreviousTokenEndPosition())
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (range != null && i !in range) {
+            throw reader.exception(start..end, "整数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $i が渡されました")
+        }
+
+        return Argument(this, i, start..end)
     }
 
     companion object {
