@@ -496,7 +496,7 @@ class BclTokenizer(text: String) {
         if (testThenAdvance(Symbol.COLON.value)) {
             val value = word()
             val end = getSourcePositionAtBack()
-            return tokenOf(TokenType.WITH_COLON, "${word.value}:${value.value}", start, end)
+            return tokenOf(TokenType.NAMESPACED, "${word.value}:${value.value}", start, end)
         }
         else {
             return word

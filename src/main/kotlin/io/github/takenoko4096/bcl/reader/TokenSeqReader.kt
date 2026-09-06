@@ -308,7 +308,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readNamespacedIdentifier(defaultNamespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE): NamespacedIdentifier {
+    fun readNamespacedIdentifier(defaultNamespace: String = NamespacedIdentifier.MINECRAFT): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
         val t = peek()
 
@@ -317,7 +317,7 @@ open class TokenSeqReader(
                 next()
                 NamespacedIdentifier(defaultNamespace, t.value)
             }
-            TokenType.WITH_COLON -> {
+            TokenType.NAMESPACED -> {
                 next()
                 val end = getPreviousTokenEndPosition()
                 val array = t.value.split(Symbol.COLON.value)

@@ -1,24 +1,38 @@
 package io.github.takenoko4096.bcl.brigadier.value
 
 class BlockProperties {
-    private val entries = mutableSetOf<Entry<*>>()
+    private val entries = mutableSetOf<BlockProperty.Value<*>>()
 
-    operator fun <T> get(property: BlockProperty<T>): T? {
-        return entries.find { it.property == property }?.value as T?
-    }
-
-    operator fun <T> set(property: BlockProperty<T>, value: T) {
+    /**
+     * @throws IllegalArgumentException
+     */
+    operator fun set(property: BlockProperty<*>, value: BlockProperty.Value<*>) {
         entries.removeIf { it.property == property }
-        entries.add(Entry(property, value))
+        entries.add(value)
     }
 
     override fun toString(): String {
         return "[${entries.joinToString(", ")}]"
     }
 
-    class Entry<T>(val property: BlockProperty<T>, val value: T) {
-        override fun toString(): String {
-            return "$property=$value"
+    operator fun contains(property: BlockProperty<*>): Boolean {
+        return entries.any { it.property == property }
+    }
+
+    companion object {
+        private val properties = mutableSetOf<BlockProperty<*>>()
+
+        val AGE = BlockProperty.integer("age", 0..15)
+
+        init {
+            properties.addAll(listOf(
+                AGE,
+
+            ))
+        }
+
+        fun getProperty(name: String): BlockProperty<*>? {
+            return properties.find { it.name == name }
         }
     }
 }

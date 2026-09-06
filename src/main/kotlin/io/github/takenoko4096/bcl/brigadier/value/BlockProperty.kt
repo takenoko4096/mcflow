@@ -1,32 +1,66 @@
 package io.github.takenoko4096.bcl.brigadier.value
 
 import kotlin.enums.EnumEntries
+import kotlin.enums.enumEntries
 
-sealed class BlockProperty<T>(val identifier: NamespacedIdentifier) {
-    abstract fun validate(value: T): Boolean
-
+sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     override fun hashCode(): Int {
-        return identifier.hashCode()
+        return name.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
         if (other !is BlockProperty<*>) return false
-        return identifier == other.identifier
+        return name == other.name
     }
 
     override fun toString(): String {
-        return identifier.toString()
+        return name
     }
 
-    class BooleanProperty(identifier: NamespacedIdentifier) : BlockProperty<Boolean>(identifier) {
-        override fun validate(value: Boolean) = true
+    abstract fun parse(string: String): Value<T>?
+
+    @ConsistentCopyVisibility
+    data class Value<T> internal constructor(val property: BlockProperty<T>, val value: T) {
+        override fun toString(): String {
+            return "$property=$value"
+        }
     }
 
-    class IntegerProperty(identifier: NamespacedIdentifier, val range: ClosedRange<Int>) : BlockProperty<Int>(identifier) {
-        override fun validate(value: Int) = value in range
+    companion object {
+        fun boolean(name: String): BooleanProperty {
+            return BooleanProperty(name)
+        }
+
+        fun integer(name: String, range: IntRange): IntegerProperty {
+            return IntegerProperty(name, range)
+        }
+
+        inline fun <reified E> enum(name: String): EnumProperty<E> where E : Enum<E>, E : StringRepresentable {
+            return EnumProperty(name, enumEntries<E>())
+        }
     }
 
-    class EnumProperty<E>(identifier: NamespacedIdentifier, val entries: EnumEntries<E>) : BlockProperty<E>(identifier) where E : Enum<E> {
-        override fun validate(value: E) = value in entries
+    class BooleanProperty(name: String) : BlockProperty<Boolean>(name, listOf(true, false)) {
+        override fun parse(string: String) = when (string) {
+            "true" -> true
+            "false" -> false
+            else -> null
+        }?.let { Value(this, it) }
+    }
+
+    class IntegerProperty(name: String, range: IntRange) : BlockProperty<Int>(name, range.toList()) {
+        override fun parse(string: String) = try {
+            val i = string.toInt()
+            if (i in values) i else null
+        }
+        catch (_: NumberFormatException) {
+            null
+        }?.let { Value(this, it) }
+    }
+
+    class EnumProperty<E>(name: String, entries: EnumEntries<E>) : BlockProperty<E>(name, entries) where E : Enum<E>, E : StringRepresentable {
+        override fun parse(string: String) = values
+            .find { it.getString() == string }
+            ?.let { Value(this, it) }
     }
 }
