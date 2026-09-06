@@ -9,7 +9,7 @@
   - `@calculate`, `@define`
 - BedrockBrigadier
   - より多くの `ArgumentType` の実装
-    - `Enum`, `Selector`, `Pos`, `Rot`, `Identifier`
+    - `Selector`, `BlockStateMap` `Json`
 
 ## 制約
 

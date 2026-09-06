@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
-class LiteralCommandNode(
+open class LiteralCommandNode(
     name: String,
     executable: Boolean,
     children: Map<String, CommandNode>

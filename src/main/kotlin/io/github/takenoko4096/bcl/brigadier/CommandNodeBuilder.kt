@@ -12,51 +12,55 @@ sealed class CommandNodeBuilder(protected val name: String) {
     protected var executable = false
 
     init {
-        if (!name.matches(KeyChar.COMMAND_UNQUOTED_LITERAL)) {
-            throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; ${KeyChar.COMMAND_UNQUOTED_LITERAL} に従う必要があります")
+        if (!name.matches(JAVA_IDENTIFIER_STRING_REGEX)) {
+            throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; $JAVA_IDENTIFIER_STRING_REGEX に従う必要があります")
         }
     }
 
-    open class LiteralCommandNodeBuilder(name: String) : CommandNodeBuilder(name) {
+    class LiteralCommandNodeBuilder(name: String, configurator: LiteralCommandNodeBuilder.() -> Unit) : CommandNodeBuilder(name) {
+        init {
+            configurator()
+        }
+
         override fun build(): LiteralCommandNode {
             return LiteralCommandNode(name, executable, children)
         }
     }
 
-    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>) : CommandNodeBuilder(name) {
+    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) : CommandNodeBuilder(name) {
+        init {
+            configurator()
+        }
+
         override fun build(): ArgumentCommandNode<T> {
             return ArgumentCommandNode(name, type, executable, children)
         }
     }
 
-    class RootCommandNodeBuilder(name: String) : LiteralCommandNodeBuilder(name) {
-        private var description: String = ""
+    class CommandBuilder(name: String, configurator: CommandBuilder.() -> Unit) : CommandNodeBuilder(name) {
+        var description: String = ""
 
         private var aliases: Set<String> = setOf()
 
-        fun description(text: String) {
-            description = text
+        init {
+            configurator()
         }
 
         fun aliases(vararg names: String) {
             aliases = names.toSet()
         }
 
-        fun command(): Command {
-            return Command(name, description, aliases, build())
+        override fun build(): Command {
+            return Command(name, description, aliases, executable, children)
         }
     }
 
     operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit) {
-        val literalCommandNodeBuilderBuilder = LiteralCommandNodeBuilder(this)
-        literalCommandNodeBuilderBuilder.configurator()
-        children[this] = literalCommandNodeBuilderBuilder.build()
+        children[this] = LiteralCommandNodeBuilder(this, configurator).build()
     }
 
     operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) {
-        val argumentCommandNodeBuilderBuilder = ArgumentCommandNodeBuilder(this, type)
-        argumentCommandNodeBuilderBuilder.configurator()
-        children[this] = argumentCommandNodeBuilderBuilder.build()
+        children[this] = ArgumentCommandNodeBuilder(this, type, configurator).build()
     }
 
     fun executable() {
@@ -64,4 +68,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
     }
 
     abstract fun build(): CommandNode
+
+    companion object {
+        val JAVA_IDENTIFIER_STRING_REGEX = "^[a-zA-Z_][a-zA-Z0-9_]*$".toRegex()
+    }
 }

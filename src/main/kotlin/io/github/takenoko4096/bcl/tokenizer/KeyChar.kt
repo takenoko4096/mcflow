@@ -39,10 +39,4 @@ object KeyChar {
     const val COORDINATE_RELATIVE = '~'
     const val COORDINATE_LOCAL = '^'
     const val MINUS = '-'
-
-    val COMMAND_UNQUOTED_LITERAL_START = "[a-zA-Z_]".toRegex()
-
-    val COMMAND_UNQUOTED_LITERAL_PART = "[a-zA-Z0-9_\\-]".toRegex()
-
-    val COMMAND_UNQUOTED_LITERAL = "^[a-zA-Z_][a-zA-Z0-9_\\-]+$".toRegex()
 }

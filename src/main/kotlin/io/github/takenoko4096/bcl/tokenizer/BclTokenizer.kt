@@ -359,7 +359,7 @@ class BclTokenizer(text: String) {
 
         var current = peek()
 
-        if (KeyChar.COMMAND_UNQUOTED_LITERAL_START.matches(current.toString())) {
+        if (current.isJavaIdentifierStart()) {
             sb.append(current)
         }
         else {
@@ -373,7 +373,7 @@ class BclTokenizer(text: String) {
         while (!isOver()) {
             current = peek()
 
-            if (KeyChar.COMMAND_UNQUOTED_LITERAL_PART.matches(current.toString())) {
+            if (current.isJavaIdentifierPart()) {
                 sb.append(current)
                 end = getCurrentSourcePosition()
                 next()
@@ -403,13 +403,23 @@ class BclTokenizer(text: String) {
 
             sb.append(number().value)
 
-            return tokenOf(type, sb.toString(), start, getCurrentSourcePosition())
+            cursor--
+            val end = getCurrentSourcePosition()
+            cursor++
+
+            return tokenOf(type, sb.toString(), start, end)
         }
         else if (peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
-            return tokenOf(type, number().value, start, getCurrentSourcePosition())
+            val number = number().value
+
+            cursor--
+            val end = getCurrentSourcePosition()
+            cursor++
+
+            return tokenOf(type, number, start, end)
         }
         else {
-            return tokenOf(type, "0", start, getCurrentSourcePosition())
+            return tokenOf(type, "0", start, start)
         }
     }
 
@@ -480,7 +490,17 @@ class BclTokenizer(text: String) {
             throw exception(start, "トークン $previous の直後には区切りが必要です")
         }
 
-        return word()
+        val word = word()
+        if (testThenAdvance(Symbol.COLON.value)) {
+            val value = word()
+            cursor--
+            val end = getCurrentSourcePosition()
+            cursor++
+            return tokenOf(TokenType.WITH_COLON, "${word.value}:${value.value}", start, end)
+        }
+        else {
+            return word
+        }
     }
 
     fun tokenize(): List<Token> {

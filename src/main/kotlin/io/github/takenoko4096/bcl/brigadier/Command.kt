@@ -1,19 +1,19 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 
 class Command(
-    val name: String,
+    name: String,
     val description: String,
     val aliases: Set<String>,
-    val root: LiteralCommandNode
-) {
+    executable: Boolean,
+    children: Map<String, CommandNode>
+) : LiteralCommandNode(name, executable, children) {
     fun getAllUsages(): List<String> {
         val usage = "/$name" + aliases.joinToString(", ", "[", "]").ifEmpty { "" }
 
-        return getChildrenUsagesOf(root, usage)
+        return getChildrenUsagesOf(this, usage)
     }
 
     private fun getChildrenUsagesOf(node: CommandNode, parent: String): List<String> {
@@ -33,6 +33,11 @@ class Command(
     }
 
     override fun toString(): String {
-        return "Command</$name ${aliases.ifEmpty { "" }}>"
+        return if (aliases.isEmpty()) {
+            "Command</$name>"
+        }
+        else {
+            "Command</$name $aliases>"
+        }
     }
 }

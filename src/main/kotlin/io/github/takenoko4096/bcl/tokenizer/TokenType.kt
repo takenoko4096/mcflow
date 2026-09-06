@@ -33,4 +33,6 @@ enum class TokenType {
 
     COORDINATE_RELATIVE,
     COORDINATE_LOCAL,
+
+    WITH_COLON
 }

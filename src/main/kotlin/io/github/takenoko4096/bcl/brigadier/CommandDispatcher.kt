@@ -1,14 +1,12 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.RootCommandNodeBuilder
+import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.CommandBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.TokenType
-import kotlin.collections.contains
-import kotlin.collections.set
 
 class CommandDispatcher {
     private val commands = mutableMapOf<String, Command>()
@@ -17,21 +15,24 @@ class CommandDispatcher {
         return commands[name]
     }
 
-    fun register(name: String, configurator: RootCommandNodeBuilder.() -> Unit): Command {
-        val builder = RootCommandNodeBuilder(name)
-        builder.configurator()
-        val cmd = builder.command()
+    fun register(name: String, configurator: CommandBuilder.() -> Unit): Command {
+        val command = CommandBuilder(name, configurator).build()
+
         if (name in commands) {
-            throw IllegalArgumentException()
+            throw IllegalArgumentException("コマンド名 '$name' は既に使用されているため登録できません")
         }
-        commands[name] = cmd
-        for (string in cmd.aliases) {
+
+        commands[name] = command
+
+        for (string in command.aliases) {
             if (string in commands) {
-                throw IllegalArgumentException()
+                throw IllegalArgumentException("コマンド名 '$name' は既に使用されているためエイリアスを登録できません")
             }
-            commands[string] = cmd
+
+            commands[string] = command
         }
-        return cmd
+
+        return command
     }
 
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
@@ -57,7 +58,7 @@ class CommandDispatcher {
         reader.next()
         val name = token.value
 
-        val command = getCommand(name)
+        val root = getCommand(name)
             ?: return CommandLineParseResult.Failure(
                 null,
                 null,
@@ -75,14 +76,14 @@ class CommandDispatcher {
         val initialState = DispatcherParseState(
             reader = reader.clone(),
             arguments = emptyMap(),
-            destination = command.root,
+            destination = root,
             literalCount = 1
         )
 
         val potentials = dispatch(
             reader.sourceCode,
             initialState,
-            command.root.children
+            root.children
         )
 
         if (potentials.isNotEmpty()) {
@@ -90,7 +91,7 @@ class CommandDispatcher {
 
             return if (best.diagnostics.isEmpty()) {
                 CommandLineParseResult.Successful(
-                    command,
+                    root,
                     best.state.destination,
                     best.state.arguments,
                     start..best.state.reader.getPreviousTokenEndPosition()
@@ -98,7 +99,7 @@ class CommandDispatcher {
             }
             else {
                 CommandLineParseResult.Failure(
-                    command,
+                    root,
                     best.state.destination,
                     best.state.arguments,
                     best.diagnostics,
@@ -110,7 +111,7 @@ class CommandDispatcher {
         val diagnostics = potentials.flatMap { it.diagnostics }
 
         return CommandLineParseResult.Failure(
-            command,
+            root,
             destination = null,
             emptyMap(),
             diagnostics,
@@ -165,7 +166,7 @@ class CommandDispatcher {
                     listOf(
                         BclDiagnostic(
                             """
-                            引数が正しくありません (${e.description}？)
+                            引数が正しくありません (${e.description})
                             ${
                                 if (children.size == 1) {
                                     children.values.first().toString() + " が期待されています"

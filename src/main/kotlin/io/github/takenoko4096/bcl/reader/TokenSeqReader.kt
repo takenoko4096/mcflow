@@ -1,5 +1,7 @@
 package io.github.takenoko4096.bcl.reader
 
+import io.github.takenoko4096.bcl.brigadier.value.CoordinateComponent
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
@@ -155,8 +157,12 @@ open class TokenSeqReader(
     }
 
     fun read(vararg types: TokenType): String {
+        if (types.isEmpty()) {
+            throw IllegalArgumentException("read() を引数無しで呼び出す馬鹿がどこにいる？")
+        }
+
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、コード外に到達しました")
+            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -167,7 +173,15 @@ open class TokenSeqReader(
         }
         else {
             next()
-            throw exception(start, "${types.contentToString()} のうちいずれかのトークンが期待されましたが、トークンの種類が一致しませんでした: ${current.type} ($current)")
+            throw exception(
+                start,
+                if (types.size == 1) {
+                    "${types.first()} のトークンが期待されましたが、 ${current.type} のトークン '$current' が見つかりました"
+                }
+                else {
+                    "${types.contentToString()} のうちいずれかのトークンが期待されましたが、 ${current.type} のトークン '$current' が見つかりました"
+                }
+            )
         }
     }
 
@@ -275,22 +289,33 @@ open class TokenSeqReader(
         }
     }
 
-    fun readCoordinateComponent(): CoordinateComponent {
+    fun readCoordinateComponent(blockCenterCorrection: Boolean = false): CoordinateComponent {
         val start = getCurrentTokenStartPosition()
-        val t = peek()
+        var t = peek()
+        var sign = 1
+
+        if (t `is` Symbol.MINUS) {
+            next()
+            t = peek()
+            sign = -1
+        }
 
         when (t.type) {
-            TokenType.FLOAT, TokenType.INT -> {
+            TokenType.INT -> {
                 next()
-                return CoordinateComponent.Absolute(t.value.toFloat())
+                return CoordinateComponent.Absolute(sign * t.value.toFloat() + if (blockCenterCorrection) 0.5f else 0f)
+            }
+            TokenType.FLOAT -> {
+                next()
+                return CoordinateComponent.Absolute(sign * t.value.toFloat())
             }
             TokenType.COORDINATE_RELATIVE -> {
                 next()
-                return CoordinateComponent.Relative(t.value.toFloat())
+                return CoordinateComponent.Relative(sign * t.value.toFloat())
             }
             TokenType.COORDINATE_LOCAL -> {
                 next()
-                return CoordinateComponent.Local(t.value.toFloat())
+                return CoordinateComponent.Local(sign * t.value.toFloat())
             }
             else -> {
                 next()
@@ -300,6 +325,34 @@ open class TokenSeqReader(
                 )
             }
         }
+    }
+
+    fun readNamespacedIdentifier(): NamespacedIdentifier {
+        val start = getCurrentTokenStartPosition()
+        val t = peek()
+
+        val value = when (t.type) {
+            TokenType.WORD -> {
+                next()
+                NamespacedIdentifier.minecraft(t.value)
+            }
+            TokenType.WITH_COLON -> {
+                next()
+                val end = getPreviousTokenEndPosition()
+                val array = t.value.split(Symbol.COLON.value)
+                if (array.size != 2) {
+                    throw exception(start..end, "NEVER HAPPENS")
+                }
+                NamespacedIdentifier(array[0], array[1])
+            }
+            else -> {
+                next()
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "識別子の読み取りに失敗しました: 不明なトークンです ($t)")
+            }
+        }
+
+        return value
     }
 
     fun readAllRemainingAsString(): String {

@@ -4,8 +4,12 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.IdentifierArgument
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
+import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.Token
@@ -18,7 +22,7 @@ fun main() {
 
     val dispatcher = CommandDispatcher()
     dispatcher.register("return") {
-        description("return an integer value.")
+        description = "return an integer value."
 
         aliases("ret")
 
@@ -36,7 +40,7 @@ fun main() {
     }
 
     dispatcher.register("say") {
-        description("saying!")
+        description = "say a message"
 
         aliases("shaberu")
 
@@ -49,10 +53,26 @@ fun main() {
         }
     }
 
+    dispatcher.register("setblock") {
+        "pos"(PositionArgumentType()) {
+            "id"(IdentifierArgument()) {
+                executable()
+            }
+        }
+    }
+
+    dispatcher.register("difficulty") {
+        "mode"(EnumArgumentType.of<Difficluty>()) {
+            executable()
+        }
+    }
+
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
     val text = """
         /ret 1.4
+        setblock ~ ~ ~ nonminecraft:air
+        difficulty peaceful
         say i am a pen!!!!!!!!
     """.trimIndent()
 
