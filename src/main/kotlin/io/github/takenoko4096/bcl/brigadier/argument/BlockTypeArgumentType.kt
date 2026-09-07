@@ -11,7 +11,7 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in BlockType.entries) {
-            if (identifier == entry.getIdentifier()) {
+            if (identifier == entry.identifier) {
                 return Argument(this, entry, start..end)
             }
         }

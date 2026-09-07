@@ -11,7 +11,7 @@ class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in ItemType.entries) {
-            if (identifier == entry.getIdentifier()) {
+            if (identifier == entry.identifier) {
                 return Argument(this, entry, start..end)
             }
         }
