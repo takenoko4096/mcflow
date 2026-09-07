@@ -33,7 +33,7 @@ open class TokenSeqReader(
 
     fun peek(): Token {
         if (isOver()) {
-            throw exception(getCurrentTokenStartPosition(), "コード外に到達しました")
+            throw exception(getCurrentTokenStartPosition(), "入力が不足しています")
         }
 
         return tokens[cursor]
@@ -176,10 +176,10 @@ open class TokenSeqReader(
             throw exception(
                 start,
                 if (types.size == 1) {
-                    "${types.first()} のトークンが期待されましたが、 ${current.type} のトークン '$current' が見つかりました"
+                    "${types.first()} のトークンが期待されましたが、 ${current.type} のトークン '${current.value}' が見つかりました"
                 }
                 else {
-                    "${types.contentToString()} のうちいずれかのトークンが期待されましたが、 ${current.type} のトークン '$current' が見つかりました"
+                    "${types.contentToString()} のうちいずれかのトークンが期待されましたが、 ${current.type} のトークン '${current.value}' が見つかりました"
                 }
             )
         }
@@ -248,7 +248,7 @@ open class TokenSeqReader(
             throw exception(peekSafely(-1).sourceSpan.end, "浮動小数点数が期待されましたが、入力が不足しています")
         }
 
-        return read(TokenType.DECIMAL, TokenType.INT).toFloat()
+        return read(TokenType.FLOAT, TokenType.INT).toFloat()
     }
 
     fun readQuotedString(): String {
@@ -286,7 +286,7 @@ open class TokenSeqReader(
                 next()
                 return CoordinateComponent.Absolute(t.value.toFloat() + if (blockCenterCorrection) 0.5f else 0f)
             }
-            TokenType.DECIMAL -> {
+            TokenType.FLOAT -> {
                 next()
                 return CoordinateComponent.Absolute(t.value.toFloat())
             }
@@ -302,7 +302,7 @@ open class TokenSeqReader(
                 next()
                 throw exception(
                     start,
-                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.DECIMAL}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
+                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.FLOAT}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
                 )
             }
         }

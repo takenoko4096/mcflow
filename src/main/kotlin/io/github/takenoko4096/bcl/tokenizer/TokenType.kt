@@ -1,39 +1,31 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-enum class TokenType {
-    INT_RAD2,
-    INT_RAD8,
-    INT,
-    INT_RAD16,
+enum class TokenType(private val description: String) {
+    INT_RAD2("符号付き2進整数"),
+    INT_RAD8("符号付き8進整数"),
+    INT("符号付き10進整数"),
+    INT_RAD16("符号付き16進整数"),
 
-    UINT_RAD2,
-    UINT_RAD8,
-    UINT,
-    UINT_RAD16,
+    UINT_RAD2("符号無し2進整数"),
+    UINT_RAD8("符号無し8進整数"),
+    UINT("符号無し10進整数"),
+    UINT_RAD16("符号無し16進整数"),
 
-    LONG_RAD2,
-    LONG_RAD8,
-    LONG,
-    LONG_RAD16,
+    FLOAT("浮動小数点数"),
 
-    ULONG_RAD2,
-    ULONG_RAD8,
-    ULONG,
-    ULONG_RAD16,
+    SINGLE_QUOTED("シングルクォート文字列"),
+    DOUBLE_QUOTED("ダブルクォート文字列"),
+    BACK_QUOTED("バッククォート文字列"),
+    WORD("クォート無し文字列"),
 
-    DECIMAL,
-    DECIMAL_POSTFIX_FLOAT,
-    DECIMAL_POSTFIX_DOUBLE,
+    SYMBOL("記号"),
 
-    SINGLE_QUOTED,
-    DOUBLE_QUOTED,
-    BACK_QUOTED,
-    WORD,
+    COORDINATE_RELATIVE("相対座標成分"),
+    COORDINATE_LOCAL("ローカル座標成分"),
 
-    SYMBOL,
+    NAMESPACED("名前空間付き識別子");
 
-    COORDINATE_RELATIVE,
-    COORDINATE_LOCAL,
-
-    NAMESPACED
+    override fun toString(): String {
+        return "$name ($description)"
+    }
 }

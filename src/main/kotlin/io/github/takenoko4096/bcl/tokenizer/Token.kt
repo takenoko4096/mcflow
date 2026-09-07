@@ -12,6 +12,6 @@ data class Token(val id: Int, val type: TokenType, val value: String, val source
     }
 
     override fun toString(): String {
-        return "($type) [[ $value ]]"
+        return "(${type.name}) [[ $value ]]"
     }
 }

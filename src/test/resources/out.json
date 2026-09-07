@@ -9,7 +9,7 @@
                 "int_val": {
                     "sourceSpan": "line 1, column 6 to line 1, column 10",
                     "value": -5.55,
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@33833882",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@59f95c5d",
                     "CLASS_NAME": "Argument"
                 }
             },
@@ -18,21 +18,27 @@
         },
         {
             "CLASS_NAME": "Failure",
-            "sourceSpan": "line 2, column 1 to line 2, column 34",
-            "destination": "<id: block_type>",
+            "sourceSpan": "line 2, column 1 to line 2, column 52",
+            "destination": "<properties: block_properties>",
             "arguments": {
-                "pos": {
-                    "sourceSpan": "line 2, column 10 to line 2, column 17",
-                    "value": "Coordinate(~0.0 ~0.0 ~0.1)",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@368239c8",
+                "position": {
+                    "sourceSpan": "line 2, column 10 to line 2, column 14",
+                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@2aae9190",
+                    "CLASS_NAME": "Argument"
+                },
+                "name": {
+                    "sourceSpan": "line 2, column 16 to line 2, column 28",
+                    "value": "AIR",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@2f333739",
                     "CLASS_NAME": "Argument"
                 }
             },
             "diagnostics": [
-                "引数が正しくありません (block_type として無効な識別子です: nonminecraft:air)
-<id: block_type> が期待されています @line 2, column 19 to line 2, column 34; 
-/ret -5.55;setblock ~ ~ ~0.1 nonminecraft:air;difficulty peaceful;say i am a pen!!!!!!!!
-                             ^^^^^^^^^^^^^^^^"
+                "引数が正しくありません (DOUBLE_QUOTED (ダブルクォート文字列) のトークンが期待されましたが、 NAMESPACED (名前空間付き識別子) のトークン 'minecraft:wwww' が見つかりました)
+<properties: block_properties> が期待されています @line 2, column 39 to line 2, column 52; 
+/ret -5.55;setblock ~ ~ ~ minecraft:air[\"age\"=2, minecraft:wwww=4];difficulty peaceful;say i am a pen!!!!!!!!
+                                                 ^^^^^^^^^^^^^^"
             ],
             "command": "Command</setblock>"
         },
@@ -43,7 +49,7 @@
                 "mode": {
                     "sourceSpan": "line 3, column 12 to line 3, column 19",
                     "value": "PEACEFUL",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@16f65612",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@4cc77c2e",
                     "CLASS_NAME": "Argument"
                 }
             },
@@ -57,7 +63,7 @@
                 "greedy_str": {
                     "sourceSpan": "line 4, column 5 to line 4, column 22",
                     "value": "i am a pen!!!!!!!!",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@311d617d",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@7a7b0070",
                     "CLASS_NAME": "Argument"
                 }
             },

@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType
@@ -54,9 +55,13 @@ fun main() {
     }
 
     dispatcher.register("setblock") {
-        "pos"(PositionArgumentType()) {
-            "id"(BlockTypeArgumentType()) {
+        "position"(PositionArgumentType()) {
+            "name"(BlockTypeArgumentType()) {
                 executable()
+
+                "properties"(BlockPropertiesArgumentType()) {
+                    executable()
+                }
             }
         }
     }
@@ -71,7 +76,7 @@ fun main() {
 
     val text = """
         /ret -5.55
-        setblock ~ ~ ~0.1 nonminecraft:air
+        setblock ~ ~ ~ minecraft:air["age"=2, minecraft:wwww=4]
         difficulty peaceful
         say i am a pen!!!!!!!!
     """.trimIndent()

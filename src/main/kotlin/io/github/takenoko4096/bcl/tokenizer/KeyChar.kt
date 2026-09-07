@@ -7,7 +7,7 @@ object KeyChar {
     const val LINEBREAK = '\n'
 
     const val DECIMAL_POINT = '.'
-    const val NONDECIMAL_MARKER = '0'
+    const val ZERO = '0'
     const val EXPONENTIAL = 'e'
 
     const val SIGNED = 's'

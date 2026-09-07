@@ -141,7 +141,7 @@ class BclTokenizer(text: String) {
         }
 
         val radix = run {
-            if (peek() != KeyChar.NONDECIMAL_MARKER) return@run Radix.DECIMAL
+            if (peek() != KeyChar.ZERO) return@run Radix.DECIMAL
 
             for (entry in Radix.entries) {
                 if (peek(1) == null) return@run Radix.DECIMAL
@@ -178,87 +178,31 @@ class BclTokenizer(text: String) {
             next()
             sb.append(digits(10))
 
-            return if (peek() == NumberType.FLOAT.char) {
-                // sb.append(peek())
-                val end = getCurrentSourcePosition()
-                next()
-                tokenOf(TokenType.DECIMAL_POSTFIX_FLOAT, sb.toString(), start, end)
-            }
-            else if (peek() == NumberType.DOUBLE.char) {
-                // sb.append(peek())
-                val end = getCurrentSourcePosition()
-                next()
-                tokenOf(TokenType.DECIMAL_POSTFIX_DOUBLE, sb.toString(), start, end)
-            }
-            else {
-                val end = getSourcePositionAtBack()
-                tokenOf(TokenType.DECIMAL, sb.toString(), start, end)
-            }
+            val end = getSourcePositionAtBack()
+            return tokenOf(TokenType.FLOAT, sb.toString(), start, end)
         }
 
         var end = getSourcePositionAtBack()
 
-        val suffix1 = peek(0)
-        val suffix2 = peek(1)
-
+        val suffix = peek()
         var signed = true
-        var type = NumberType.INT
-        var isEndWithValidTypeSuffix = false
-
-        for (numberType in NumberType.entries) {
-            if (suffix1 in setOf(KeyChar.SIGNED, KeyChar.UNSIGNED) && suffix2 == numberType.char) {
-                type = numberType
-
-                suffix1!!
-
-                if (!suffix1.isJavaIdentifierStart()) {
-                    break
-                }
-
-                signed = when (suffix1) {
-                    KeyChar.SIGNED -> true
-                    KeyChar.UNSIGNED -> false
-                    else -> {
-                        throw exception(start, "${KeyChar.SIGNED}/${KeyChar.UNSIGNED} が期待されましたが、無効な数値接尾辞が検出されました: '$suffix1'")
-                    }
-                }
-
-                // sb.append(peek())
-                end = getCurrentSourcePosition()
-                next()
-                isEndWithValidTypeSuffix = true
-                break
+        if (suffix in setOf(KeyChar.SIGNED, KeyChar.UNSIGNED)) {
+            when (suffix) {
+                KeyChar.SIGNED -> signed = true
+                KeyChar.UNSIGNED -> signed = false
             }
-            else if (suffix1?.lowercaseChar() == numberType.char) {
-                if (suffix2?.isJavaIdentifierPart() == true) {
-                    next()
-                    throw exception(start, "無効な数値接尾辞です: $suffix2")
-                }
 
-                type = numberType
-                signed = true
-                isEndWithValidTypeSuffix = true
-                break
-            }
+            next()
         }
 
-        val tokenType = try {
-            val type = radix.apply(type.default(signed))
-
-            if (isEndWithValidTypeSuffix) {
-                // sb.append(peek())
-                end = getCurrentSourcePosition()
-                next()
-            }
-
-            type
-        }
-        catch (error: IllegalArgumentException) {
-            throw exception(start, "基数が ${radix.value} の数値リテラルに型接尾辞 '${type.char}' は付与できません", error)
+        if (sb.startsWith(KeyChar.MINUS) && !signed) {
+            end = getCurrentSourcePosition()
+            next()
+            throw exception(start..end, "符号無し整数に負の符号が付いています")
         }
 
         return tokenOf(
-            tokenType,
+            radix.apply(signed),
             sb.toString(),
             start,
             end
@@ -409,7 +353,7 @@ class BclTokenizer(text: String) {
         if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             val numToken = number()
 
-            if (numToken.type == TokenType.DECIMAL_POSTFIX_FLOAT || numToken.type == TokenType.DECIMAL_POSTFIX_DOUBLE) {
+            if (numToken.type == TokenType.UINT) {
                 val end = getSourcePositionAtBack()
                 throw exception(start..end, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(text)}'")
             }
@@ -421,7 +365,7 @@ class BclTokenizer(text: String) {
             return tokenOf(type, number, start, end)
         }
         else {
-            return tokenOf(type, "0", start, start)
+            return tokenOf(type, KeyChar.ZERO.toString(), start, start)
         }
     }
 
