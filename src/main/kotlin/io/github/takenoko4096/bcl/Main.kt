@@ -11,9 +11,9 @@ import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
-import io.github.takenoko4096.bcl.brigadier.value.BlockProperties
-import io.github.takenoko4096.bcl.brigadier.value.BlockType
-import io.github.takenoko4096.bcl.brigadier.value.Coordinate
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer

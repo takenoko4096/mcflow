@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl.brigadier.value
+package io.github.takenoko4096.bcl.brigadier.value.location
 
 sealed class Coordinate(
     val x: CoordinateComponent,

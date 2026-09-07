@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl.brigadier.value
+package io.github.takenoko4096.bcl.brigadier.value.block
 
 class BlockProperties : Iterable<BlockProperty.Value<*>> {
     private val entries = mutableSetOf<BlockProperty.Value<*>>()

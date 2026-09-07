@@ -1,5 +1,6 @@
-package io.github.takenoko4096.bcl.brigadier.value
+package io.github.takenoko4096.bcl.brigadier.value.block
 
+import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 import kotlin.enums.EnumEntries

@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.value.Coordinate
+import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class PositionArgumentType : ArgumentType<Coordinate>("position") {

@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.reader
 
-import io.github.takenoko4096.bcl.brigadier.value.CoordinateComponent
+import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword

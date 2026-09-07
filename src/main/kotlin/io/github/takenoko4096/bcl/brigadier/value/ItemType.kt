@@ -1,7 +1,10 @@
 package io.github.takenoko4096.bcl.brigadier.value
 
-enum class ItemType(private val namespace: String = NamespacedIdentifier.MINECRAFT, private val value: String? = null) : IdentifierRepresentable {
+enum class ItemType(
+    namespace: String = NamespacedIdentifier.MINECRAFT,
+    value: String? = null
+) {
     AIR;
 
-    override fun getIdentifier() = NamespacedIdentifier(namespace, value ?: name.lowercase())
+    val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 }

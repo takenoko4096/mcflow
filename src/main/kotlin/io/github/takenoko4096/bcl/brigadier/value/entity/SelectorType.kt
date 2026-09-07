@@ -1,4 +1,6 @@
-package io.github.takenoko4096.bcl.brigadier.value
+package io.github.takenoko4096.bcl.brigadier.value.entity
+
+import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
 enum class SelectorType(private val string: String) : StringRepresentable {
     P("@p"),

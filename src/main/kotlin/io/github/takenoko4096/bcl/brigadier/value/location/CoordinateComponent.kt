@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl.brigadier.value
+package io.github.takenoko4096.bcl.brigadier.value.location
 
 sealed class CoordinateComponent(val value: Float) {
     sealed class World(value: Float) : CoordinateComponent(value)

@@ -1,8 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.value.CoordinateComponent
-import io.github.takenoko4096.bcl.brigadier.value.Rotation
+import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
+import io.github.takenoko4096.bcl.brigadier.value.location.Rotation
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class RotationArgumentType : ArgumentType<Rotation>("rotation") {

@@ -1,11 +1,10 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.value.BlockProperties
-import io.github.takenoko4096.bcl.brigadier.value.BlockProperty
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
-import io.github.takenoko4096.bcl.tokenizer.TokenType
 
 class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_properties") {
     override fun parse(reader: TokenSeqReader): Argument<BlockProperties> {

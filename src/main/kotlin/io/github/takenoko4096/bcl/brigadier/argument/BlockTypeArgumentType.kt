@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.value.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
