@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.block
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
 enum class BlockType(
-    namespace: String = NamespacedIdentifier.MINECRAFT,
+    namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE,
     value: String? = null,
     private val properties: Set<BlockProperty<*>> = setOf()
 ) {

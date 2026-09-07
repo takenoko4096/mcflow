@@ -2,14 +2,73 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
-enum class SelectorType(private val string: String) : StringRepresentable {
-    P("@p"),
-    A("@a"),
-    R("@r"),
-    S("@s"),
-    E("@e"),
-    N("@n"),
-    INITIATOR("@initiator");
+enum class SelectorType(
+    private val string: String,
+    val aliveOnly: Boolean,
+    val isPlayer: Boolean,
+    val defaultSortOrder: SelectorSortOrder,
+    val defaultArguments: SelectorArguments,
+    val argumentsOverridable: Boolean
+) : StringRepresentable {
+    P(
+        "@p",
+        aliveOnly = true,
+        isPlayer = true,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments { c = 1 },
+        argumentsOverridable = true
+    ),
+    A(
+        "@a",
+        aliveOnly = false,
+        isPlayer = true,
+        defaultSortOrder = SelectorSortOrder.RANDOM,
+        defaultArguments = SelectorArguments { c = 1 },
+        argumentsOverridable = true
+    ),
+    R(
+        "@r",
+        aliveOnly = true,
+        isPlayer = false,
+        defaultSortOrder = SelectorSortOrder.RANDOM,
+        defaultArguments = SelectorArguments {
+            c = 1
+            type += InvertibleValue(false, EntityType.PLAYER)
+        },
+        argumentsOverridable = true
+    ),
+    S(
+        "@s",
+        aliveOnly = false,
+        isPlayer = false,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments { c = 1 },
+        argumentsOverridable = false
+    ),
+    E(
+        "@e",
+        aliveOnly = true,
+        isPlayer = false,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments {},
+        argumentsOverridable = true
+    ),
+    N(
+        "@n",
+        aliveOnly = true,
+        isPlayer = false,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments { c = 1 },
+        argumentsOverridable = true
+    ),
+    INITIATOR(
+        "@initiator",
+        aliveOnly = false,
+        isPlayer = false,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments {},
+        argumentsOverridable = true
+    );
 
     override fun getString(): String {
         return string

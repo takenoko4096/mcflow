@@ -80,7 +80,7 @@ fun main() {
 
                         for ((property, _) in properties.value) {
                             if (!blockType.hasProperty(property)) {
-                                throw exception(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.getIdentifier()}' に存在しません")
+                                throw exception(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.identifier}' に存在しません")
                             }
                         }
                     }

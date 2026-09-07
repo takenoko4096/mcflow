@@ -1,8 +1,14 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
-class EntitySelector {
-    sealed class OptionState
+class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
+    val isSingle: Boolean
 
-    class SetOnceOptionState : OptionState()
-    class InvertibleSetOptionState : OptionState()
+    init {
+        isSingle = if (type.argumentsOverridable) {
+            arguments.c ?: type.defaultArguments.c
+        }
+        else {
+            type.defaultArguments.c
+        } == 1
+    }
 }

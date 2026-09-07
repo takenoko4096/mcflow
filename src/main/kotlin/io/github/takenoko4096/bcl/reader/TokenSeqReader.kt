@@ -308,14 +308,14 @@ open class TokenSeqReader(
         }
     }
 
-    fun readNamespacedIdentifier(defaultNamespace: String = NamespacedIdentifier.MINECRAFT): NamespacedIdentifier {
+    fun readIdentifier(): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
         val t = peek()
 
         val value = when (t.type) {
             TokenType.WORD -> {
                 next()
-                NamespacedIdentifier(defaultNamespace, t.value)
+                NamespacedIdentifier(NamespacedIdentifier.DEFAULT_NAMESPACE, t.value)
             }
             TokenType.NAMESPACED -> {
                 next()

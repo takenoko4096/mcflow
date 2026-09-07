@@ -6,6 +6,6 @@ data class NamespacedIdentifier(val namespace: String, val value: String) {
     }
 
     companion object {
-        const val MINECRAFT = "minecraft"
+        const val DEFAULT_NAMESPACE = "minecraft"
     }
 }
