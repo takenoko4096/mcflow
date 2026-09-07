@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
@@ -10,7 +9,8 @@ sealed class CommandLineParseResult(sourceSpan: SourceSpan) : Node(sourceSpan) {
         val command: Command,
         val destination: CommandNode,
         val arguments: Map<String, Argument<*>>,
-        sourceSpan: SourceSpan
+        sourceSpan: SourceSpan,
+        val resultValue: Any?
     ) : CommandLineParseResult(sourceSpan) {
         override fun toString(): String {
             return "Successful</${command.name} ... $destination> $arguments"

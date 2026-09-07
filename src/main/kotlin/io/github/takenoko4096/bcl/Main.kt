@@ -11,6 +11,9 @@ import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
+import io.github.takenoko4096.bcl.brigadier.value.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.Coordinate
 import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
@@ -28,15 +31,19 @@ fun main() {
         aliases("ret")
 
         "int_val"(FloatArgumentType.float()) {
-            executable()
+            executes { getArgument<Float>("int_val").value }
 
             "flg"(BooleanArgumentType()) {
-                executable()
+                executes {
+                    getArgument<Boolean>("flg").value
+                }
             }
         }
 
         "fail" {
-            executable()
+            executes {
+                "failure!!!"
+            }
         }
     }
 
@@ -46,10 +53,15 @@ fun main() {
         aliases("shaberu")
 
         "greedy_str"(StringArgumentType.greedy()) {
-            executable()
+            executes {
+                getArgument<String>("greedy_str").value
+            }
 
             "count"(IntegerArgumentType.unlimited()) {
-                executable()
+                executes {
+                    val s = getArgument<String>("greedy_str").value
+                    s.repeat(getArgument<Int>("count").value)
+                }
             }
         }
     }
@@ -57,10 +69,21 @@ fun main() {
     dispatcher.register("setblock") {
         "position"(PositionArgumentType()) {
             "name"(BlockTypeArgumentType()) {
-                executable()
+                executes {
+                    "${getValue<Coordinate>("position")} に ${getValue<BlockType>("name")} を設置"
+                }
 
                 "properties"(BlockPropertiesArgumentType()) {
-                    executable()
+                    executes {
+                        val blockType = getValue<BlockType>("name")
+                        val properties = getArgument<BlockProperties>("properties")
+
+                        for ((property, _) in properties.value) {
+                            if (!blockType.hasProperty(property)) {
+                                throw exception(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.getIdentifier()}' に存在しません")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -68,7 +91,9 @@ fun main() {
 
     dispatcher.register("difficulty") {
         "mode"(EnumArgumentType.of<Difficluty>()) {
-            executable()
+            executes {
+                "難易度=${getValue<Difficluty>("mode").getString()}"
+            }
         }
     }
 
@@ -76,7 +101,7 @@ fun main() {
 
     val text = """
         /ret -5.55
-        setblock ~ ~ ~ minecraft:air["age"=2u, minecraft:wwww=4]
+        setblock ~ ~ ~ minecraft:potatoes["growth"=true]
         difficulty peaceful
         say i am a pen!!!!!!!!
     """.trimIndent()

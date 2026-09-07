@@ -1,5 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.value
 
+import io.github.takenoko4096.bcl.tokenizer.Token
+import io.github.takenoko4096.bcl.tokenizer.TokenType
 import kotlin.enums.EnumEntries
 import kotlin.enums.enumEntries
 
@@ -17,7 +19,10 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
         return name
     }
 
-    abstract fun parse(string: String): Value<T>?
+    /**
+     * @throws IllegalArgumentException
+     */
+    abstract fun parse(token: Token): Value<T>
 
     @ConsistentCopyVisibility
     data class Value<T> internal constructor(val property: BlockProperty<T>, val value: T) {
@@ -41,26 +46,50 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     }
 
     class BooleanProperty(name: String) : BlockProperty<Boolean>(name, listOf(true, false)) {
-        override fun parse(string: String) = when (string) {
-            "true" -> true
-            "false" -> false
-            else -> null
-        }?.let { Value(this, it) }
+        override fun parse(token: Token): Value<Boolean> {
+            if (token.type != TokenType.WORD) {
+                throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は真偽値です")
+            }
+
+            val f = when (token.value) {
+                "true" -> true
+                "false" -> false
+                else -> throw IllegalArgumentException("プロパティ $name に渡された値 ${token.value} が正しくありません: 期待される値は ${values.joinToString(" | ")} です")
+            }
+
+            return Value(this, f)
+        }
     }
 
     class IntegerProperty(name: String, range: IntRange) : BlockProperty<Int>(name, range.toList()) {
-        override fun parse(string: String) = try {
-            val i = string.toInt()
-            if (i in values) i else null
+        override fun parse(token: Token): Value<Int> {
+            if (token.type != TokenType.INT) {
+                throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は整数です")
+            }
+
+            val i = token.value.toInt()
+
+            if (i !in values) {
+                throw IllegalArgumentException("プロパティ $name に渡された値 ${token.value} が正しくありません: 期待される値は ${values.joinToString(" | ")} です")
+            }
+
+            return Value(this, i)
         }
-        catch (_: NumberFormatException) {
-            null
-        }?.let { Value(this, it) }
     }
 
     class EnumProperty<E>(name: String, entries: EnumEntries<E>) : BlockProperty<E>(name, entries) where E : Enum<E>, E : StringRepresentable {
-        override fun parse(string: String) = values
-            .find { it.getString() == string }
-            ?.let { Value(this, it) }
+        override fun parse(token: Token): Value<E> {
+            if (token.type != TokenType.DOUBLE_QUOTED) {
+                throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は文字列です")
+            }
+
+            val value = values.find { it.getString() == token.value }
+
+            if (value == null) {
+                throw IllegalArgumentException("プロパティ $name に渡された値 ${token.value} が正しくありません: 期待される値は ${values.joinToString(" | ")} です")
+            }
+
+            return Value(this, value)
+        }
     }
 }

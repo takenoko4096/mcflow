@@ -26,40 +26,29 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
             val name = reader.readQuotedString()
 
             val property = BlockProperties.getProperty(name)
-                ?: throw reader.exception(currentPropertyStart..reader.getPreviousTokenEndPosition(), "プロパティセットの読み取りに失敗しました: 不明なプロパティです: '$name'")
+                ?: throw reader.exception(currentPropertyStart..reader.getPreviousTokenEndPosition(), "プロパティの読み取りに失敗しました: 不明なプロパティです: '$name'")
 
             reader.expect(Symbol.ASSIGN)
 
             val t = reader.peek()
-
-            val expectedTokenType = when (property) {
-                is BlockProperty.BooleanProperty -> TokenType.WORD
-                is BlockProperty.IntegerProperty -> TokenType.INT
-                is BlockProperty.EnumProperty -> TokenType.DOUBLE_QUOTED
-            }
-
-            if (t.type != expectedTokenType) {
-                reader.next()
-                val end = reader.getPreviousTokenEndPosition()
-                throw reader.exception(currentPropertyStart..end, "プロパティセットの読み取りに失敗しました: プロパティ '$name' に対して無効な型です: $t; $expectedTokenType の値が期待されています")
-            }
-
             reader.next()
-            val value: BlockProperty.Value<*> = property.parse(t.value)
-                ?: run {
-                    val end = reader.getPreviousTokenEndPosition()
-                    throw reader.exception(currentPropertyStart..end, "プロパティセットの読み取りに失敗しました: プロパティ '$name' に対して無効なトークンです: '${t.value}'; 期待される値は ${property.values.joinToString(" | ")} です")
-                }
+            val end = reader.getPreviousTokenEndPosition()
+
+            val value: BlockProperty.Value<*> = try {
+                property.parse(t)
+            }
+            catch (error: IllegalArgumentException) {
+                throw reader.exception(currentPropertyStart..end, "プロパティの読み取りに失敗しました: ${error.message!!}; ${property.values.joinToString(" | ")} を渡す必要があります")
+            }
 
             if (property in properties) {
-                val end = reader.getPreviousTokenEndPosition()
-                throw reader.exception(currentPropertyStart..end, "プロパティセットの読み取りに失敗しました: プロパティ '$name' が重複しています")
+                throw reader.exception(currentPropertyStart..end, "プロパティの読み取りに失敗しました: プロパティ '$name' が重複しています")
             }
 
             properties[property] = value
 
             if (reader.isOver()) {
-                throw reader.exception(currentPropertyStart..reader.getPreviousTokenEndPosition(), "プロパティセットが '${Symbol.ARRAY_END.value}' で閉じられていません")
+                throw reader.exception(currentPropertyStart..end, "プロパティリストの読み取りに失敗しました: プロパティリストが '${Symbol.ARRAY_END.value}' で閉じられていません")
             }
             else if (reader.peek() `is` Symbol.ARRAY_END) {
                 reader.next()
@@ -71,7 +60,7 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
             else {
                 reader.next()
                 val end = reader.getPreviousTokenEndPosition()
-                throw reader.exception(currentPropertyStart..end, "プロパティセットの読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
+                throw reader.exception(currentPropertyStart..end, "プロパティの読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
             }
         }
 

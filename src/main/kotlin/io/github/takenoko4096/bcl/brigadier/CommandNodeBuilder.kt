@@ -4,12 +4,11 @@ import io.github.takenoko4096.bcl.brigadier.argument.ArgumentType
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
-import io.github.takenoko4096.bcl.tokenizer.KeyChar
 
 sealed class CommandNodeBuilder(protected val name: String) {
     protected val children = mutableMapOf<String, CommandNode>()
 
-    protected var executable = false
+    protected var executor: (CommandContext.() -> Any?)? = null
 
     init {
         if (!name.matches(JAVA_IDENTIFIER_STRING_REGEX)) {
@@ -23,7 +22,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): LiteralCommandNode {
-            return LiteralCommandNode(name, executable, children)
+            return LiteralCommandNode(name, executor, children)
         }
     }
 
@@ -33,7 +32,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): ArgumentCommandNode<T> {
-            return ArgumentCommandNode(name, type, executable, children)
+            return ArgumentCommandNode(name, type, executor, children)
         }
     }
 
@@ -51,7 +50,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): Command {
-            return Command(name, description, aliases, executable, children)
+            return Command(name, description, aliases, executor, children)
         }
     }
 
@@ -63,8 +62,13 @@ sealed class CommandNodeBuilder(protected val name: String) {
         children[this] = ArgumentCommandNodeBuilder(this, type, configurator).build()
     }
 
-    fun executable() {
-        executable = true
+    fun executes(callback: CommandContext.() -> Any?) {
+        if (executor == null) {
+            executor = callback
+        }
+        else {
+            throw IllegalArgumentException("実行処理を複数書くことはできません")
+        }
     }
 
     abstract fun build(): CommandNode

@@ -90,11 +90,31 @@ class CommandDispatcher {
             val best = selectBest(potentials)
 
             return if (best.diagnostics.isEmpty()) {
+                val context = CommandContext(reader.sourceCode, best.state.arguments)
+
+                val resultValue = try {
+                    best.state.destination.executor!!(context)
+                }
+                catch (error: BclCommandExecutionException) {
+                    return CommandLineParseResult.Failure(
+                        root,
+                        best.state.destination,
+                        best.state.arguments,
+                        listOf(BclDiagnostic(
+                            error.description,
+                            reader.sourceCode,
+                            error.span
+                        )),
+                        start..best.state.reader.getPreviousTokenEndPosition()
+                    )
+                }
+
                 CommandLineParseResult.Successful(
                     root,
                     best.state.destination,
                     best.state.arguments,
-                    start..best.state.reader.getPreviousTokenEndPosition()
+                    start..best.state.reader.getPreviousTokenEndPosition(),
+                    resultValue
                 )
             }
             else {
@@ -185,7 +205,7 @@ class CommandDispatcher {
             }
 
             // node自身で終了する可能性
-            if (node.executable) {
+            if (node.executor != null) {
                 potentials += RoutePotential(
                     nextState,
                     if (candidateReader.isOver()) {

@@ -7,9 +7,9 @@ class Command(
     name: String,
     val description: String,
     val aliases: Set<String>,
-    executable: Boolean,
+    executor: (CommandContext.() -> Any?)?,
     children: Map<String, CommandNode>
-) : LiteralCommandNode(name, executable, children) {
+) : LiteralCommandNode(name, executor, children) {
     fun getAllUsages(): List<String> {
         val usage = "/$name" + aliases.joinToString(", ", "[", "]").ifEmpty { "" }
 
@@ -22,7 +22,7 @@ class Command(
         for ((_, value) in node.children) {
             val usage = "$parent $value"
 
-            if (value.executable) {
+            if (value.executor != null) {
                 usages.add(usage)
             }
 
