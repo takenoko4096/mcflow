@@ -10,7 +10,6 @@ object KeyChar {
     const val ZERO = '0'
     const val EXPONENTIAL = 'e'
 
-    const val SIGNED = 's'
     const val UNSIGNED = 'u'
 
     const val CHAR_QUOTE = '\''

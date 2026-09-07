@@ -186,12 +186,8 @@ class BclTokenizer(text: String) {
 
         val suffix = peek()
         var signed = true
-        if (suffix in setOf(KeyChar.SIGNED, KeyChar.UNSIGNED)) {
-            when (suffix) {
-                KeyChar.SIGNED -> signed = true
-                KeyChar.UNSIGNED -> signed = false
-            }
-
+        if (suffix == KeyChar.UNSIGNED) {
+            signed = false
             next()
         }
 

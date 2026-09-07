@@ -76,7 +76,7 @@ fun main() {
 
     val text = """
         /ret -5.55
-        setblock ~ ~ ~ minecraft:air["age"=2, minecraft:wwww=4]
+        setblock ~ ~ ~ minecraft:air["age"=2u, minecraft:wwww=4]
         difficulty peaceful
         say i am a pen!!!!!!!!
     """.trimIndent()
