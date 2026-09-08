@@ -410,6 +410,17 @@ class BclTokenizer(text: String) {
             return coordinate(KeyChar.COORDINATE_LOCAL, TokenType.COORDINATE_LOCAL)
         }
 
+        if (testThenAdvance(Symbol.AT.value)) {
+            for (symbol in Symbol.entries) {
+                if (test(symbol.value)) {
+                    return tokenOf(Symbol.AT, start, getSourcePositionAtBack())
+                }
+            }
+
+            val word = word()
+            return tokenOf(TokenType.WORD, "${Symbol.AT.value}${word.value}", start, getSourcePositionAtBack())
+        }
+
         a@for (symbol in Symbol.entries.sortedByDescending { it.value.length }) {
             val start = getCurrentSourcePosition()
 

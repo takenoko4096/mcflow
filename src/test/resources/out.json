@@ -1,77 +1,91 @@
 {
+    "sourceSpan": "line 1, column 1 to line 5, column 12",
     "CLASS_NAME": "Block",
     "nodes": [
         {
-            "destination": "<int_val: float>",
-            "sourceSpan": "line 1, column 2 to line 1, column 10",
-            "resultValue": -5.55,
-            "CLASS_NAME": "Successful",
             "command": "Command</return [ret]>",
             "arguments": {
                 "int_val": {
-                    "value": -5.55,
-                    "sourceSpan": "line 1, column 6 to line 1, column 10",
                     "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@c818063"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@35bbe5e8",
+                    "value": -5.55,
+                    "sourceSpan": "line 1, column 6 to line 1, column 10"
                 }
-            }
+            },
+            "destination": "<int_val: float>",
+            "sourceSpan": "line 1, column 2 to line 1, column 10",
+            "resultValue": -5.55,
+            "CLASS_NAME": "Successful"
         },
         {
-            "destination": "<properties: block_properties>",
-            "sourceSpan": "line 2, column 1 to line 2, column 47",
-            "CLASS_NAME": "Failure",
             "command": "Command</setblock>",
-            "diagnostics": [
-                "引数が正しくありません (プロパティの読み取りに失敗しました: プロパティ growth に渡された型 WORD (クォート無し文字列) が正しくありません: 期待される型は整数です; 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 を渡す必要があります)
-<properties: block_properties> が期待されています @line 2, column 35 to line 2, column 47; 
-/ret -5.55;setblock ~ ~ ~ minecraft:potatoes[\"growth\"=true];difficulty peaceful;say i am a pen!!!!!!!!
-                                             ^^^^^^^^^^^^^"
-            ],
             "arguments": {
-                "name": {
-                    "value": "POTATOES",
-                    "sourceSpan": "line 2, column 16 to line 2, column 33",
+                "properties": {
                     "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@4c203ea1"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType@49e4cb85",
+                    "value": [
+                        "growth=1"
+                    ],
+                    "sourceSpan": "line 2, column 34 to line 2, column 45"
                 },
                 "position": {
-                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
-                    "sourceSpan": "line 2, column 10 to line 2, column 14",
                     "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@7c75222b"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@58ceff1",
+                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
+                    "sourceSpan": "line 2, column 10 to line 2, column 14"
+                },
+                "name": {
+                    "CLASS_NAME": "Argument",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@7c30a502",
+                    "value": "POTATOES",
+                    "sourceSpan": "line 2, column 16 to line 2, column 33"
                 }
-            }
+            },
+            "destination": "<properties: block_properties>",
+            "sourceSpan": "line 2, column 1 to line 2, column 45",
+            "resultValue": "kotlin.Unit",
+            "CLASS_NAME": "Successful"
         },
         {
-            "destination": "<mode: enum>",
-            "sourceSpan": "line 3, column 1 to line 3, column 19",
-            "resultValue": "難易度=peaceful",
-            "CLASS_NAME": "Successful",
             "command": "Command</difficulty>",
             "arguments": {
                 "mode": {
-                    "value": "PEACEFUL",
-                    "sourceSpan": "line 3, column 12 to line 3, column 19",
                     "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@48140564"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@3ac3fd8b",
+                    "value": "PEACEFUL",
+                    "sourceSpan": "line 3, column 12 to line 3, column 19"
                 }
-            }
+            },
+            "destination": "<mode: enum>",
+            "sourceSpan": "line 3, column 1 to line 3, column 19",
+            "resultValue": "難易度=peaceful",
+            "CLASS_NAME": "Successful"
         },
         {
-            "destination": "<greedy_str: string>",
-            "sourceSpan": "line 4, column 1 to line 4, column 22",
-            "resultValue": "i am a pen!!!!!!!!",
-            "CLASS_NAME": "Successful",
             "command": "Command</say [shaberu]>",
             "arguments": {
                 "greedy_str": {
-                    "value": "i am a pen!!!!!!!!",
-                    "sourceSpan": "line 4, column 5 to line 4, column 22",
                     "CLASS_NAME": "Argument",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@58ceff1"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@5594a1b5",
+                    "value": "i am a pen!!!!!!!!",
+                    "sourceSpan": "line 4, column 5 to line 4, column 22"
                 }
-            }
+            },
+            "destination": "<greedy_str: string>",
+            "sourceSpan": "line 4, column 1 to line 4, column 22",
+            "resultValue": "i am a pen!!!!!!!!",
+            "CLASS_NAME": "Successful"
+        },
+        {
+            "block": {
+                "sourceSpan": "line 5, column 11 to line 5, column 12",
+                "CLASS_NAME": "Block",
+                "nodes": []
+            },
+            "sourceSpan": "line 5, column 1 to line 5, column 9",
+            "CLASS_NAME": "SetStatement",
+            "parameters": [],
+            "identifier": "main"
         }
-    ],
-    "sourceSpan": "line 1, column 1 to line 4, column 22"
+    ]
 }

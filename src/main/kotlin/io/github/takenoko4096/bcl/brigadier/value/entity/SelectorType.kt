@@ -15,7 +15,7 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = true,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments { c = 1 },
+        defaultArguments = SelectorArguments(c = 1),
         argumentsOverridable = true
     ),
     A(
@@ -23,7 +23,7 @@ enum class SelectorType(
         aliveOnly = false,
         isPlayer = true,
         defaultSortOrder = SelectorSortOrder.RANDOM,
-        defaultArguments = SelectorArguments { c = 1 },
+        defaultArguments = SelectorArguments(c = 1),
         argumentsOverridable = true
     ),
     R(
@@ -31,10 +31,10 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.RANDOM,
-        defaultArguments = SelectorArguments {
-            c = 1
-            type += InvertibleValue(false, EntityType.PLAYER)
-        },
+        defaultArguments = SelectorArguments(
+            c = 1,
+            type = mutableListOf(InvertibleValue.uninverted(EntityType.PLAYER))
+        ),
         argumentsOverridable = true
     ),
     S(
@@ -42,7 +42,7 @@ enum class SelectorType(
         aliveOnly = false,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments { c = 1 },
+        defaultArguments = SelectorArguments(c = 1),
         argumentsOverridable = false
     ),
     E(
@@ -50,7 +50,7 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments {},
+        defaultArguments = SelectorArguments(),
         argumentsOverridable = true
     ),
     N(
@@ -58,7 +58,7 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments { c = 1 },
+        defaultArguments = SelectorArguments(c = 1),
         argumentsOverridable = true
     ),
     INITIATOR(
@@ -66,7 +66,15 @@ enum class SelectorType(
         aliveOnly = false,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments {},
+        defaultArguments = SelectorArguments(),
+        argumentsOverridable = true
+    ),
+    PLAYER(
+        "(player)",
+        aliveOnly = false,
+        isPlayer = true,
+        defaultSortOrder = SelectorSortOrder.DISTANCE,
+        defaultArguments = SelectorArguments(),
         argumentsOverridable = true
     );
 

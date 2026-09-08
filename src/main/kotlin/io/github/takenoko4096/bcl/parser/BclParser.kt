@@ -680,8 +680,7 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             throw exception(peekSafely(-1).sourceSpan.start, "命令のパースに失敗しました: コード外に到達しました")
         }
 
-        val node = if (extension && peekIgnoreNewLine() `is` Symbol.AT) {
-            nextIgnoreNewLine()
+        val node = if (extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
             statement()
         }
         else if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {

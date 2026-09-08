@@ -101,9 +101,10 @@ fun main() {
 
     val text = """
         /ret -5.55
-        setblock ~ ~ ~ minecraft:potatoes["growth"=true]
+        setblock ~ ~ ~ minecraft:potatoes["growth"=1]
         difficulty peaceful
         say i am a pen!!!!!!!!
+        @set main {}
     """.trimIndent()
 
     val r = JsonReflector(Node::class.java)
