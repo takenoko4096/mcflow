@@ -1,106 +1,112 @@
 {
+    "CLASS_NAME": "Block",
     "sourceSpan": "line 1, column 1 to line 6, column 12",
     "nodes": [
         {
+            "CLASS_NAME": "Successful",
+            "resultValue": -5.55,
             "sourceSpan": "line 1, column 2 to line 1, column 10",
             "destination": "<int_val: float>",
             "arguments": {
                 "int_val": {
+                    "sourceSpan": "line 1, column 6 to line 1, column 10",
                     "value": -5.55,
                     "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@17c68925",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 1, column 6 to line 1, column 10"
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</return [ret]>",
-            "CLASS_NAME": "Successful",
-            "resultValue": -5.55
+            "command": "Command</return [ret]>"
         },
         {
+            "CLASS_NAME": "Successful",
+            "resultValue": "kotlin.Unit",
             "sourceSpan": "line 2, column 1 to line 2, column 45",
             "destination": "<properties: block_properties>",
             "arguments": {
-                "name": {
-                    "value": "POTATOES",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@566776ad",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 2, column 16 to line 2, column 33"
-                },
                 "position": {
+                    "sourceSpan": "line 2, column 10 to line 2, column 14",
                     "value": "Coordinate(~0.0 ~0.0 ~0.0)",
                     "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@2f7a2457",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 2, column 10 to line 2, column 14"
+                    "CLASS_NAME": "Argument"
                 },
                 "properties": {
+                    "sourceSpan": "line 2, column 34 to line 2, column 45",
                     "value": [
                         "growth=1"
                     ],
                     "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType@6108b2d7",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 2, column 34 to line 2, column 45"
+                    "CLASS_NAME": "Argument"
+                },
+                "name": {
+                    "sourceSpan": "line 2, column 16 to line 2, column 33",
+                    "value": "POTATOES",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@566776ad",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</setblock>",
-            "CLASS_NAME": "Successful",
-            "resultValue": "kotlin.Unit"
+            "command": "Command</setblock>"
         },
         {
+            "CLASS_NAME": "Successful",
+            "resultValue": "難易度=peaceful",
             "sourceSpan": "line 3, column 1 to line 3, column 19",
             "destination": "<mode: enum>",
             "arguments": {
                 "mode": {
+                    "sourceSpan": "line 3, column 12 to line 3, column 19",
                     "value": "PEACEFUL",
                     "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@6cd8737",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 3, column 12 to line 3, column 19"
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</difficulty>",
-            "CLASS_NAME": "Successful",
-            "resultValue": "難易度=peaceful"
+            "command": "Command</difficulty>"
         },
         {
-            "sourceSpan": "line 4, column 1 to line 4, column 22",
-            "destination": "<greedy_str: string>",
+            "CLASS_NAME": "Successful",
+            "resultValue": "am-i-a-pen?",
+            "sourceSpan": "line 4, column 1 to line 4, column 17",
+            "destination": "<count: integer>",
             "arguments": {
                 "greedy_str": {
-                    "value": "i am a pen!!!!!!!!",
+                    "sourceSpan": "line 4, column 5 to line 4, column 15",
+                    "value": "am-i-a-pen?",
                     "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@22f71333",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 4, column 5 to line 4, column 22"
+                    "CLASS_NAME": "Argument"
+                },
+                "count": {
+                    "sourceSpan": "line 4, column 17",
+                    "value": 1,
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType@13969fbe",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</say [shaberu]>",
-            "CLASS_NAME": "Successful",
-            "resultValue": "i am a pen!!!!!!!!"
+            "command": "Command</say [shaberu]>"
         },
         {
-            "sourceSpan": "line 5, column 1 to line 5, column 41",
+            "CLASS_NAME": "Successful",
+            "resultValue": "ESelectorArguments(c=1, dx=null, dy=null, dz=null, family=[foo.bar-baz?], hasProperty=null, hasItem=[], hasPermission=null, l=null, lm=null, m=null, name=[ff\"ff ], r=null, rm=null, rx=null, rxm=null, ry=null, rym=null, scores=null, tag=[], type=[!PLAYER], x=null, y=null, z=null)",
+            "sourceSpan": "line 5, column 1 to line 5, column 62",
             "destination": "<selc: entity_selector>",
             "arguments": {
                 "selc": {
-                    "value": "ESelectorArguments(c=1, dx=null, dy=null, dz=null, family=[], hasProperty=null, hasItem=[], hasPermission=null, l=null, lm=null, m=null, name=[ff\"ff ], r=null, rm=null, rx=null, rxm=null, ry=null, rym=null, scores=null, tag=[], type=[!PLAYER], x=null, y=null, z=null)",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType@13969fbe",
-                    "CLASS_NAME": "Argument",
-                    "sourceSpan": "line 5, column 5 to line 5, column 41"
+                    "sourceSpan": "line 5, column 5 to line 5, column 62",
+                    "value": "ESelectorArguments(c=1, dx=null, dy=null, dz=null, family=[foo.bar-baz?], hasProperty=null, hasItem=[], hasPermission=null, l=null, lm=null, m=null, name=[ff\"ff ], r=null, rm=null, rx=null, rxm=null, ry=null, rym=null, scores=null, tag=[], type=[!PLAYER], x=null, y=null, z=null)",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType@6aaa5eb0",
+                    "CLASS_NAME": "Argument"
                 }
             },
-            "command": "Command</sel>",
-            "CLASS_NAME": "Successful",
-            "resultValue": "ESelectorArguments(c=1, dx=null, dy=null, dz=null, family=[], hasProperty=null, hasItem=[], hasPermission=null, l=null, lm=null, m=null, name=[ff\"ff ], r=null, rm=null, rx=null, rxm=null, ry=null, rym=null, scores=null, tag=[], type=[!PLAYER], x=null, y=null, z=null)"
+            "command": "Command</sel>"
         },
         {
+            "parameters": [],
+            "CLASS_NAME": "SetStatement",
             "sourceSpan": "line 6, column 1 to line 6, column 9",
             "block": {
+                "CLASS_NAME": "Block",
                 "sourceSpan": "line 6, column 11 to line 6, column 12",
-                "nodes": [],
-                "CLASS_NAME": "Block"
+                "nodes": []
             },
-            "identifier": "main",
-            "parameters": [],
-            "CLASS_NAME": "SetStatement"
+            "identifier": "main"
         }
-    ],
-    "CLASS_NAME": "Block"
+    ]
 }

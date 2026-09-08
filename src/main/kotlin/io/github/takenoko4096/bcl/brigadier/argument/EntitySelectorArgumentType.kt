@@ -104,7 +104,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
 
     private fun family(reader: TokenSeqReader, arguments: SelectorArguments) {
         val inverted = reader.readIsInverted()
-        val string = reader.readUnquotableString()
+        val string = reader.readQuotedOrCommandWord()
         arguments.family.add(InvertibleValue(inverted, string))
     }
 
@@ -121,7 +121,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         val hasPermission = SelectorArguments.HasPermission()
 
         while (true) {
-            val name = reader.readWord()
+            val name = reader.readCommandWord()
             val permission = SelectorArguments.HasPermission.Permission.parse(name)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -130,7 +130,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
 
             reader.expect(Symbol.ASSIGN)
 
-            val flag = reader.readWord()
+            val flag = reader.readCommandWord()
             val state = SelectorArguments.HasPermission.PermissionState.parse(flag)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -163,10 +163,12 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         arguments.hasPermission = hasPermission
     }
 
+    // TODO
     private fun hasProperty(reader: TokenSeqReader, arguments: SelectorArguments) {
 
     }
 
+    // TODO
     private fun hasItem(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
 
@@ -176,7 +178,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             prefix = Symbol.BRACE_START,
             postfix = Symbol.BRACE_END,
             keyParser = {
-                readWord()
+                readCommandWord()
             },
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
@@ -279,7 +281,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             throw reader.exception(start..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません")
         }
 
-        val name = reader.readUnquotableString()
+        val name = reader.readQuotedOrCommandWord()
         arguments.name.add(InvertibleValue(inverted, name))
     }
 
@@ -392,7 +394,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         val scores = SelectorArguments.Scores()
 
         while (true) {
-            val objective = reader.readUnquotableString()
+            val objective = reader.readQuotedOrCommandWord()
             reader.expect(Symbol.ASSIGN)
             val inverted = reader.readIsInverted()
             val range = reader.readIntRange()
@@ -442,7 +444,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             return
         }
 
-        val string = reader.readUnquotableString()
+        val string = reader.readQuotedOrCommandWord()
         arguments.tag.add(InvertibleValue(inverted, string))
     }
 
@@ -513,7 +515,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
 
-            val key = reader.readWord()
+            val key = reader.readCommandWord()
             if (key !in parsers) {
                 val end2 = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: セレクタ引数 '$key' は存在しません")
@@ -537,9 +539,10 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 reader.next()
             }
             else {
+                val p = reader.peek()
                 reader.next()
                 val end2 = reader.getPreviousTokenEndPosition()
-                throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
+                throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: 不明なトークンです: $p")
             }
         }
     }

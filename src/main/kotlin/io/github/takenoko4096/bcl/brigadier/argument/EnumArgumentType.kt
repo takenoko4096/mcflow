@@ -9,7 +9,8 @@ import kotlin.enums.enumEntries
 class EnumArgumentType<E>(private val entries: EnumEntries<E>) : ArgumentType<E>("enum") where E : Enum<E>, E : StringRepresentable {
     override fun parse(reader: TokenSeqReader): Argument<E> {
         val start = reader.getCurrentTokenStartPosition()
-        val word = reader.readWord()
+        // TODO
+        val word = reader.readCommandWord()
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in entries) {

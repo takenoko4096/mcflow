@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
+import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
@@ -255,12 +256,9 @@ open class TokenSeqReader(
         return read(TokenType.DOUBLE_QUOTED)
     }
 
+    // TODO
     fun readWord(): String {
         return read(TokenType.WORD)
-    }
-
-    fun readUnquotableString(): String {
-        return read(TokenType.DOUBLE_QUOTED, TokenType.WORD, TokenType.NAMESPACED)
     }
 
     fun readBool(): Boolean {
@@ -497,5 +495,62 @@ open class TokenSeqReader(
         }
 
         return map
+    }
+
+    fun readCommandWord(): String {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan, "CommandWord の解析に失敗しました: 入力が不足しています")
+        }
+
+        val start = getCurrentTokenStartPosition()
+
+        val startIndex = peek().sourceSpan.start.index
+
+        val secondChar = sourceCode.getOrNull(startIndex + 1)
+
+        if (sourceCode[startIndex] == KeyChar.COLON) {
+            next()
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.COLON}' で開始できません")
+        }
+        else if (sourceCode[startIndex] == KeyChar.MINUS && secondChar != null && secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+            next()
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.MINUS}$secondChar' で開始できません")
+        }
+
+        var index = startIndex
+        while (sourceCode[index] !in KeyChar.COMMAND_WORD_TERMINATORS) {
+            index++
+            if (index >= sourceCode.length) break
+        }
+
+        val string = sourceCode.substring(startIndex, index)
+
+        cursor = tokens.indexOfFirst { it.sourceSpan.start.index >= index }
+
+        if (cursor == -1) {
+            cursor = tokens.size
+        }
+
+        if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
+        }
+
+        return string
+    }
+
+    fun readQuotedOrCommandWord(): String {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan, "Quoted または CommandWord の解析に失敗しました: 入力が不足しています")
+        }
+
+        return if (peek().type == TokenType.DOUBLE_QUOTED) {
+            readQuotedString()
+        }
+        else {
+            readCommandWord()
+        }
     }
 }

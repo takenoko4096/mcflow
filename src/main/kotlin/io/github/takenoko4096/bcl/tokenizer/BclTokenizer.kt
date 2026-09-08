@@ -394,11 +394,7 @@ class BclTokenizer(text: String) {
             return string()
         }
 
-        if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
-            if (noSeparator) {
-                throw exception(start..getCurrentSourcePosition(), "区切りが必要です")
-            }
-
+        if ((peek() == KeyChar.MINUS && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             return number()
         }
 
