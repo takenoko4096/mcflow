@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
+import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorType
@@ -12,24 +13,329 @@ import io.github.takenoko4096.bcl.tokenizer.TokenType
 
 class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector") {
     private val parsers: Map<String, TokenSeqReader.(SelectorArguments) -> Unit> = mapOf(
+        "c" to ::c,
+        "dx" to ::dx,
+        "dy" to ::dy,
+        "dz" to ::dz,
+        "family" to ::family,
+        "haspermission" to ::hasPermission,
+        "l" to ::l,
+        "lm" to ::lm,
+        "m" to ::m,
+        "name" to ::name,
+        "r" to ::r,
+        "rm" to ::rm,
+        "rx" to ::rx,
+        "rxm" to ::rxm,
+        "ry" to ::ry,
+        "rym" to ::rym,
+        "scores" to ::scores,
+        "tag" to ::tag,
         "type" to ::type
     )
+
+    private fun TokenSeqReader.readIsInverted(): Boolean {
+        return if (peek() `is` Symbol.LOGICAL_NOT) {
+            next()
+            true
+        }
+        else false
+    }
+
+    private fun c(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val c = reader.readInteger()
+
+        if (arguments.c != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'c' の読み取りに失敗しました: セレクタ引数 c は重複できません")
+        }
+
+        if (c == 0) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'c' の読み取りに失敗しました: セレクタ引数 c は 0以外の整数が有効です")
+        }
+
+        arguments.c = c
+    }
+
+    private fun dx(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val dx = reader.readFloat()
+
+        if (arguments.dx != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'dx' の読み取りに失敗しました: セレクタ引数 dx は重複できません")
+        }
+
+        arguments.dx = dx
+    }
+
+    private fun dy(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val dy = reader.readFloat()
+
+        if (arguments.dy != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'dy' の読み取りに失敗しました: セレクタ引数 dy は重複できません")
+        }
+
+        arguments.dy = dy
+    }
+
+    private fun dz(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val dz = reader.readFloat()
+
+        if (arguments.dz != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'dz' の読み取りに失敗しました: セレクタ引数 dz は重複できません")
+        }
+
+        arguments.dz = dz
+    }
+
+    private fun family(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val inverted = reader.readIsInverted()
+        val string = reader.readUnquotableString()
+        arguments.family.add(InvertibleValue(inverted, string))
+    }
+
+    private fun hasPermission(reader: TokenSeqReader, arguments: SelectorArguments) {
+        // TODO
+    }
+
+    private fun l(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val l = reader.readInteger()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.l != null) {
+            throw reader.exception(start..end, "セレクタ引数 'l' の読み取りに失敗しました: セレクタ引数 l は重複できません")
+        }
+
+        if (l < 0) {
+            throw reader.exception(start..end, "セレクタ引数 'l' の読み取りに失敗しました: 負のレベルを条件にすることはできません")
+        }
+
+        arguments.l = l
+    }
+
+    private fun lm(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val lm = reader.readInteger()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.lm != null) {
+            throw reader.exception(start..end, "セレクタ引数 'lm' の読み取りに失敗しました: セレクタ引数 lm は重複できません")
+        }
+
+        if (lm < 0) {
+            throw reader.exception(start..end, "セレクタ引数 'lm' の読み取りに失敗しました: 負のレベルを条件にすることはできません")
+        }
+
+        arguments.lm = lm
+    }
+
+    private fun m(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val t = reader.peek()
+        val gameMode = GameMode.parse(t)
+            ?: run {
+                val end = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: ゲームモード '${t.value}' は存在しません")
+            }
+
+        if (arguments.m != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: セレクタ引数 m は \"\"否定であっても\"\" 重複できません")
+        }
+
+        arguments.m = gameMode
+    }
+
+    private fun name(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        val inverted = reader.readIsInverted()
+
+        if (!inverted && arguments.name.any { !it.inverted }) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません")
+        }
+
+        val name = reader.readUnquotableString()
+        arguments.name.add(InvertibleValue(inverted, name))
+    }
+
+    private fun r(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val r = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.r != null) {
+            throw reader.exception(start..end, "セレクタ引数 'r' の読み取りに失敗しました: セレクタ引数 r は重複できません")
+        }
+
+        if (r < 0) {
+            throw reader.exception(start..end, "セレクタ引数 'r' の読み取りに失敗しました: 半径を負の値にすることはできません")
+        }
+
+        arguments.r = r
+    }
+
+    private fun rm(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val rm = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.rm != null) {
+            throw reader.exception(start..end, "セレクタ引数 'rm' の読み取りに失敗しました: セレクタ引数 rm は重複できません")
+        }
+
+        if (rm < 0) {
+            throw reader.exception(start..end, "セレクタ引数 'rm' の読み取りに失敗しました: 半径を負の値にすることはできません")
+        }
+
+        arguments.rm = rm
+    }
+
+    private fun rx(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val rx = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.rx != null) {
+            throw reader.exception(start..end, "セレクタ引数 'rx' の読み取りに失敗しました: セレクタ引数 rx は重複できません")
+        }
+
+        if (rx !in -90f..90f) {
+            throw reader.exception(start..end, "セレクタ引数 'rx' の読み取りに失敗しました: 縦回転は -90 ～ 90 の範囲が有効です")
+        }
+
+        arguments.rx = rx
+    }
+
+    private fun rxm(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val rxm = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.rxm != null) {
+            throw reader.exception(start..end, "セレクタ引数 'rxm' の読み取りに失敗しました: セレクタ引数 rxm は重複できません")
+        }
+
+        if (rxm !in -90f..90f) {
+            throw reader.exception(start..end, "セレクタ引数 'rxm' の読み取りに失敗しました: 縦回転は -90 ～ 90 の範囲が有効です")
+        }
+
+        arguments.rxm = rxm
+    }
+
+    private fun ry(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val ry = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.ry != null) {
+            throw reader.exception(start..end, "セレクタ引数 'ry' の読み取りに失敗しました: セレクタ引数 ry は重複できません")
+        }
+
+        if (ry !in -180f..180f) {
+            throw reader.exception(start..end, "セレクタ引数 'ry' の読み取りに失敗しました: 横回転は -180 ～ 180 の範囲が有効です")
+        }
+
+        arguments.ry = ry
+    }
+
+    private fun rym(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val rym = reader.readFloat()
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.rym != null) {
+            throw reader.exception(start..end, "セレクタ引数 'rym' の読み取りに失敗しました: セレクタ引数 rym は重複できません")
+        }
+
+        if (rym !in -180f..180f) {
+            throw reader.exception(start..end, "セレクタ引数 'rym' の読み取りに失敗しました: 横回転は -180 ～ 180 の範囲が有効です")
+        }
+
+        arguments.rym = rym
+    }
+
+    private fun scores(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        reader.expect(Symbol.BRACE_START)
+
+        val scores = SelectorArguments.Scores()
+
+        while (true) {
+            val objective = reader.readUnquotableString()
+            reader.expect(Symbol.ASSIGN)
+            val inverted = reader.readIsInverted()
+            val range = reader.readIntRange()
+
+            scores.add(objective, InvertibleValue(inverted, range))
+
+            if (reader.isOver()) {
+                val end = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: 引数が '${Symbol.BRACE_END.value}' で閉じられていません")
+            }
+            else if (reader.peek() `is` Symbol.COMMA) {
+                reader.next()
+            }
+            else if (reader.peek() `is` Symbol.BRACE_END) {
+                reader.next()
+                break
+            }
+            else {
+                val end = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
+            }
+        }
+
+        if (arguments.scores != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: scores は重複できません")
+        }
+
+        arguments.scores = scores
+    }
+
+    private fun tag(reader: TokenSeqReader, arguments: SelectorArguments) {
+        if (reader.peek() `is` Symbol.ARRAY_END || reader.peek() `is` Symbol.COMMA) {
+            arguments.tag.add(InvertibleValue.uninverted(""))
+            return
+        }
+
+        val inverted = reader.readIsInverted()
+
+        if (reader.peek() `is` Symbol.ARRAY_END || reader.peek() `is` Symbol.COMMA) {
+            arguments.tag.add(InvertibleValue.inverted(""))
+            return
+        }
+
+        val string = reader.readUnquotableString()
+        arguments.tag.add(InvertibleValue(inverted, string))
+    }
 
     private fun type(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
 
-        val inverted = if (reader.peek() `is` Symbol.LOGICAL_NOT) {
-            reader.next()
-            true
-        }
-        else false
+        val inverted = reader.readIsInverted()
 
         if (!inverted && arguments.type.any { !it.inverted }) {
             val end = reader.getPreviousTokenEndPosition()
             throw reader.exception(start..end, "セレクタ引数 type は否定でない限り重複できません")
         }
 
-        val identifier = reader.readIdentifier()
+        val identifier = reader.readNamespacedIdentifier()
         val entityType = EntityType.entries.find { it.identifier == identifier }
             ?: run {
                 val end = reader.getPreviousTokenEndPosition()
@@ -39,28 +345,26 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         arguments.type.add(InvertibleValue(inverted, entityType))
     }
 
-    override fun parse(reader: TokenSeqReader): Argument<EntitySelector> {
+    private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments): SelectorType {
         val start = reader.getCurrentTokenStartPosition()
-        val arguments = SelectorArguments()
 
         val t = reader.peek()
-        val type = when (t.type) {
+        return when (t.type) {
             TokenType.DOUBLE_QUOTED -> {
                 reader.next()
                 arguments.name.add(InvertibleValue.uninverted(t.value))
-                val end = reader.getPreviousTokenEndPosition()
-                return Argument(this, EntitySelector(SelectorType.PLAYER, arguments), start..end)
+                SelectorType.PLAYER
             }
-            TokenType.WORD -> let {
+            TokenType.WORD -> run {
                 for (type in SelectorType.entries) {
                     if (type.getString() == t.value) {
                         reader.next()
-                        return@let type
+                        return@run type
                     }
                 }
 
                 reader.next()
-                return@let SelectorType.PLAYER
+                SelectorType.PLAYER
             }
             else -> {
                 reader.next()
@@ -68,7 +372,9 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 throw reader.exception(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです ('${t.value}')")
             }
         }
+    }
 
+    private fun parseSelectorArguments(reader: TokenSeqReader, arguments: SelectorArguments) {
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
 
@@ -77,6 +383,8 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 val end2 = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: セレクタ引数 '$key' は存在しません")
             }
+
+            reader.expect(Symbol.ASSIGN)
 
             val parser = parsers[key]!!
 
@@ -99,6 +407,21 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
             }
         }
+    }
+
+    override fun parse(reader: TokenSeqReader): Argument<EntitySelector> {
+        val arguments = SelectorArguments()
+
+        val start = reader.getCurrentTokenStartPosition()
+
+        val type = parseSelectorType(reader, arguments)
+
+        if (type == SelectorType.PLAYER) {
+            val end = reader.getPreviousTokenEndPosition()
+            return Argument(this, EntitySelector(type, arguments), start..end)
+        }
+
+        parseSelectorArguments(reader, arguments)
 
         val end = reader.getPreviousTokenEndPosition()
         return Argument(this, EntitySelector(type, arguments), start..end)

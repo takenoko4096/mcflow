@@ -7,7 +7,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
     override fun parse(reader: TokenSeqReader): Argument<ItemType> {
         val start = reader.getCurrentTokenStartPosition()
-        val identifier = reader.readIdentifier()
+        val identifier = reader.readNamespacedIdentifier()
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in ItemType.entries) {

@@ -7,7 +7,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 class IdentifierArgumentType(name: String) : ArgumentType<NamespacedIdentifier>(name) {
     override fun parse(reader: TokenSeqReader): Argument<NamespacedIdentifier> {
         val start = reader.getCurrentTokenStartPosition()
-        val identifier = reader.readIdentifier()
+        val identifier = reader.readNamespacedIdentifier()
         val end = reader.getPreviousTokenEndPosition()
         return Argument(this, identifier, start..end)
     }

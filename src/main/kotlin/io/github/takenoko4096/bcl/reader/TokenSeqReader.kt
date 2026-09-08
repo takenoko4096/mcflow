@@ -260,7 +260,7 @@ open class TokenSeqReader(
     }
 
     fun readUnquotableString(): String {
-        return read(TokenType.DOUBLE_QUOTED, TokenType.WORD)
+        return read(TokenType.DOUBLE_QUOTED, TokenType.WORD, TokenType.NAMESPACED)
     }
 
     fun readBool(): Boolean {
@@ -308,7 +308,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readIdentifier(): NamespacedIdentifier {
+    fun readNamespacedIdentifier(): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
         val t = peek()
 
@@ -374,5 +374,36 @@ open class TokenSeqReader(
         }
 
         return TokenSeqReader(sourceCode, tokens,::BclParseException)
+    }
+
+    fun readIntRange(): IntRange {
+        val start = getCurrentTokenStartPosition()
+        val t = peek()
+        return if (t `is` Symbol.RANGE) {
+            val min = Int.MIN_VALUE
+            val max = readInteger()
+            min..max
+        }
+        else if (t.type == TokenType.INT) {
+            next()
+            val min = t.value.toInt()
+            val max = if (peek() `is` Symbol.RANGE) {
+                next()
+
+                val t = peek()
+                if (t.type == TokenType.INT) {
+                    next()
+                    t.value.toInt()
+                }
+                else Int.MAX_VALUE
+            }
+            else min
+            min..max
+        }
+        else {
+            next()
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "整数範囲の読み取りに失敗しました: 不明なトークンです: $t")
+        }
     }
 }

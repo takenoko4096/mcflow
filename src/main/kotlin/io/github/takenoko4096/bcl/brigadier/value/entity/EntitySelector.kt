@@ -1,14 +1,9 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
-    val isSingle: Boolean
+    private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
 
-    init {
-        isSingle = if (type.argumentsOverridable) {
-            arguments.c ?: type.defaultArguments.c
-        }
-        else {
-            type.defaultArguments.c
-        } == 1
-    }
+    val isSingle = c == 1 || c == -1
+
+    val isSortOrderInverted = c != null && c < 0
 }
