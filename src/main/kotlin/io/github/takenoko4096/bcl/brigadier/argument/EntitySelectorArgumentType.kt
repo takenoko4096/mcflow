@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
@@ -19,6 +20,8 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         "dz" to ::dz,
         "family" to ::family,
         "haspermission" to ::hasPermission,
+        "has_property" to ::hasProperty,
+        "hasitem" to ::hasItem,
         "l" to ::l,
         "lm" to ::lm,
         "m" to ::m,
@@ -106,7 +109,114 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
     }
 
     private fun hasPermission(reader: TokenSeqReader, arguments: SelectorArguments) {
-        // TODO
+        val start = reader.getCurrentTokenStartPosition()
+        reader.expect(Symbol.BRACE_START)
+
+        if (reader.peek() `is` Symbol.BRACE_END) {
+            reader.next()
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: 空の haspermission は無効です")
+        }
+
+        val hasPermission = SelectorArguments.HasPermission()
+
+        while (true) {
+            val name = reader.readWord()
+            val permission = SelectorArguments.HasPermission.Permission.parse(name)
+                ?: run {
+                    val end = reader.getPreviousTokenEndPosition()
+                    throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なパーミッション名です: $name")
+                }
+
+            reader.expect(Symbol.ASSIGN)
+
+            val flag = reader.readWord()
+            val state = SelectorArguments.HasPermission.PermissionState.parse(flag)
+                ?: run {
+                    val end = reader.getPreviousTokenEndPosition()
+                    throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なパーミッションステートです: '$flag'; ${SelectorArguments.HasPermission.PermissionState.entries.joinToString(" | ") { it.getString() }} が期待されています")
+                }
+            hasPermission.set(permission, state)
+
+            if (reader.isOver()) {
+                val end = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: 引数が '${Symbol.BRACE_END.value}' で閉じられていません")
+            }
+            else if (reader.peek() `is` Symbol.COMMA) {
+                reader.next()
+            }
+            else if (reader.peek() `is` Symbol.BRACE_END) {
+                reader.next()
+                break
+            }
+            else {
+                val end = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
+            }
+        }
+
+        if (arguments.hasPermission != null) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'haspermission' の読み取りに失敗しました: haspermission は重複できません")
+        }
+
+        arguments.hasPermission = hasPermission
+    }
+
+    private fun hasProperty(reader: TokenSeqReader, arguments: SelectorArguments) {
+
+    }
+
+    private fun hasItem(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+
+        // reader.readList()
+
+        val map = reader.readMap(
+            prefix = Symbol.BRACE_START,
+            postfix = Symbol.BRACE_END,
+            keyParser = {
+                readWord()
+            },
+            kvSeparatorParser = {
+                expect(Symbol.ASSIGN)
+                readIsInverted()
+            },
+            valueParsers = mapOf(
+                "item" to { start, inv ->
+                    if (inv) {
+                        val end = getPreviousTokenEndPosition()
+                        throw exception(start..end, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'item' は否定できません")
+                    }
+
+                    readNamespacedIdentifier()
+                },
+                "slot" to { _, inv ->
+                    InvertibleValue(inv, readIntRange())
+                },
+                "quantity" to { _, inv ->
+                    InvertibleValue(inv, readIntRange())
+                },
+                "location" to { start, inv ->
+                    if (inv) {
+                        val end = getPreviousTokenEndPosition()
+                        throw exception(start..end, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'location' は否定できません")
+                    }
+
+
+                },
+                "data" to { _, inv ->
+                    if (inv) {
+                        val end = getPreviousTokenEndPosition()
+                        throw exception(start..end, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は否定できません")
+                    }
+
+                    readInteger()
+                }
+            )
+        )
+
+        // SelectorArguments.HasItem()
     }
 
     private fun l(reader: TokenSeqReader, arguments: SelectorArguments) {
@@ -273,6 +383,12 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         val start = reader.getCurrentTokenStartPosition()
         reader.expect(Symbol.BRACE_START)
 
+        if (reader.peek() `is` Symbol.BRACE_END) {
+            reader.next()
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: 空の scores は無効です")
+        }
+
         val scores = SelectorArguments.Scores()
 
         while (true) {
@@ -300,8 +416,13 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             }
         }
 
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (scores.isEmpty()) {
+            throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: 空の条件を渡すことはできません")
+        }
+
         if (arguments.scores != null) {
-            val end = reader.getPreviousTokenEndPosition()
             throw reader.exception(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: scores は重複できません")
         }
 
@@ -375,6 +496,20 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
     }
 
     private fun parseSelectorArguments(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        if (reader.peek() `is` Symbol.ARRAY_START) {
+            reader.next()
+        }
+        else {
+            return
+        }
+
+        if (reader.peek() `is` Symbol.ARRAY_END) {
+            reader.next()
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数を空にすることはできません")
+        }
+
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
 

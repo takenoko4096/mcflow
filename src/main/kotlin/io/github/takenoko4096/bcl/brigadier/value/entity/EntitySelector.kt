@@ -6,4 +6,8 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     val isSingle = c == 1 || c == -1
 
     val isSortOrderInverted = c != null && c < 0
+
+    override fun toString(): String {
+        return "$type$arguments"
+    }
 }

@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.brigadier.value.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 
@@ -33,12 +34,44 @@ data class SelectorArguments(
 
     }
 
-    class HasItem {
+    class HasItem(
+        val item: ItemType,
+        val location: ItemLocation,
+        val slot: InvertibleValue<IntRange>?,
+        val quantity: InvertibleValue<IntRange>?,
+        val data: Int?
+    ) {
+        enum class ItemLocation {
 
+        }
     }
 
     class HasPermission {
-        private val map = mutableMapOf<String, PermissionState>()
+        private val map = mutableMapOf<Permission, PermissionState>()
+
+        enum class Permission(private val string: String) : StringRepresentable {
+            CAMERA("camera"),
+            DISMOUNT("dismount"),
+            JUMP("jump"),
+            LATERAL_MOVEMENT("lateral_movement"),
+            MOUNT("mount"),
+            MOVE_BACKWARD("move_backward"),
+            MOVE_FORWARD("move_forward"),
+            MOVE_LEFT("move_left"),
+            MOVE_RIGHT("move_right"),
+            MOVEMENT("movement"),
+            SNEAK("sneak");
+
+            override fun getString(): String {
+                return string
+            }
+
+            companion object {
+                fun parse(name: String): Permission? {
+                    return entries.find { it.getString() == name }
+                }
+            }
+        }
 
         enum class PermissionState : StringRepresentable {
             ENABLED {
@@ -46,11 +79,17 @@ data class SelectorArguments(
             },
             DISABLED {
                 override fun getString() = "disabled"
+            };
+
+            companion object {
+                fun parse(name: String): PermissionState? {
+                    return entries.find { it.getString() == name }
+                }
             }
         }
 
-        fun set(name: String, state: PermissionState) {
-            map[name] = state
+        fun set(permission: Permission, state: PermissionState) {
+            map[permission] = state
         }
 
         override fun toString(): String {
@@ -68,5 +107,7 @@ data class SelectorArguments(
         override fun toString(): String {
             return list.joinToString(", ", "{", "}") { (first, second) -> "$first=$second" }
         }
+
+        fun isEmpty(): Boolean = list.isEmpty()
     }
 }

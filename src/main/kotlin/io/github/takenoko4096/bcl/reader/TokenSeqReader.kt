@@ -406,4 +406,96 @@ open class TokenSeqReader(
             throw exception(start..end, "整数範囲の読み取りに失敗しました: 不明なトークンです: $t")
         }
     }
+
+    fun <K, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.(SourcePosition) -> K, valueParsers: Map<K, TokenSeqReader.(SourcePosition, S) -> V>): Map<K, V> {
+        val map = mutableMapOf<K, V>()
+
+        val start = getCurrentTokenStartPosition()
+        expect(prefix)
+
+        if (peek() `is` postfix) {
+            next()
+            return map
+        }
+
+        while (true) {
+            val start2 = getCurrentTokenStartPosition()
+            val key = keyParser(start2)
+            val valueParser = valueParsers[key]
+                ?: run {
+                    val end = getPreviousTokenEndPosition()
+                    val range = start..end
+                    throw exception(range, "マップオブジェクトの読み取りに失敗しました: 不明なキーです: ${range.getStringFromSourceCode(sourceCode)}")
+                }
+
+            val separator = kvSeparatorParser()
+
+            val value = valueParser(start2, separator)
+            map[key] = value
+
+            if (isOver()) {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+            else if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` postfix) {
+                next()
+                break
+            }
+            else {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: 不明なトークンです: ${peek()}")
+            }
+        }
+
+        return map
+    }
+
+    fun <K, S, V> readMapIgnoreNewLine(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.(SourcePosition) -> K, valueParsers: Map<K, TokenSeqReader.(SourcePosition, S) -> V>): Map<K, V> {
+        val map = mutableMapOf<K, V>()
+
+        val start = getCurrentTokenStartPosition()
+        expectIgnoreNewLine(prefix)
+
+        if (peekIgnoreNewLine() `is` postfix) {
+            nextIgnoreNewLine()
+            return map
+        }
+
+        while (true) {
+            val start2 = getCurrentTokenStartPosition()
+            val key = keyParser(start2)
+            val valueParser = valueParsers[key]
+                ?: run {
+                    val end = getPreviousTokenEndPosition()
+                    val range = start..end
+                    throw exception(range, "マップオブジェクトの読み取りに失敗しました: 不明なキーです: ${range.getStringFromSourceCode(sourceCode)}")
+                }
+
+            val separator = kvSeparatorParser()
+
+            val value = valueParser(start2, separator)
+            map[key] = value
+
+            if (isOverIgnoreNewLine()) {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+            else if (peekIgnoreNewLine() `is` Symbol.COMMA) {
+                nextIgnoreNewLine()
+            }
+            else if (peekIgnoreNewLine() `is` postfix) {
+                nextIgnoreNewLine()
+                break
+            }
+            else {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: 不明なトークンです: ${peekIgnoreNewLine()}")
+            }
+        }
+
+        return map
+    }
 }
