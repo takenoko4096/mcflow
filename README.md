@@ -14,6 +14,7 @@
     - `RawText`
     - `EntitySelector`
       - テスト足りてない
+      - `has_property` のプロパティ名バリデーション
 
 ## 制約
 

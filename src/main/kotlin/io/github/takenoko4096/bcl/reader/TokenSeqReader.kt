@@ -276,7 +276,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readCoordinateComponent(blockCenterCorrection: Boolean = false): CoordinateComponent {
+    fun readCoordinateComponent(blockCenterCorrection: Boolean = false, allowLocal: Boolean = true): CoordinateComponent {
         val start = getCurrentTokenStartPosition()
         val t = peek()
 
@@ -295,7 +295,13 @@ open class TokenSeqReader(
             }
             TokenType.COORDINATE_LOCAL -> {
                 next()
-                return CoordinateComponent.Local(t.value.toFloat())
+                if (allowLocal) {
+                    return CoordinateComponent.Local(t.value.toFloat())
+                }
+                else {
+                    val end = getPreviousTokenEndPosition()
+                    throw exception(start..end, "位置成分の読み取りに失敗しました: ここではローカル座標系は許可されていません")
+                }
             }
             else -> {
                 next()

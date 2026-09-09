@@ -38,7 +38,10 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         "rym" to ::rym,
         "scores" to ::scores,
         "tag" to ::tag,
-        "type" to ::type
+        "type" to ::type,
+        "x" to ::x,
+        "y" to ::y,
+        "z" to ::z
     )
 
     private fun TokenSeqReader.readIsInverted(): Boolean {
@@ -589,6 +592,42 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         }
 
         arguments.type.add(InvertibleValue(inverted, entityType, start..end))
+    }
+
+    private fun x(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val x = reader.readCoordinateComponent(allowLocal = false)
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.x != null) {
+            throw reader.exception(start..end, "セレクタ引数 'x' の読み取りに失敗しました: セレクタ引数 x は重複できません")
+        }
+
+        arguments.x = x
+    }
+
+    private fun y(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val y = reader.readCoordinateComponent(allowLocal = false)
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.y != null) {
+            throw reader.exception(start..end, "セレクタ引数 'y' の読み取りに失敗しました: セレクタ引数 y は重複できません")
+        }
+
+        arguments.y = y
+    }
+
+    private fun z(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val start = reader.getCurrentTokenStartPosition()
+        val z = reader.readCoordinateComponent(allowLocal = false)
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.z != null) {
+            throw reader.exception(start..end, "セレクタ引数 'z' の読み取りに失敗しました: セレクタ引数 z は重複できません")
+        }
+
+        arguments.z = z
     }
 
     private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments): SelectorType {
