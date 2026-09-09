@@ -3,11 +3,11 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
 
-    val isSingle = c == 1 || c == -1
+    val isSingle = c?.value == 1 || c?.value == -1
 
-    val isSortOrderInverted = c != null && c < 0
+    val isSortOrderInverted = c?.value != null && c.value < 0
 
     override fun toString(): String {
-        return "$type$arguments"
+        return "${type.getString()}[$arguments]"
     }
 }

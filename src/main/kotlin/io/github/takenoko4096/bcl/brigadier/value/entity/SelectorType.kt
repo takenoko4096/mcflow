@@ -1,6 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 enum class SelectorType(
     private val string: String,
@@ -15,7 +17,7 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = true,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments(c = 1),
+        defaultArguments = SelectorArguments(c = WithSpan.noSpan(1)),
         argumentsOverridable = true
     ),
     A(
@@ -23,7 +25,7 @@ enum class SelectorType(
         aliveOnly = false,
         isPlayer = true,
         defaultSortOrder = SelectorSortOrder.RANDOM,
-        defaultArguments = SelectorArguments(c = 1),
+        defaultArguments = SelectorArguments(c = WithSpan.noSpan(1)),
         argumentsOverridable = true
     ),
     R(
@@ -32,8 +34,8 @@ enum class SelectorType(
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.RANDOM,
         defaultArguments = SelectorArguments(
-            c = 1,
-            type = mutableListOf(InvertibleValue.uninverted(EntityType.PLAYER))
+            c = WithSpan.noSpan(1),
+            type = mutableListOf(InvertibleValue.uninverted(EntityType.PLAYER, SourceSpan.NULL))
         ),
         argumentsOverridable = true
     ),
@@ -42,7 +44,7 @@ enum class SelectorType(
         aliveOnly = false,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments(c = 1),
+        defaultArguments = SelectorArguments(c = WithSpan.noSpan(1)),
         argumentsOverridable = false
     ),
     E(
@@ -58,7 +60,7 @@ enum class SelectorType(
         aliveOnly = true,
         isPlayer = false,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
-        defaultArguments = SelectorArguments(c = 1),
+        defaultArguments = SelectorArguments(c = WithSpan.noSpan(1)),
         argumentsOverridable = true
     ),
     INITIATOR(

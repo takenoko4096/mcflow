@@ -7,4 +7,10 @@ enum class ItemType(
     AIR;
 
     val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
+
+    companion object {
+        fun get(identifier: NamespacedIdentifier): ItemType? {
+            return entries.find { it.identifier == identifier }
+        }
+    }
 }

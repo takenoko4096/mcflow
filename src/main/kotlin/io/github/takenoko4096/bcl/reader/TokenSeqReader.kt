@@ -10,6 +10,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
+import kotlin.collections.set
 
 open class TokenSeqReader(
     val sourceCode: String,
@@ -405,7 +406,42 @@ open class TokenSeqReader(
         }
     }
 
-    fun <K, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.(SourcePosition) -> K, valueParsers: Map<K, TokenSeqReader.(SourcePosition, S) -> V>): Map<K, V> {
+    fun <V> readList(prefix: Symbol, postfix: Symbol, elementParser: TokenSeqReader.() -> V): List<V> {
+        val list = mutableListOf<V>()
+
+        val start = getCurrentTokenStartPosition()
+        expect(prefix)
+
+        if (peek() `is` postfix) {
+            next()
+            return list
+        }
+
+        while (true) {
+            val elem = elementParser()
+            list.add(elem)
+
+            if (isOver()) {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "リストの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+            else if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` postfix) {
+                next()
+                break
+            }
+            else {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "リストの読み取りに失敗しました: 不明なトークンです: ${peek()}")
+            }
+        }
+
+        return list
+    }
+
+    fun <K, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K, valueParser: TokenSeqReader.(S) -> V): Map<K, V> {
         val map = mutableMapOf<K, V>()
 
         val start = getCurrentTokenStartPosition()
@@ -417,8 +453,46 @@ open class TokenSeqReader(
         }
 
         while (true) {
-            val start2 = getCurrentTokenStartPosition()
-            val key = keyParser(start2)
+            val key = keyParser()
+
+            val separator = kvSeparatorParser()
+
+            val value = valueParser(separator)
+            map[key] = value
+
+            if (isOver()) {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+            else if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` postfix) {
+                next()
+                break
+            }
+            else {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "マップの読み取りに失敗しました: 不明なトークンです: ${peek()}")
+            }
+        }
+
+        return map
+    }
+
+    fun <K, S, V> readTypedMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K, valueParsers: Map<K, TokenSeqReader.(S) -> V>): Map<K, V> {
+        val map = mutableMapOf<K, V>()
+
+        val start = getCurrentTokenStartPosition()
+        expect(prefix)
+
+        if (peek() `is` postfix) {
+            next()
+            return map
+        }
+
+        while (true) {
+            val key = keyParser()
             val valueParser = valueParsers[key]
                 ?: run {
                     val end = getPreviousTokenEndPosition()
@@ -428,7 +502,7 @@ open class TokenSeqReader(
 
             val separator = kvSeparatorParser()
 
-            val value = valueParser(start2, separator)
+            val value = valueParser(separator)
             map[key] = value
 
             if (isOver()) {
@@ -451,7 +525,7 @@ open class TokenSeqReader(
         return map
     }
 
-    fun <K, S, V> readMapIgnoreNewLine(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.(SourcePosition) -> K, valueParsers: Map<K, TokenSeqReader.(SourcePosition, S) -> V>): Map<K, V> {
+    fun <K, S, V> readTypedMapIgnoreNewLine(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K, valueParsers: Map<K, TokenSeqReader.(S) -> V>): Map<K, V> {
         val map = mutableMapOf<K, V>()
 
         val start = getCurrentTokenStartPosition()
@@ -463,8 +537,7 @@ open class TokenSeqReader(
         }
 
         while (true) {
-            val start2 = getCurrentTokenStartPosition()
-            val key = keyParser(start2)
+            val key = keyParser()
             val valueParser = valueParsers[key]
                 ?: run {
                     val end = getPreviousTokenEndPosition()
@@ -474,7 +547,7 @@ open class TokenSeqReader(
 
             val separator = kvSeparatorParser()
 
-            val value = valueParser(start2, separator)
+            val value = valueParser(separator)
             map[key] = value
 
             if (isOverIgnoreNewLine()) {

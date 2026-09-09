@@ -114,7 +114,7 @@ fun main() {
         setblock ~ ~ ~ minecraft:potatoes["growth"=1]
         difficulty peaceful
         say i am a pen!!!!!!!!
-        sel @e[c=1, type=!player,name= "ff\"ff ", family=foo.bar-baz?]
+        sel @e[c=1, type=!player,name= "ff\"ff ", family=foo.bar-baz?, hasitem={item=air,location=slot.weapon.mainhand}]
         @set main {}
     """.trimIndent()
 

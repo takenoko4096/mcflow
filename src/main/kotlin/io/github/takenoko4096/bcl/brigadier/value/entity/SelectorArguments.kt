@@ -1,14 +1,17 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.SpanHolder
+import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.value.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 data class SelectorArguments(
-    var c: Int? = null,
-    var dx: Float? = null,
-    var dy: Float? = null,
-    var dz: Float? = null,
+    var c: WithSpan<Int>? = null,
+    var dx: WithSpan<Float>? = null,
+    var dy: WithSpan<Float>? = null,
+    var dz: WithSpan<Float>? = null,
     val family: MutableList<InvertibleValue<String>> = mutableListOf(),
     val hasProperty: HasProperty? = null,
     val hasItem: MutableList<HasItem> = mutableListOf(),
@@ -24,7 +27,7 @@ data class SelectorArguments(
     var ry: Float? = null,
     var rym: Float? = null,
     var scores: Scores? = null,
-    val tag: MutableList<InvertibleValue<String>> = mutableListOf(),
+    val tag: MutableList<InvertibleValue<String?>> = mutableListOf(),
     val type: MutableList<InvertibleValue<EntityType>> = mutableListOf(),
     var x: CoordinateComponent? = null,
     var y: CoordinateComponent? = null,
@@ -35,16 +38,13 @@ data class SelectorArguments(
     }
 
     class HasItem(
-        val item: ItemType,
-        val location: ItemLocation,
+        val item: WithSpan<ItemType>,
+        val location: WithSpan<EntityContainerSlotType>?,
         val slot: InvertibleValue<IntRange>?,
         val quantity: InvertibleValue<IntRange>?,
-        val data: Int?
-    ) {
-        enum class ItemLocation {
-
-        }
-    }
+        val data: WithSpan<Int>?,
+        override val sourceSpan: SourceSpan
+    ) : SpanHolder
 
     class HasPermission {
         private val map = mutableMapOf<Permission, PermissionState>()
@@ -98,14 +98,14 @@ data class SelectorArguments(
     }
 
     class Scores {
-        private val list = mutableListOf<Pair<String, InvertibleValue<IntRange>>>()
+        private val list = mutableListOf<Pair<WithSpan<String>, InvertibleValue<IntRange>>>()
 
-        fun add(objective: String, range: InvertibleValue<IntRange>) {
+        fun add(objective: WithSpan<String>, range: InvertibleValue<IntRange>) {
             list.add(objective to range)
         }
 
         override fun toString(): String {
-            return list.joinToString(", ", "{", "}") { (first, second) -> "$first=$second" }
+            return list.joinToString(", ", "{", "}") { (first, second) -> "${first.value}=$second" }
         }
 
         fun isEmpty(): Boolean = list.isEmpty()
