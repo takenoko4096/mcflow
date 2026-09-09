@@ -173,7 +173,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 val start = getCurrentTokenStartPosition()
                 val inv = readIsInverted()
                 val end = getPreviousTokenEndPosition()
-                WithSpan(inv, start..end)
+                WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
             },
             keyParser = {
                 readQuotedOrCommandWord()
@@ -197,7 +197,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 val start = getCurrentTokenStartPosition()
                 val inv = readIsInverted()
                 val end = getPreviousTokenEndPosition()
-                WithSpan(inv, start..end)
+                WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
             },
             valueParsers = mapOf(
                 "item" to { inv ->
