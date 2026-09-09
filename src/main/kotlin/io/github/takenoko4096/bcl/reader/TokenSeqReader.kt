@@ -640,9 +640,14 @@ open class TokenSeqReader(
             cursor = tokens.size
         }
 
+        val end = getPreviousTokenEndPosition()
+
         if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
-            val end = getPreviousTokenEndPosition()
             throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
+        }
+
+        if (string.isEmpty()) {
+            throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
         }
 
         return string

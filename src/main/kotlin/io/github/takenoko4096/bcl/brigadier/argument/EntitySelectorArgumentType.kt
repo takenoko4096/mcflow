@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.value.ItemType
+import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityContainerSlotType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
@@ -184,9 +184,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             },
             keyParser = {
                 val start = getCurrentTokenStartPosition()
-                println(peek())
                 val key = readCommandString()
-                println(peek())
                 val end = getPreviousTokenEndPosition()
 
                 if (key == "property") {
@@ -579,7 +577,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         val inverted = reader.readIsInverted()
 
         val identifier = reader.readNamespacedIdentifier()
-        val entityType = EntityType.entries.find { it.identifier == identifier }
+        val entityType = EntityType.get(identifier)
             ?: run {
                 val end = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start..end, "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier")

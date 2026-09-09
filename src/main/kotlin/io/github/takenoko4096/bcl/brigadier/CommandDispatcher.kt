@@ -38,25 +38,24 @@ class CommandDispatcher {
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
-        val token = reader.peek()
-        if (token.type != TokenType.WORD) {
+        val name = try {
+            reader.readCommandString()
+        }
+        catch (error: BclTokenSeqReadException) {
             return CommandLineParseResult.Failure(
                 null,
                 null,
                 emptyMap(),
                 listOf(
                     BclDiagnostic(
-                        "コマンド名の読み取りに失敗しました: ${TokenType.WORD} のトークンが期待されましたが、 ${token.type} のトークン '${token.value}' が見つかりました",
+                        "コマンド名の読み取りに失敗しました: ${error.description}",
                         reader.sourceCode,
-                        token.sourceSpan
+                        error.span
                     )
                 ),
-                reader.getRemainingSourceSpan()
+                start..reader.getPreviousTokenEndPosition()
             )
         }
-
-        reader.next()
-        val name = token.value
 
         val root = getCommand(name)
             ?: return CommandLineParseResult.Failure(

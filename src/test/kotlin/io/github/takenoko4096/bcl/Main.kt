@@ -1,22 +1,14 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.ast.Node
-import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
-import io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.argument.*
+import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
-import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
-import io.github.takenoko4096.bcl.brigadier.value.Difficluty
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
+import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.json.JsonFile
@@ -81,7 +73,7 @@ fun main() {
                         val properties = getArgument<BlockProperties>("properties")
 
                         for ((property, _) in properties.value) {
-                            if (!blockType.hasProperty(property)) {
+                            if (property !in blockType) {
                                 throw exception(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.identifier}' に存在しません")
                             }
                         }
@@ -114,7 +106,11 @@ fun main() {
         setblock ~ ~ ~ minecraft:potatoes["growth"=1]
         difficulty peaceful
         say i am a pen!!!!!!!!
-        sel @e[x=~1, y=-0.4, z = ~,c=1, type=!minecraft:player,name= "ff\"ff ", family=foo.bar-baz?, name=!a:b::::::c:::, hasitem={item=minecraft:air,location=slot.weapon.mainhand}, scores={a=!1..3, b=..2, c=1.., d=4, e=-4..-2}, has_property={property=!minecraft:big}]
+        sel @e[x=~1, y=-0.4, z = ~,c=1, type=!evocation_fang,\
+        name= "ff\"ff ", family=foo.bar-baz?, name=!a:b::::::c:::,\
+         hasitem={item=minecraft:apple,location=slot.weapon.mainhand}, \
+         scores={a=!1..3, b=..2, c=1.., d=4, e=-4..-2}, has_property={property=!minecraft:big}\
+         ]
         @set main {}
     """.trimIndent()
 

@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.SpanHolder
 import io.github.takenoko4096.bcl.WithSpan
-import io.github.takenoko4096.bcl.brigadier.value.ItemType
+import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
