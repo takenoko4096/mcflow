@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.value.ItemType
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityContainerSlotType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
@@ -103,7 +104,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
     private fun family(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
-        val string = reader.readQuotedOrCommandWord()
+        val string = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()
         arguments.family.add(InvertibleValue(inverted, string, start..end))
     }
@@ -121,7 +122,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         val hasPermission = SelectorArguments.HasPermission()
 
         while (true) {
-            val name = reader.readCommandWord()
+            val name = reader.readCommandString()
             val permission = SelectorArguments.HasPermission.Permission.parse(name)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -130,7 +131,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
 
             reader.expect(Symbol.ASSIGN)
 
-            val flag = reader.readCommandWord()
+            val flag = reader.readCommandString()
             val state = SelectorArguments.HasPermission.PermissionState.parse(flag)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -163,9 +164,12 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         arguments.hasPermission = hasPermission
     }
 
-    // TODO
     private fun hasProperty(reader: TokenSeqReader, arguments: SelectorArguments) {
-        val map = reader.readMap(
+        val start = reader.getCurrentTokenStartPosition()
+
+        val properties = mutableListOf<InvertibleValue<NamespacedIdentifier>>()
+
+        val list = reader.readPairList(
             Symbol.BRACE_START,
             Symbol.BRACE_END,
             kvSeparatorParser = {
@@ -176,11 +180,45 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
             },
             keyParser = {
-                readQuotedOrCommandWord()
+                val start = getCurrentTokenStartPosition()
+                println(peek())
+                val key = readCommandString()
+                println(peek())
+                val end = getPreviousTokenEndPosition()
+
+                if (key == "property") {
+                    expect(Symbol.ASSIGN)
+                    val inv = readIsInverted()
+                    val start = getCurrentTokenStartPosition()
+                    val identifier = readNamespacedIdentifier()
+                    val end = getPreviousTokenEndPosition()
+                    properties.add(InvertibleValue(inv, identifier, start..end))
+                    return@readPairList null
+                }
+
+                return@readPairList NamespacedIdentifier.parse(key)
+                    ?: run {
+
+                        throw exception(start..end, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
+                    }
             },
-            valueParser = {
-                val word = readCommandWord()
+            valueParser = { inv ->
+                val start = getCurrentTokenStartPosition()
+                val flag = readBool()
+                val end = getPreviousTokenEndPosition()
+                InvertibleValue(inv.value, flag, start..end)
             }
+        )
+
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.hasProperty != null) {
+            throw reader.exception(start..end, "セレクタ引数 'has_property' の読み取りに失敗しました: has_property は重複できません")
+        }
+
+        arguments.hasProperty = SelectorArguments.HasProperty(
+            properties,
+            list
         )
     }
 
@@ -190,7 +228,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             prefix = Symbol.BRACE_START,
             postfix = Symbol.BRACE_END,
             keyParser = {
-                readCommandWord()
+                readCommandString()
             },
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
@@ -202,7 +240,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             valueParsers = mapOf(
                 "item" to { inv ->
                     if (inv.value) {
-                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: キー 'item' は否定できません")
+                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: キー 'item' は反転できません")
                     }
 
                     val start2 = getCurrentTokenStartPosition()
@@ -230,11 +268,11 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 },
                 "location" to { inv ->
                     if (inv.value) {
-                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'location' は否定できません")
+                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'location' は反転できません")
                     }
 
                     val start2 = getCurrentTokenStartPosition()
-                    val location = readCommandWord()
+                    val location = readCommandString()
                     val slotType = EntityContainerSlotType.parse(location)
                         ?: run {
                             val end = getPreviousTokenEndPosition()
@@ -246,7 +284,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
                 },
                 "data" to { inv ->
                     if (inv.value) {
-                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は否定できません")
+                        throw exception(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は反転できません")
                     }
 
                     val start = getCurrentTokenStartPosition()
@@ -352,16 +390,13 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
 
     private fun name(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
-
         val inverted = reader.readIsInverted()
+        val name = reader.readQuotableCommandString()
+        val end = reader.getPreviousTokenEndPosition()
 
         if (!inverted && arguments.name.any { !it.inverted }) {
-            val end = reader.getPreviousTokenEndPosition()
             throw reader.exception(start..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません")
         }
-
-        val name = reader.readQuotedOrCommandWord()
-        val end = reader.getPreviousTokenEndPosition()
 
         arguments.name.add(InvertibleValue(inverted, name, start..end))
     }
@@ -476,7 +511,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
 
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
-            val objective = reader.readQuotedOrCommandWord()
+            val objective = reader.readQuotableCommandString()
             val end2 = reader.getPreviousTokenEndPosition()
             reader.expect(Symbol.ASSIGN)
             val start3 = reader.getCurrentTokenStartPosition()
@@ -531,7 +566,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             return
         }
 
-        val string = reader.readQuotedOrCommandWord()
+        val string = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()
         arguments.tag.add(InvertibleValue(inverted, string, start..end))
     }
@@ -539,11 +574,6 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
     private fun type(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
-
-        if (!inverted && arguments.type.any { !it.inverted }) {
-            val end = reader.getPreviousTokenEndPosition()
-            throw reader.exception(start..end, "セレクタ引数 type は否定でない限り重複できません")
-        }
 
         val identifier = reader.readNamespacedIdentifier()
         val entityType = EntityType.entries.find { it.identifier == identifier }
@@ -553,6 +583,11 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
             }
 
         val end = reader.getPreviousTokenEndPosition()
+
+        if (!inverted && arguments.type.any { !it.inverted }) {
+            throw reader.exception(start..end, "セレクタ引数 type は否定でない限り重複できません")
+        }
+
         arguments.type.add(InvertibleValue(inverted, entityType, start..end))
     }
 
@@ -606,7 +641,7 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
 
-            val key = reader.readCommandWord()
+            val key = reader.readCommandString()
             if (key !in parsers) {
                 val end2 = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: セレクタ引数 '$key' は存在しません")

@@ -106,7 +106,13 @@ class BclTokenizer(text: String) {
     }
 
     private fun tokenOf(type: TokenType, value: String, start: SourcePosition, end: SourcePosition): Token {
-        return Token(id++, type, value, start..end)
+        return Token(
+            id++,
+            type,
+            // クォートに囲まれた文字列以外の全てのトークンは大文字・小文字を区別しない
+            if (type in setOf(TokenType.SINGLE_QUOTED, TokenType.DOUBLE_QUOTED, TokenType.BACK_QUOTED)) value else value.lowercase(),
+            start..end
+        )
     }
 
     private fun tokenOf(symbol: Symbol, start: SourcePosition, end: SourcePosition): Token {
@@ -439,15 +445,7 @@ class BclTokenizer(text: String) {
             throw exception(start..getCurrentSourcePosition(), "トークン $previous の直後には区切りが必要です")
         }
 
-        val word = word()
-        if (testThenAdvance(Symbol.COLON.value)) {
-            val value = word()
-            val end = getSourcePositionAtBack()
-            return tokenOf(TokenType.NAMESPACED, "${word.value}:${value.value}", start, end)
-        }
-        else {
-            return word
-        }
+        return word()
     }
 
     fun tokenize(): List<Token> {

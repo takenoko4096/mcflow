@@ -11,10 +11,8 @@
 - BedrockBrigadier
   - より多くの `ArgumentType` の実装
     - `AbstractJson`
-    - `Selector`
     - `RawText`
     - `EntitySelector`
-      - `hasitem`, `has_property`
       - テスト足りてない
 
 ## 制約

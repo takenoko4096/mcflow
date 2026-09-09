@@ -10,7 +10,7 @@ class EnumArgumentType<E>(private val entries: EnumEntries<E>) : ArgumentType<E>
     override fun parse(reader: TokenSeqReader): Argument<E> {
         val start = reader.getCurrentTokenStartPosition()
         // TODO
-        val word = reader.readCommandWord()
+        val word = reader.readCommandString()
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in entries) {

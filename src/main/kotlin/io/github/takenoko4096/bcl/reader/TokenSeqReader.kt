@@ -309,30 +309,15 @@ open class TokenSeqReader(
 
     fun readNamespacedIdentifier(): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
-        val t = peek()
+        val string = readCommandString()
+        val end = getPreviousTokenEndPosition()
 
-        val value = when (t.type) {
-            TokenType.WORD -> {
-                next()
-                NamespacedIdentifier(NamespacedIdentifier.DEFAULT_NAMESPACE, t.value)
+        val identifier = NamespacedIdentifier.parse(string)
+            ?: run {
+                throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
             }
-            TokenType.NAMESPACED -> {
-                next()
-                val end = getPreviousTokenEndPosition()
-                val array = t.value.split(Symbol.COLON.value)
-                if (array.size != 2) {
-                    throw exception(start..end, "NEVER HAPPENS")
-                }
-                NamespacedIdentifier(array[0], array[1])
-            }
-            else -> {
-                next()
-                val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "識別子の読み取りに失敗しました: 不明なトークンです ($t)")
-            }
-        }
 
-        return value
+        return identifier
     }
 
     fun readAllRemainingAsString(): String {
@@ -379,6 +364,7 @@ open class TokenSeqReader(
         val start = getCurrentTokenStartPosition()
         val t = peek()
         return if (t `is` Symbol.RANGE) {
+            next()
             val min = Int.MIN_VALUE
             val max = readInteger()
             min..max
@@ -388,7 +374,6 @@ open class TokenSeqReader(
             val min = t.value.toInt()
             val max = if (peek() `is` Symbol.RANGE) {
                 next()
-
                 val t = peek()
                 if (t.type == TokenType.INT) {
                     next()
@@ -441,7 +426,48 @@ open class TokenSeqReader(
         return list
     }
 
-    fun <K, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K, valueParser: TokenSeqReader.(S) -> V): Map<K, V> {
+    fun <K : Any, S, V> readPairList(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(S) -> V): List<Pair<K, V>> {
+        val list = mutableListOf<Pair<K, V>>()
+
+        val start = getCurrentTokenStartPosition()
+        expect(prefix)
+
+        if (peek() `is` postfix) {
+            next()
+            return list
+        }
+
+        while (true) {
+            val key = keyParser()
+
+            if (key != null) {
+                val separator = kvSeparatorParser()
+
+                val value = valueParser(separator)
+                list.add(key to value)
+            }
+
+            if (isOver()) {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "ペアリストの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+            else if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` postfix) {
+                next()
+                break
+            }
+            else {
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "ペアリストの読み取りに失敗しました: 不明なトークンです: ${peek()}")
+            }
+        }
+
+        return list
+    }
+
+    fun <K : Any, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(S) -> V): Map<K, V> {
         val map = mutableMapOf<K, V>()
 
         val start = getCurrentTokenStartPosition()
@@ -455,10 +481,12 @@ open class TokenSeqReader(
         while (true) {
             val key = keyParser()
 
-            val separator = kvSeparatorParser()
+            if (key != null) {
+                val separator = kvSeparatorParser()
 
-            val value = valueParser(separator)
-            map[key] = value
+                val value = valueParser(separator)
+                map[key] = value
+            }
 
             if (isOver()) {
                 val end = getPreviousTokenEndPosition()
@@ -570,7 +598,7 @@ open class TokenSeqReader(
         return map
     }
 
-    fun readCommandWord(): String {
+    fun readCommandString(): String {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "CommandWord の解析に失敗しました: 入力が不足しています")
         }
@@ -614,7 +642,7 @@ open class TokenSeqReader(
         return string
     }
 
-    fun readQuotedOrCommandWord(): String {
+    fun readQuotableCommandString(): String {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "Quoted または CommandWord の解析に失敗しました: 入力が不足しています")
         }
@@ -623,7 +651,7 @@ open class TokenSeqReader(
             readQuotedString()
         }
         else {
-            readCommandWord()
+            readCommandString()
         }
     }
 }

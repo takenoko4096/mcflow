@@ -10,9 +10,9 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
         val string = when (mode) {
             Mode.QUOTED -> reader.readQuotedString()
             // TODO
-            Mode.UNQUOTABLE -> reader.readQuotedOrCommandWord()
+            Mode.UNQUOTABLE -> reader.readQuotableCommandString()
             // TODO
-            Mode.WORD -> reader.readCommandWord()
+            Mode.WORD -> reader.readCommandString()
             Mode.GREEDY -> reader.readAllRemainingAsString()
         }
 

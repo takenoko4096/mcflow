@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 import io.github.takenoko4096.bcl.SpanHolder
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.value.ItemType
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
@@ -13,7 +14,7 @@ data class SelectorArguments(
     var dy: WithSpan<Float>? = null,
     var dz: WithSpan<Float>? = null,
     val family: MutableList<InvertibleValue<String>> = mutableListOf(),
-    val hasProperty: HasProperty? = null,
+    var hasProperty: HasProperty? = null,
     val hasItem: MutableList<HasItem> = mutableListOf(),
     var hasPermission: HasPermission? = null,
     var l: Int? = null,
@@ -33,11 +34,12 @@ data class SelectorArguments(
     var y: CoordinateComponent? = null,
     var z: CoordinateComponent? = null
 ) {
-    class HasProperty {
+    data class HasProperty(
+        val properties: List<InvertibleValue<NamespacedIdentifier>>,
+        val conditions: List<Pair<NamespacedIdentifier, InvertibleValue<Boolean>>>
+    )
 
-    }
-
-    class HasItem(
+    data class HasItem(
         val item: WithSpan<ItemType>,
         val location: WithSpan<EntityContainerSlotType>?,
         val slot: InvertibleValue<IntRange>?,
