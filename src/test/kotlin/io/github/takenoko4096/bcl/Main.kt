@@ -4,7 +4,7 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.*
-import io.github.takenoko4096.bcl.brigadier.value.Difficluty
+import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
@@ -84,9 +84,9 @@ fun main() {
     }
 
     dispatcher.register("difficulty") {
-        "mode"(EnumArgumentType.of<Difficluty>()) {
+        "mode"(EnumArgumentType.of<Difficulty>()) {
             executes {
-                "難易度=${getValue<Difficluty>("mode").getString()}"
+                "難易度=${getValue<Difficulty>("mode").getString()}"
             }
         }
     }
