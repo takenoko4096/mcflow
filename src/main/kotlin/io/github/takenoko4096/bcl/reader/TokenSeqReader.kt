@@ -604,7 +604,7 @@ open class TokenSeqReader(
         return map
     }
 
-    fun readCommandString(): String {
+    fun readCommandString(allowFloat: Boolean = false): String {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "CommandWord の解析に失敗しました: 入力が不足しています")
         }
@@ -642,12 +642,14 @@ open class TokenSeqReader(
 
         val end = getPreviousTokenEndPosition()
 
-        if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
-            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
-        }
-
         if (string.isEmpty()) {
             throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
+        }
+        else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
+            throw exception(start..end, "CommandWord の解析に失敗しました: 数値として構成される CommandWord は不正です")
+        }
+        else if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
+            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
         }
 
         return string

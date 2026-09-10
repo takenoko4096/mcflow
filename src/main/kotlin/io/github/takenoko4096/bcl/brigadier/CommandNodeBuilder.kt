@@ -62,7 +62,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         children[this] = ArgumentCommandNodeBuilder(this, type, configurator).build()
     }
 
-    fun executes(callback: CommandContext.() -> Any?) {
+    fun executes(callback: CommandContext.() -> Any? = {}) {
         if (executor == null) {
             executor = callback
         }

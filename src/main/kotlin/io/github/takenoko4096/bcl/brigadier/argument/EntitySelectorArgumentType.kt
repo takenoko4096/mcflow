@@ -16,7 +16,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector") {
+class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntitySelector, SourceSpan) -> Unit)? = null) : ArgumentType<EntitySelector>("entity_selector") {
     private val parsers: Map<String, TokenSeqReader.(SelectorArguments) -> Unit> = mapOf(
         "c" to ::c,
         "dx" to ::dx,
@@ -374,11 +374,11 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
     private fun m(reader: TokenSeqReader, arguments: SelectorArguments) {
         val start = reader.getCurrentTokenStartPosition()
 
-        val t = reader.peek()
-        val gameMode = GameMode.parse(t)
+        val s = reader.readCommandString(allowFloat = true)
+        val gameMode = GameMode.entries.find { it.getAliases().contains(s) }
             ?: run {
                 val end = reader.getPreviousTokenEndPosition()
-                throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: ゲームモード '${t.value}' は存在しません")
+                throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: ゲームモード '$s' は存在しません")
             }
 
         if (arguments.m != null) {
@@ -725,6 +725,28 @@ class EntitySelectorArgumentType : ArgumentType<EntitySelector>("entity_selector
         parseSelectorArguments(reader, arguments)
 
         val end = reader.getPreviousTokenEndPosition()
-        return Argument(this, EntitySelector(type, arguments), start..end)
+
+        val selector = EntitySelector(type, arguments)
+        validator?.invoke(reader, selector, start..end)
+
+        return Argument(this, selector, start..end)
+    }
+
+    companion object {
+        fun players(): EntitySelectorArgumentType {
+            return EntitySelectorArgumentType { selector, span ->
+                if (!selector.isPlayer) {
+                    throw exception(span, "セレクターの読み取りに失敗しました: ここではプレイヤーセレクターが期待されています")
+                }
+            }
+        }
+
+        fun single(): EntitySelectorArgumentType {
+            return EntitySelectorArgumentType { selector, span ->
+                if (!selector.isSingle) {
+                    throw exception(span, "セレクターの読み取りに失敗しました: ここでは単一のエンティティを指すセレクターが期待されています")
+                }
+            }
+        }
     }
 }

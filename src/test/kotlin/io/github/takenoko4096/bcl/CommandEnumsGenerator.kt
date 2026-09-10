@@ -22,12 +22,23 @@ fun main() {
         if (name.first().isLowerCase()) name = name.toUpperCamel()
         if (name.contains(':') || name.contains('-')) continue
 
-        if (name in setOf(
-            "Option_If_Unless"
-        )) continue
+        if (name.endsWith("Set")) continue
 
         val values = property.getOrThrow("values", JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
-            .map { it.getOrThrow("value", JsonValueTypes.STRING).value }
+            .map {
+                var s = it.getOrThrow("value", JsonValueTypes.STRING).value
+
+                if (s.startsWith("minecraft:")) {
+                    s = s.replaceFirst("minecraft:", "")
+                }
+
+                if (!s.first().isJavaIdentifierStart() || s.any { !it.isJavaIdentifierPart() }) {
+                    "`$s`"
+                }
+                else s
+            }
+
+        val className = if (name.first().isJavaIdentifierStart()) name else "`$name`"
 
         if (values.size == 1) continue
 
@@ -38,7 +49,7 @@ package io.github.takenoko4096.bcl.brigadier.value.misc
 
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
-enum class ${if (name.first().isJavaIdentifierStart()) name else "`$name`"} : StringRepresentable {
+enum class $className : StringRepresentable {
 ${values.joinToString(",\n    ", prefix = "    ", postfix = ";") { it.uppercase() }}
 
     override fun getString(): String {

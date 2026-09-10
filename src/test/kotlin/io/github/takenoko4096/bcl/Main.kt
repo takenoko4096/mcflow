@@ -4,11 +4,11 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.*
-import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
+import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.json.JsonFile
@@ -104,7 +104,7 @@ fun main() {
     val text = """
         /ret -5.55
         setblock ~ ~ ~ minecraft:potatoes["growth"=1]
-        difficulty peaceful
+        difficulty 2
         say i am a pen!!!!!!!!
         sel @e[x=~1, y=-0.4, z = ~,c=1, type=!evocation_fang,\
         name= "ff\"ff ", family=foo.bar-baz?, name=!a:b::::::c:::,\
