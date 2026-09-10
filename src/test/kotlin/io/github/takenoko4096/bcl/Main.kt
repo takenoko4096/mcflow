@@ -121,7 +121,7 @@ fun main() {
 
     val parseResult = BclParser(
         text,
-        BclTokenizer(text).tokenize(),
+        BclTokenizer(text, interpretComments = false).tokenize(),
         dispatcher,
         true
     ).parse()
@@ -136,7 +136,7 @@ fun main() {
 
     val s = "execute as@a[tag=a]at@s facing^1^^run tp~-1~~-2~~true"
     println(
-        BclTokenizer(s)
+        BclTokenizer(s, interpretComments = false)
             .tokenize()
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )
@@ -144,7 +144,7 @@ fun main() {
     val vnl = getVanillaDispatcher()
     val results = CommandDispatcher.eval(vnl, """
     /help camera
-    /camera @s set minecraft:free ease 1 in_circ rot ~ ~1 view_offset
+    /camera "#sttt" set minecraft:free ease 1 in_circ rot ~ ~1 view_offset
     """.trimIndent())
 
     for (result in results) {
@@ -153,7 +153,7 @@ fun main() {
                 println(result)
             }
             is CommandLineParseResult.Successful -> {
-                println(result.resultValue)
+                println(result)
             }
         }
     }

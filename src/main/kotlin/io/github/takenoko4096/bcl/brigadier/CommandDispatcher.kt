@@ -279,7 +279,7 @@ class CommandDispatcher {
 
     companion object {
         fun eval(dispatcher: CommandDispatcher, sourceCode: String): List<CommandLineParseResult> {
-            val tokens = BclTokenizer(sourceCode).tokenize()
+            val tokens = BclTokenizer(sourceCode, interpretComments = false).tokenize()
             val block = BclParser(sourceCode, tokens, dispatcher, extension = false).parse()
             return block.nodes.filterIsInstance<CommandLineParseResult>()
         }

@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-class BclTokenizer(text: String) {
+class BclTokenizer(text: String, private val interpretComments: Boolean) {
     private val text: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
@@ -292,6 +292,8 @@ class BclTokenizer(text: String) {
     }
 
     private fun skipComment() {
+        if (!interpretComments) return
+
         if (isOver()) return
 
         if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
