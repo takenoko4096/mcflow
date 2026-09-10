@@ -22,7 +22,7 @@ fun main() {
         if (name.first().isLowerCase()) name = name.toUpperCamel()
         if (name.contains(':') || name.contains('-')) continue
 
-        if (name.endsWith("Set")) continue
+        if (name.endsWith("Set") || name in setOf("EntityType")) continue
 
         val values = property.getOrThrow("values", JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
             .map {
@@ -47,13 +47,13 @@ fun main() {
 """
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
 
-enum class $className : StringRepresentable {
+enum class $className : AliasRepresentable {
 ${values.joinToString(",\n    ", prefix = "    ", postfix = ";") { it.uppercase() }}
 
-    override fun getString(): String {
-        return name.lowercase()
+    override fun getAliases(): Set<String> {
+        return setOf(name.lowercase())
     }
 }
 

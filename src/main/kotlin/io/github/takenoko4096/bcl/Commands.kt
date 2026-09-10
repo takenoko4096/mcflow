@@ -3,12 +3,17 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
+import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 
-fun getDefaultDispatcher(): CommandDispatcher {
+fun getVanillaDispatcher(): CommandDispatcher {
     return CommandDispatcher().apply {
         aimassist()
+        alwaysday()
+        camera()
     }
 }
 
@@ -82,6 +87,72 @@ fun CommandDispatcher.camera() {
             }
 
             "fade" {
+                executes()
+
+                "color" {
+                    "red"(IntegerArgumentType.integer(0..255)) {
+                        "green"(IntegerArgumentType.integer(0..255)) {
+                            "blue"(IntegerArgumentType.integer(0..255)) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+
+                "time" {
+                    "in_seconds"(FloatArgumentType.float(0f..10f)) {
+                        "hold_seconds"(FloatArgumentType.float(0f..10f)) {
+                            "out_seconds"(FloatArgumentType.float(0f..10f)) {
+                                executes()
+
+                                "color" {
+                                    "red"(IntegerArgumentType.integer(0..255)) {
+                                        "green"(IntegerArgumentType.integer(0..255)) {
+                                            "blue"(IntegerArgumentType.integer(0..255)) {
+                                                executes()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            "fov_clear" {
+                executes()
+
+                "fov_ease_time"(FloatArgumentType.float()) {
+                    executes()
+
+                    "fov_ease_type"(EnumArgumentType.of<EasingType>()) {
+                        executes()
+                    }
+                }
+            }
+
+            "fov_set" {
+                "fov_value"(FloatArgumentType.float()) {
+                    executes()
+
+                    "fov_ease_time"(FloatArgumentType.float()) {
+                        executes()
+
+                        "fov_ease_type"(EnumArgumentType.of<EasingType>()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "play_spline" {
+                "name"(StringArgumentType.isolated()) {
+                    executes()
+                }
+            }
+
+            "remove_target" {
                 executes()
             }
         }

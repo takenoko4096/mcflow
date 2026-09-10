@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.json.JsonFile
+import io.github.takenoko4096.json.JsonPath
 import io.github.takenoko4096.json.JsonValueTypes
 import java.io.PrintStream
 import kotlin.io.path.ExperimentalPathApi
@@ -16,12 +17,19 @@ import kotlin.io.path.writeText
 fun main() {
     System.setOut(PrintStream(System.out, true, Charsets.UTF_8))
     System.setErr(PrintStream(System.err, true, Charsets.UTF_8))
-    val file = JsonFile("src/test/resources/mojang-entities.json")
+    val file = JsonFile("src/test/resources/mojang-commands.json")
     val obj = file.readAsObject()
-    val dataItems =  obj.getOrThrow("data_items", JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
+    val dataItems =  obj.getOrThrow(JsonPath.of("command_enums[{\"name\": \"EntityType\"}].values"), JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
         .map { item ->
-            item.getOrThrow("name", JsonValueTypes.STRING).value
+            item.getOrThrow("value", JsonValueTypes.STRING).value
         }
+        .filterNot {
+            it.startsWith("minecraft:")
+        }
+        .sortedBy { it }
+        .toMutableList()
+
+    dataItems.add("player")
 
     val sourceFile = Path("src/test/resources/classes/EntityType.kt")
     if (!sourceFile.parent.exists()) sourceFile.createParentDirectories()
@@ -34,7 +42,15 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
 enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null) {
-${dataItems.joinToString(",\n    ", prefix = "    ", postfix = ";") { it.split(':')[1].uppercase() }}
+${dataItems.joinToString(",\n    ", prefix = "    ", postfix = ";") {
+    if (it.first().isJavaIdentifierStart() && it.all { char -> char.isJavaIdentifierPart() }) {
+        it.uppercase()
+    }
+    else {
+        val (namespace, id) = it.split(':')
+        "`${it.uppercase()}`(\"$namespace\", \"$id\")"
+    }
+}}
 
     val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 

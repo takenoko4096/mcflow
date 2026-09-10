@@ -110,7 +110,7 @@ class BclTokenizer(text: String) {
             id++,
             type,
             // クォートに囲まれた文字列以外の全てのトークンは大文字・小文字を区別しない
-            if (type in setOf(TokenType.SINGLE_QUOTED, TokenType.DOUBLE_QUOTED, TokenType.BACK_QUOTED)) value else value.lowercase(),
+            value.lowercase(),
             start..end
         )
     }
@@ -317,6 +317,7 @@ class BclTokenizer(text: String) {
 
         var current = peek()
 
+        // TODO
         if (current.isJavaIdentifierStart()) {
             sb.append(current)
         }
@@ -331,6 +332,7 @@ class BclTokenizer(text: String) {
         while (!isOver()) {
             current = peek()
 
+            // TODO
             if (current.isJavaIdentifierPart()) {
                 sb.append(current)
                 end = getCurrentSourcePosition()
