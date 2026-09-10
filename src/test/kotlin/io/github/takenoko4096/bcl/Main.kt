@@ -22,7 +22,7 @@ fun main() {
     dispatcher.register("return") {
         description = "return an integer value."
 
-        aliases("ret")
+        aliases.add("ret")
 
         "int_val"(FloatArgumentType.float()) {
             executes { getArgument<Float>("int_val").value }
@@ -44,7 +44,7 @@ fun main() {
     dispatcher.register("say") {
         description = "say a message"
 
-        aliases("shaberu")
+        aliases.add("shaberu")
 
         "greedy_str"(StringArgumentType.greedy()) {
             executes {
@@ -143,7 +143,7 @@ fun main() {
 
     val vnl = getVanillaDispatcher()
     val results = CommandDispatcher.eval(vnl, """
-    /help camera
+    /? camera
     /camera "#sttt" set minecraft:free ease 1 in_circ rot ~ ~1 view_offset
     """.trimIndent())
 
@@ -153,7 +153,7 @@ fun main() {
                 println(result)
             }
             is CommandLineParseResult.Successful -> {
-                println(result)
+                println(result.resultValue)
             }
         }
     }

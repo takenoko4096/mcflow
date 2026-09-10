@@ -5,11 +5,11 @@ import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 
 class Command(
     name: String,
-    override val description: String,
+    val description: String,
     val aliases: Set<String>,
     executor: (CommandContext.() -> Any?)?,
     children: Map<String, CommandNode>
-) : LiteralCommandNode(name, description, executor, children) {
+) : LiteralCommandNode(name, executor, children) {
     fun getAllUsages(): List<String> {
         val usage = "/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]")
 
@@ -23,18 +23,21 @@ class Command(
             val usage = "$parent $value"
 
             if (value.executor != null) {
-                if (value.description == null) {
-                    usages.add(usage)
-                }
-                else {
-                    usages.add("$usage\n    - ${value.description!!}")
-                }
+                usages.add(usage)
             }
 
             usages.addAll(getChildrenUsagesOf(value, usage))
         }
 
         return usages
+    }
+
+    fun getTreeUsage(): String {
+        return getTreeUsage(
+            false,
+            0,
+            self = "/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]")
+        )
     }
 
     override fun toString(): String {

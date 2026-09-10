@@ -24,9 +24,9 @@ fun getVanillaDispatcher(): CommandDispatcher {
 
 fun CommandDispatcher.help() {
     register("help") {
-        description = "コマンドの一覧(ヘルプ)を呼び出します。"
+        description = "コマンドの一覧またはヘルプを呼び出します。"
 
-        aliases("?")
+        aliases.add("?")
 
         executes()
 
@@ -39,7 +39,7 @@ fun CommandDispatcher.help() {
                 val arg = getArgument<CommandName>("command_name")
                 val command = getCommand(arg.value.getString()) ?: throw exception(arg.sourceSpan, "NEVER HAPPENS")
 
-                command.getAllUsages().joinToString("\n")
+                command.getTreeUsage()
             }
         }
     }
@@ -93,12 +93,12 @@ fun CommandDispatcher.alwaysday() {
     register("alwaysday") {
         description = "昼夜サイクルを停止及び再開します。"
 
-        executes("昼夜サイクルの停止・再開を切り替えます。") {
+        executes {
             "昼夜サイクルが既に停止されている場合は再開し、そうでなければ停止します。"
         }
 
         "lock"(BooleanArgumentType()) {
-            executes("'true' が渡された場合に昼夜サイクルを停止し、時刻は常に昼間になります。 'false' を渡すと再開します。") {
+            executes {
                 if (getValue("lock")) {
                     "昼夜サイクルを停止します。"
                 }
