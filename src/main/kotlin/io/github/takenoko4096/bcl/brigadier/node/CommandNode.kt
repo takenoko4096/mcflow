@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.CommandContext
 
 sealed class CommandNode(
     val name: String,
+    open val description: String?,
     val executor: (CommandContext.() -> Any?)?,
     val children: Map<String, CommandNode>
 ) {

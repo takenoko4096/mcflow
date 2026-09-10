@@ -10,6 +10,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
 
     protected var executor: (CommandContext.() -> Any?)? = null
 
+    protected open var description: String? = null
+
     init {
         if (!name.matches(JAVA_IDENTIFIER_STRING_REGEX)) {
             throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; $JAVA_IDENTIFIER_STRING_REGEX に従う必要があります")
@@ -22,7 +24,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): LiteralCommandNode {
-            return LiteralCommandNode(name, executor, children)
+            return LiteralCommandNode(name, description, executor, children)
         }
     }
 
@@ -32,12 +34,12 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): ArgumentCommandNode<T> {
-            return ArgumentCommandNode(name, type, executor, children)
+            return ArgumentCommandNode(name, description, type, executor, children)
         }
     }
 
     class CommandBuilder(name: String, configurator: CommandBuilder.() -> Unit) : CommandNodeBuilder(name) {
-        var description: String = ""
+        public override var description: String? = null
 
         private var aliases: Set<String> = setOf()
 
@@ -50,7 +52,12 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): Command {
-            return Command(name, description, aliases, executor, children)
+            if (description == null) {
+                // TODO temp throw IllegalStateException("コマンド '$name' の description が設定されていません")
+                description = "empty description"
+            }
+
+            return Command(name, description!!, aliases, executor, children)
         }
     }
 
@@ -62,9 +69,11 @@ sealed class CommandNodeBuilder(protected val name: String) {
         children[this] = ArgumentCommandNodeBuilder(this, type, configurator).build()
     }
 
-    fun executes(callback: CommandContext.() -> Any? = {}) {
+    // TODO temp description = ""
+    fun executes(description: String = "empty description", callback: CommandContext.() -> Any? = {}) {
         if (executor == null) {
             executor = callback
+            this.description = description
         }
         else {
             throw IllegalArgumentException("実行処理を複数書くことはできません")

@@ -22,7 +22,7 @@ fun main() {
         if (name.first().isLowerCase()) name = name.toUpperCamel()
         if (name.contains(':') || name.contains('-')) continue
 
-        if (name.endsWith("Set") || name in setOf("EntityType")) continue
+        if (name in setOf("EntityType")) continue
 
         val values = property.getOrThrow("values", JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
             .map {

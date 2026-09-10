@@ -42,7 +42,7 @@ enum class SelectorType(
     S(
         "@s",
         aliveOnly = false,
-        isPlayer = false,
+        isPlayer = true,
         defaultSortOrder = SelectorSortOrder.DISTANCE,
         defaultArguments = SelectorArguments(c = WithSpan.noSpan(1)),
         argumentsOverridable = false

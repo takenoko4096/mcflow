@@ -140,4 +140,21 @@ fun main() {
             .tokenize()
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )
+
+    val vnl = getVanillaDispatcher()
+    val results = CommandDispatcher.eval(vnl, """
+    /help camera
+    /camera @s set minecraft:free ease 1 in_circ rot ~ ~1 view_offset
+    """.trimIndent())
+
+    for (result in results) {
+        when (result) {
+            is CommandLineParseResult.Failure -> {
+                println(result)
+            }
+            is CommandLineParseResult.Successful -> {
+                println(result.resultValue)
+            }
+        }
+    }
 }

@@ -30,7 +30,7 @@ class BclTokenizer(text: String) {
 
     private fun peek(): Char {
         if (isOver()) {
-            throw exception(getCurrentSourcePosition()..getCurrentSourcePosition(), "コード外に到達しました")
+            throw exception(getSourcePositionAtBack()..getSourcePositionAtBack(), "入力が不足しています")
         }
 
         return text[cursor]
@@ -190,6 +190,10 @@ class BclTokenizer(text: String) {
 
         var end = getSourcePositionAtBack()
 
+        if (isOver()) {
+            return tokenOf(radix.apply(true), sb.toString(), start, end)
+        }
+
         val suffix = peek()
         var signed = true
         if (suffix == KeyChar.UNSIGNED) {
@@ -226,6 +230,10 @@ class BclTokenizer(text: String) {
         val quote = peek()
         // sb.append(quote)
         next()
+
+        if (isOver()) {
+            throw exception(start..start, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません")
+        }
 
         if (peek() == quote) {
             if (quote == KeyChar.CHAR_QUOTE) {

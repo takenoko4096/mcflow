@@ -4,8 +4,10 @@ import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.CommandBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
+import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
 class CommandDispatcher {
@@ -13,6 +15,10 @@ class CommandDispatcher {
 
     fun getCommand(name: String): Command? {
         return commands[name]
+    }
+
+    fun getAllCommands(): Set<Command> {
+        return commands.values.toSet()
     }
 
     fun register(name: String, configurator: CommandBuilder.() -> Unit): Command {
@@ -50,7 +56,7 @@ class CommandDispatcher {
                     BclDiagnostic(
                         "コマンド名の読み取りに失敗しました: ${error.description}",
                         reader.sourceCode,
-                        error.span
+                        error.sourceSpan
                     )
                 ),
                 start..reader.getPreviousTokenEndPosition()
@@ -102,7 +108,7 @@ class CommandDispatcher {
                         listOf(BclDiagnostic(
                             error.description,
                             reader.sourceCode,
-                            error.span
+                            error.sourceSpan
                         )),
                         start..best.state.reader.getPreviousTokenEndPosition()
                     )
@@ -196,7 +202,7 @@ class CommandDispatcher {
                             }
                             """.trimIndent(),
                             text,
-                            e.span
+                            e.sourceSpan
                         )
                     )
                 )
@@ -215,7 +221,7 @@ class CommandDispatcher {
                             BclDiagnostic(
                                 "予期しない引数です: ${candidateReader.peek()}",
                                 candidateReader.sourceCode,
-                                candidateReader.getRemainingSourceSpan()
+                                candidateReader.peek().sourceSpan
                             )
                         )
                     }
@@ -269,5 +275,13 @@ class CommandDispatcher {
         }
 
         return potentials
+    }
+
+    companion object {
+        fun eval(dispatcher: CommandDispatcher, sourceCode: String): List<CommandLineParseResult> {
+            val tokens = BclTokenizer(sourceCode).tokenize()
+            val block = BclParser(sourceCode, tokens, dispatcher, extension = false).parse()
+            return block.nodes.filterIsInstance<CommandLineParseResult>()
+        }
     }
 }
