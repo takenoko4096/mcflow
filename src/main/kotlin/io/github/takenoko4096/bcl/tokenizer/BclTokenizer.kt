@@ -328,7 +328,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         var current = peek()
 
         // TODO
-        if (current.isJavaIdentifierStart()) {
+        if (current !in KeyChar.SYMBOLS && current !in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             sb.append(current)
         }
         else {
@@ -343,7 +343,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
             current = peek()
 
             // TODO
-            if (current.isJavaIdentifierPart()) {
+            if (current !in KeyChar.SYMBOLS) {
                 sb.append(current)
                 end = getCurrentSourcePosition()
                 next()

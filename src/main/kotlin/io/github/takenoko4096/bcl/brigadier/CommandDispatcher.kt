@@ -91,6 +91,24 @@ class CommandDispatcher {
             root.children
         )
 
+        if (root.executor != null) {
+            potentials += RoutePotential(
+                initialState,
+                if (reader.isOver()) {
+                    emptyList()
+                }
+                else {
+                    listOf(
+                        BclDiagnostic(
+                            "予期しない引数です: ${reader.peek()}",
+                            reader.sourceCode,
+                            reader.peek().sourceSpan
+                        )
+                    )
+                }
+            )
+        }
+
         if (potentials.isNotEmpty()) {
             val best = selectBest(potentials)
 
@@ -133,14 +151,21 @@ class CommandDispatcher {
             }
         }
 
-        val diagnostics = potentials.flatMap { it.diagnostics }
+        val end = reader.peekSafely(-1).sourceSpan.end
+        val sourceSpan = start..end
 
         return CommandLineParseResult.Failure(
             root,
             destination = null,
             emptyMap(),
-            diagnostics,
-            start..diagnostics.maxBy { it.sourceSpan.end.index }.sourceSpan.end
+            listOf(
+                BclDiagnostic(
+                    "?",
+                    reader.sourceCode,
+                    sourceSpan
+                )
+            ),
+            sourceSpan
         )
     }
 
@@ -153,7 +178,7 @@ class CommandDispatcher {
         )
     }
 
-    private fun dispatch(text: String, state: DispatcherParseState, children: Map<String, CommandNode>): List<RoutePotential> {
+    private fun dispatch(text: String, state: DispatcherParseState, children: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
         for ((name, node) in children) {
@@ -185,13 +210,13 @@ class CommandDispatcher {
                     }
                 }
             }
-            catch (e: BclTokenSeqReadException) {
+            catch (error: BclTokenSeqReadException) {
                 potentials += RoutePotential(
                     nextState,
                     listOf(
                         BclDiagnostic(
                             """
-                            引数が正しくありません (${e.description})
+                            引数が正しくありません (${error.description})
                             ${
                                 if (children.size == 1) {
                                     children.values.first().toString() + " が期待されています"
@@ -202,7 +227,7 @@ class CommandDispatcher {
                             }
                             """.trimIndent(),
                             text,
-                            e.sourceSpan
+                            error.sourceSpan
                         )
                     )
                 )
@@ -230,58 +255,41 @@ class CommandDispatcher {
 
             // さらに子へ進む可能性
             if (node.children.isNotEmpty()) {
-                potentials += dispatch(
+                val childPotentials = dispatch(
                     text,
                     nextState,
                     node.children
                 )
-            }
 
-            /*if (node.children.isEmpty()) {
-                if (node.executable) {
-                    potentials += if (!candidateReader.isOver()) {
-                        Potential(
-                            nextState,
-                            listOf(
-                                Diagnostic("予期しない引数です", text, candidateReader.peek().sourceSpan)
-                            )
-                        )
-                    } else Potential(
-                        nextState,
-                        listOf()
-                    )
-                }
-                else if (candidateReader.isOver()) {
-                    potentials += Potential(
-                        nextState,
-                        listOf(
-                            Diagnostic("引数が不足しています", text, candidateReader.peekSafely(offset = -1).sourceSpan)
-                        )
-                    )
+                if (childPotentials.isNotEmpty()) {
+                    potentials += childPotentials
                 }
                 else {
-                    potentials += Potential(
+                    potentials += RoutePotential(
                         nextState,
                         listOf(
-                            Diagnostic("予期しない引数です", text, candidateReader.peek().sourceSpan)
+                            BclDiagnostic(
+                                if (node.children.size == 1) {
+                                    "予期しない引数です: ${node.children.values.first()} が期待されています"
+                                }
+                                else {
+                                    node.children.values.joinToString(prefix = "予期しない引数です: ", separator = " | ", postfix = " のいずれかが期待されています")
+                                },
+                                text,
+                                candidateReader.peek().sourceSpan
+                            )
                         )
                     )
                 }
             }
-            else {
-                val nextPotentials = dispatch(text, nextState, node.children)
-                potentials += nextPotentials
-            }*/
         }
 
         return potentials
     }
 
-    companion object {
-        fun eval(dispatcher: CommandDispatcher, sourceCode: String): List<CommandLineParseResult> {
-            val tokens = BclTokenizer(sourceCode, interpretComments = false).tokenize()
-            val block = BclParser(sourceCode, tokens, dispatcher, extension = false).parse()
-            return block.nodes.filterIsInstance<CommandLineParseResult>()
-        }
+    fun evaluate(sourceCode: String): List<CommandLineParseResult> {
+        val tokens = BclTokenizer(sourceCode, interpretComments = false).tokenize()
+        val block = BclParser(sourceCode, tokens, this, extension = false).parse()
+        return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
 }

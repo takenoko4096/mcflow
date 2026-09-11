@@ -674,8 +674,6 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
     }
 
     private fun node(): Node {
-        val start = getCurrentTokenStartPosition()
-
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan.start, "命令のパースに失敗しました: コード外に到達しました")
         }
@@ -687,12 +685,8 @@ class BclParser(text: String, tokens: List<Token>, private val dispatcher: Comma
             nextIgnoreNewLine()
             command()
         }
-        else if (peekIgnoreNewLine().type == TokenType.WORD) {
-            command()
-        }
         else {
-            nextIgnoreNewLine()
-            throw exception(start, "命令のパースに失敗しました: 不明な命令です: ${peekSafely(-1)}")
+            command()
         }
 
         while (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.SEMICOLON) {

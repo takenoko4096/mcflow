@@ -372,31 +372,33 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun m(reader: TokenSeqReader, arguments: SelectorArguments) {
+        val startFromInv = reader.getCurrentTokenStartPosition()
+        val inv = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
-
         val s = reader.readCommandString(allowFloat = true)
+        val end = reader.getPreviousTokenEndPosition()
+
+        if (arguments.m != null) {
+            throw reader.exception(startFromInv..end, "セレクタ引数 'm' の読み取りに失敗しました: セレクタ引数 m は \"\"否定であっても\"\" 重複できません")
+        }
+
         val gameMode = GameMode.entries.find { it.getAliases().contains(s) }
             ?: run {
-                val end = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: ゲームモード '$s' は存在しません")
             }
 
-        if (arguments.m != null) {
-            val end = reader.getPreviousTokenEndPosition()
-            throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: セレクタ引数 m は \"\"否定であっても\"\" 重複できません")
-        }
-
-        arguments.m = gameMode
+        arguments.m = InvertibleValue(inv, gameMode, start..end)
     }
 
     private fun name(reader: TokenSeqReader, arguments: SelectorArguments) {
-        val start = reader.getCurrentTokenStartPosition()
+        val startFromInv = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
+        val start = reader.getCurrentTokenStartPosition()
         val name = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()
 
         if (!inverted && arguments.name.any { !it.inverted }) {
-            throw reader.exception(start..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません")
+            throw reader.exception(startFromInv..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません")
         }
 
         arguments.name.add(InvertibleValue(inverted, name, start..end))

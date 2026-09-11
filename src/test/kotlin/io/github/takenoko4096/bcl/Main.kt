@@ -141,11 +141,8 @@ fun main() {
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )
 
-    val vnl = getVanillaDispatcher()
-    val results = CommandDispatcher.eval(vnl, """
-    /? camera
-    /camera "#sttt" set minecraft:free ease 1 in_circ rot ~ ~1 view_offset
-    """.trimIndent())
+    val vanilla = getVanillaDispatcher()
+    val results = vanilla.evaluate("/help inputpermission")
 
     for (result in results) {
         when (result) {

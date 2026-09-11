@@ -2,9 +2,6 @@
 
 ## 未実装
 
-- Tokenizer
-  - 相対／ローカル座標のテスト
-  - 英語以外への対応
 - Parser
   - 文字列マクロ
   - `@calculate`, `@define`

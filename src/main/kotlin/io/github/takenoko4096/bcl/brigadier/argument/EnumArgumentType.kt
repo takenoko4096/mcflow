@@ -7,7 +7,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import kotlin.enums.EnumEntries
 import kotlin.enums.enumEntries
 
-class EnumArgumentType<E>(private val entries: EnumEntries<E>) : ArgumentType<E>("enum") where E : Enum<E>, E : AliasRepresentable {
+class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : ArgumentType<E>(name) where E : Enum<E>, E : AliasRepresentable {
     override fun parse(reader: TokenSeqReader): Argument<E> {
         val start = reader.getCurrentTokenStartPosition()
         // TODO
@@ -25,7 +25,10 @@ class EnumArgumentType<E>(private val entries: EnumEntries<E>) : ArgumentType<E>
 
     companion object {
         inline fun <reified E> of(): EnumArgumentType<E> where E : Enum<E>, E : AliasRepresentable {
-            return EnumArgumentType(enumEntries<E>())
+            val className = E::class.simpleName ?: throw IllegalArgumentException("無名クラスを EnumArgumentType に使用することはできません")
+            val name = className.replace("([a-z])([A-Z]+)".toRegex(), "$1_$2").lowercase()
+            val entries = enumEntries<E>()
+            return EnumArgumentType(name, entries)
         }
     }
 }

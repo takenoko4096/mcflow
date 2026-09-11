@@ -72,7 +72,7 @@ enum class SelectorType(
         argumentsOverridable = true
     ),
     PLAYER(
-        "(player)",
+        "@specific-player",
         aliveOnly = false,
         isPlayer = true,
         defaultSortOrder = SelectorSortOrder.DISTANCE,

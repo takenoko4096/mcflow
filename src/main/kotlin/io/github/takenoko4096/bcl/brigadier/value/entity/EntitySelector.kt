@@ -10,6 +10,6 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     val isInvertedOrder = c?.value != null && c.value < 0
 
     override fun toString(): String {
-        return "${type.getString()}[$arguments]"
+        return "${type.getString()}$arguments"
     }
 }

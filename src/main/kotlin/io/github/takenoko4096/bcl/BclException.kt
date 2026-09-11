@@ -38,11 +38,13 @@ abstract class BclException protected constructor(
                 .replace(KeyChar.LINEBREAK, ';')
                 .replace("\\s+".toRegex(), KeyChar.SPACE.toString()) else ""
 
-            println(a)
-            println(m)
-            println(b)
+            val halfWidth = "[\\x20-\\x7E\\uFF61-\\uFF9F]".toRegex()
+            val fullWidth = "[^\\x20-\\x7E\\uFF61-\\uFF9F]".toRegex()
 
-            val area = "$a$m$b\n" + " ".repeat(a.length) + "^".repeat(m.length)
+            val space = a.replace(halfWidth, " ").replace(fullWidth, "　")
+            val pointer = m.replace(halfWidth, "^").replace(fullWidth, "＾")
+
+            val area = "$a$m$b" + '\n' + space + pointer
 
             return "$message @$sourceSpan; \n$area"
         }

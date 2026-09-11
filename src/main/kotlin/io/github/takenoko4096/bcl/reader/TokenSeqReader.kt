@@ -214,7 +214,7 @@ open class TokenSeqReader(
 
     fun readInteger(signedDecimalOnly: Boolean = true): Int {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan.end, "整数が期待されましたが、入力が不足しています")
+            throw exception(peekSafely(-1).sourceSpan, "整数が期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()

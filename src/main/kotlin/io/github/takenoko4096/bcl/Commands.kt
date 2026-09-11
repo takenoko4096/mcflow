@@ -37,7 +37,11 @@ fun CommandDispatcher.help() {
         "command_name"(EnumArgumentType.of<CommandName>()) {
             executes {
                 val arg = getArgument<CommandName>("command_name")
-                val command = getCommand(arg.value.getString()) ?: throw exception(arg.sourceSpan, "NEVER HAPPENS")
+                val command = getCommand(arg.value.getString())
+                    ?: throw exception(
+                        arg.sourceSpan,
+                        "コマンド '${arg.value.getString()}' の定義が見つかりませんでした; 構造の定義が未実装です"
+                    )
 
                 command.getTreeUsage()
             }
