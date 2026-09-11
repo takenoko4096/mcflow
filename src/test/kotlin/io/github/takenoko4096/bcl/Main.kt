@@ -141,8 +141,8 @@ fun main() {
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )
 
-    val vanilla = getVanillaDispatcher()
-    val results = vanilla.evaluate("/help inputpermission")
+    Commands.getAllVanillaCommands().forEach(dispatcher::register)
+    val results = dispatcher.evaluate("/help 35")
 
     for (result in results) {
         when (result) {

@@ -17,28 +17,30 @@ class CommandDispatcher {
         return commands[name]
     }
 
-    fun getAllCommands(): Set<Command> {
+    fun getKnownCommands(): Set<Command> {
         return commands.values.toSet()
     }
 
-    fun register(name: String, configurator: CommandBuilder.() -> Unit): Command {
-        val command = CommandBuilder(name, configurator).build()
-
-        if (name in commands) {
-            throw IllegalArgumentException("コマンド名 '$name' は既に使用されているため登録できません")
+    fun register(command: Command): Command {
+        if (command.name in commands) {
+            throw IllegalArgumentException("コマンド名 '${command.name}' は既に使用されているため登録できません")
         }
 
-        commands[name] = command
+        commands[command.name] = command
 
         for (string in command.aliases) {
             if (string in commands) {
-                throw IllegalArgumentException("コマンド名 '$name' は既に使用されているためエイリアスを登録できません")
+                throw IllegalArgumentException("コマンド名 '${command.name}' は既に使用されているためエイリアスを登録できません")
             }
 
             commands[string] = command
         }
 
         return command
+    }
+
+    fun register(name: String, configurator: CommandBuilder.() -> Unit): Command {
+        return register(Command.create(name, configurator))
     }
 
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
@@ -113,7 +115,7 @@ class CommandDispatcher {
             val best = selectBest(potentials)
 
             return if (best.diagnostics.isEmpty()) {
-                val context = CommandContext(reader.sourceCode, best.state.arguments)
+                val context = CommandContext(reader.sourceCode, this, best.state.arguments)
 
                 val resultValue = try {
                     best.state.destination.executor!!(context)

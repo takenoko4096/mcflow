@@ -1,5 +1,4 @@
 {
-    "CLASS_NAME": "Block",
     "sourceSpan": "line 1, column 1 to line 10, column 12",
     "nodes": [
         {
@@ -9,10 +8,10 @@
             "destination": "<int_val: float>",
             "arguments": {
                 "int_val": {
-                    "sourceSpan": "line 1, column 6 to line 1, column 10",
                     "value": -5.55,
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@cb644e",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType@4566e5bd",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 1, column 6 to line 1, column 10"
                 }
             },
             "command": "Command</return [ret]>"
@@ -23,25 +22,25 @@
             "sourceSpan": "line 2, column 1 to line 2, column 45",
             "destination": "<properties: block_properties>",
             "arguments": {
-                "position": {
-                    "sourceSpan": "line 2, column 10 to line 2, column 14",
-                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@55d56113",
-                    "CLASS_NAME": "Argument"
-                },
                 "properties": {
-                    "sourceSpan": "line 2, column 34 to line 2, column 45",
                     "value": [
                         "growth=1"
                     ],
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType@dc24521",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType@10bdf5e5",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 2, column 34 to line 2, column 45"
                 },
                 "name": {
-                    "sourceSpan": "line 2, column 16 to line 2, column 33",
                     "value": "POTATOES",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@148080bb",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType@dc24521",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 2, column 16 to line 2, column 33"
+                },
+                "position": {
+                    "value": "Coordinate(~0.0 ~0.0 ~0.0)",
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType@148080bb",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 2, column 10 to line 2, column 14"
                 }
             },
             "command": "Command</setblock>"
@@ -53,10 +52,10 @@
             "destination": "<mode: difficulty>",
             "arguments": {
                 "mode": {
-                    "sourceSpan": "line 3, column 12",
                     "value": "NORMAL",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@7e0b0338",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType@617faa95",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 3, column 12"
                 }
             },
             "command": "Command</difficulty>"
@@ -68,10 +67,10 @@
             "destination": "<greedy_str: string>",
             "arguments": {
                 "greedy_str": {
-                    "sourceSpan": "line 4, column 5 to line 4, column 22",
                     "value": "i am a pen!!!!!!!!",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@617faa95",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType@1e127982",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 4, column 5 to line 4, column 22"
                 }
             },
             "command": "Command</say [shaberu]>"
@@ -83,24 +82,25 @@
             "destination": "<selc: entity_selector>",
             "arguments": {
                 "selc": {
-                    "sourceSpan": "line 5, column 5 to line 9, column 2",
                     "value": "@e[c=1, family=[foo.bar-baz?], has_property={, property=[!minecraft:big]}, hasitem=[{item=minecraft:apple, location=slot.weapon.mainhand}], name=[ff\"ff , !a:b::::::c:::], scores={a=!1..3, b=-2147483648..2, c=1..2147483647, d=4..4, e=-4..-2}, type=[!EVOCATION_FANG], x=~1.0, y=-0.4, z=~0.0]",
-                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType@1e127982",
-                    "CLASS_NAME": "Argument"
+                    "type": "io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType@60c6f5b",
+                    "CLASS_NAME": "Argument",
+                    "sourceSpan": "line 5, column 5 to line 9, column 2"
                 }
             },
             "command": "Command</sel>"
         },
         {
-            "parameters": [],
             "CLASS_NAME": "SetStatement",
             "sourceSpan": "line 10, column 1 to line 10, column 9",
             "block": {
-                "CLASS_NAME": "Block",
                 "sourceSpan": "line 10, column 11 to line 10, column 12",
-                "nodes": []
+                "nodes": [],
+                "CLASS_NAME": "Block"
             },
-            "identifier": "main"
+            "identifier": "main",
+            "parameters": []
         }
-    ]
+    ],
+    "CLASS_NAME": "Block"
 }

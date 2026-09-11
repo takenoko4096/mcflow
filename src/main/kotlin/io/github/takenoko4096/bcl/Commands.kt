@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl
 
-import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
@@ -13,44 +13,8 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.CameraPreset
 import io.github.takenoko4096.bcl.brigadier.value.misc.CommandName
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 
-fun getVanillaDispatcher(): CommandDispatcher {
-    return CommandDispatcher().apply {
-        aimassist()
-        alwaysday()
-        camera()
-        help()
-    }
-}
-
-fun CommandDispatcher.help() {
-    register("help") {
-        description = "コマンドの一覧またはヘルプを呼び出します。"
-
-        aliases.add("?")
-
-        executes()
-
-        "page"(IntegerArgumentType.integer()) {
-            executes()
-        }
-
-        "command_name"(EnumArgumentType.of<CommandName>()) {
-            executes {
-                val arg = getArgument<CommandName>("command_name")
-                val command = getCommand(arg.value.getString())
-                    ?: throw exception(
-                        arg.sourceSpan,
-                        "コマンド '${arg.value.getString()}' の定義が見つかりませんでした; 構造の定義が未実装です"
-                    )
-
-                command.getTreeUsage()
-            }
-        }
-    }
-}
-
-fun CommandDispatcher.aimassist() {
-    register("aimassist") {
+object Commands {
+    val AIMASSIST = Command.create("aimassist") {
         description = "エイムアシストを有効にします。"
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -91,31 +55,8 @@ fun CommandDispatcher.aimassist() {
             }
         }
     }
-}
 
-fun CommandDispatcher.alwaysday() {
-    register("alwaysday") {
-        description = "昼夜サイクルを停止及び再開します。"
-
-        executes {
-            "昼夜サイクルが既に停止されている場合は再開し、そうでなければ停止します。"
-        }
-
-        "lock"(BooleanArgumentType()) {
-            executes {
-                if (getValue("lock")) {
-                    "昼夜サイクルを停止します。"
-                }
-                else {
-                    "昼夜サイクルを再開します。"
-                }
-            }
-        }
-    }
-}
-
-fun CommandDispatcher.camera() {
-    register("camera") {
+    val CAMERA = Command.create("camera") {
         "players"(EntitySelectorArgumentType.players()) {
             "attach_to_entity" {
                 "target"(EntitySelectorArgumentType()) {
@@ -314,10 +255,57 @@ fun CommandDispatcher.camera() {
             }
         }
     }
-}
 
-fun CommandDispatcher.camerashake() {
-    register("camerashake") {
+    val DAYLOCK = Command.create("daylock") {
+        description = "昼夜サイクルを停止及び再開します。"
 
+        aliases.add("alwaysday")
+
+        executes {
+            "昼夜サイクルが既に停止されている場合は再開し、そうでなければ停止します。"
+        }
+
+        "lock"(BooleanArgumentType()) {
+            executes {
+                if (getValue("lock")) {
+                    "昼夜サイクルを停止します。"
+                }
+                else {
+                    "昼夜サイクルを再開します。"
+                }
+            }
+        }
     }
+
+    val HELP = Command.create("help") {
+        description = "コマンドの一覧またはヘルプを呼び出します。"
+
+        aliases.add("?")
+
+        executes()
+
+        "page"(IntegerArgumentType.integer()) {
+            executes()
+        }
+
+        "command_name"(StringArgumentType.word()) {
+            executes {
+                val arg = getArgument<String>("command_name")
+                val command = getDispatcher().getCommand(arg.value)
+                    ?: throw exception(
+                        arg.sourceSpan,
+                        "コマンド '${arg.value}' が見つかりません"
+                    )
+
+                command.getTreeUsage()
+            }
+        }
+    }
+
+    fun getAllVanillaCommands() = listOf(
+        AIMASSIST,
+        CAMERA,
+        DAYLOCK,
+        HELP
+    )
 }

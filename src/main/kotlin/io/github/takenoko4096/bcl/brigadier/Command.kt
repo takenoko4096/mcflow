@@ -48,4 +48,10 @@ class Command(
             "Command</$name $aliases>"
         }
     }
+
+    companion object {
+        fun create(name: String, configurator: CommandNodeBuilder.CommandBuilder.() -> Unit): Command {
+            return CommandNodeBuilder.CommandBuilder(name, configurator).build()
+        }
+    }
 }
