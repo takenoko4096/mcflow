@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl.brigadier.value.misc
+package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 

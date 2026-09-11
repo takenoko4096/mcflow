@@ -8,7 +8,6 @@ import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
-import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.json.JsonFile
@@ -51,7 +50,7 @@ fun main() {
                 getArgument<String>("greedy_str").value
             }
 
-            "count"(IntegerArgumentType.unlimited()) {
+            "count"(IntegerArgumentType.radixUnlimited()) {
                 executes {
                     val s = getArgument<String>("greedy_str").value
                     s.repeat(getArgument<Int>("count").value)
@@ -90,6 +89,8 @@ fun main() {
             }
         }
     }
+
+    Commands.getAllVanillaCommands().forEach(dispatcher::register)
 
     println(dispatcher.getCommand("say")!!.getAllUsages())
 
@@ -133,8 +134,7 @@ fun main() {
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )
 
-    Commands.getAllVanillaCommands().forEach(dispatcher::register)
-    val results = dispatcher.evaluate("/help 35")
+    val results = dispatcher.evaluate("fill ~~~^^^20 composter[\"composter_fill_level\"=8] replace air")
 
     for (result in results) {
         when (result) {
@@ -142,7 +142,7 @@ fun main() {
                 println(result)
             }
             is CommandLineParseResult.Successful -> {
-                println(result.resultValue)
+                println(result)
             }
         }
     }

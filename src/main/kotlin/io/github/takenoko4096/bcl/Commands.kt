@@ -1,26 +1,20 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.brigadier.Command
-import io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.ItemTypeArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.RotationArgumentType
-import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.*
+import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.CameraPreset
 import io.github.takenoko4096.bcl.brigadier.value.misc.CameraShakeType
 import io.github.takenoko4096.bcl.brigadier.value.misc.CloneMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.ControlScheme
-import io.github.takenoko4096.bcl.brigadier.value.misc.DamageCause
+import io.github.takenoko4096.bcl.brigadier.value.entity.DamageCause
 import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
+import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
+import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
 
+// /event, /execute は一旦飛ばしてる
 object Commands {
     val AIMASSIST = Command.create("aimassist") {
         description = "エイムアシストを有効にします。"
@@ -272,7 +266,7 @@ object Commands {
                 "intensity"(FloatArgumentType.float(0f..4f)) {
                     executes()
 
-                    "seconds"(FloatArgumentType.nonnegative()) {
+                    "seconds"(FloatArgumentType.positive()) {
                         executes()
 
                         "shake_type"(EnumArgumentType.of<CameraShakeType>()) {
@@ -443,6 +437,90 @@ object Commands {
         }
     }
 
+    val EFFECT = Command.create("effect") {
+        "targets"(EntitySelectorArgumentType()) {
+            "effect"(EnumArgumentType.of<Effect>()) {
+                executes()
+
+                "seconds"(IntegerArgumentType.nonnegative()) {
+                    executes()
+
+                    "amplifier"(IntegerArgumentType.integer(0..255)) {
+                        executes()
+
+                        "hide_particles"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+
+                "infinite" {
+                    executes()
+
+                    "amplifier"(IntegerArgumentType.integer(0..255)) {
+                        executes()
+
+                        "hide_particles"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "clear" {
+                executes()
+
+                "effect"(EnumArgumentType.of<Effect>()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val ENCHANT = Command.create("enchant") {
+        "targets"(EntitySelectorArgumentType()) {
+            "enchant"(EnumArgumentType.of<Enchant>()) {
+                executes()
+
+                "level"(IntegerArgumentType.positive()) {
+                    executes {
+                        val enchant = getValue<Enchant>("enchant")
+                        val levelArg = getArgument<Int>("level")
+
+                        val rangeStr = if (enchant.levels.first == enchant.levels.last) enchant.levels.first
+                            else "${enchant.levels.first} ～ ${enchant.levels.last}"
+
+                        if (levelArg.value !in enchant.levels) {
+                            throw exception(levelArg.sourceSpan, "エンチャント '${enchant.getString()}' はレベル ${levelArg.value} に対応していません: 有効なレベルは $rangeStr です")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val FILL = Command.create("fill") {
+        "from"(PositionArgumentType()) {
+            "to"(PositionArgumentType()) {
+                "tile_state"(BlockStateArgumentType.blockState()) {
+                    executes()
+
+                    "old_block_handling"(EnumArgumentType.of<FillMode>()) {
+                        executes()
+                    }
+
+                    "replace" {
+                        executes()
+
+                        "replace_tile_state"(BlockStateArgumentType.blockState()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val HELP = Command.create("help") {
         description = "コマンドの一覧またはヘルプを呼び出します。"
 
@@ -482,6 +560,9 @@ object Commands {
         DEOP,
         DIALOGUE,
         DIFFICULTY,
+        EFFECT,
+        ENCHANT,
+        FILL,
         HELP
     )
 }

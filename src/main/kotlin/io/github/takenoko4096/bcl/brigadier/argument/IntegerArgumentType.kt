@@ -2,29 +2,41 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class IntegerArgumentType(
-    private val range: ClosedRange<Int>?,
-    private val signedDecimalOnly: Boolean
+    private val signedDecimalOnly: Boolean,
+    private val validator: (TokenSeqReader.(Int, SourceSpan) -> Unit)?
 ) : ArgumentType<Int>("integer") {
     override fun parse(reader: TokenSeqReader): Argument<Int> {
         val start = reader.getCurrentTokenStartPosition()
         val i = reader.readInteger(signedDecimalOnly)
         val end = reader.getPreviousTokenEndPosition()
 
-        if (range != null && i !in range) {
-            throw reader.exception(start..end, "整数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $i が渡されました")
-        }
+        validator?.invoke(reader, i, start..end)
 
         return Argument(this, i, start..end)
     }
 
     companion object {
-        fun integer(range: ClosedRange<Int>? = null) = IntegerArgumentType(range, true)
+        fun integer() = IntegerArgumentType(true, null)
 
-        /**
-         * LONG とかは読めないよん
-         */
-        fun unlimited() = IntegerArgumentType(null, false)
+        fun integer(range: ClosedRange<Int>) = IntegerArgumentType(true) { value, sourceSpan ->
+            if (value !in range) {
+                throw exception(sourceSpan, "整数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $value が渡されました")
+            }
+        }
+
+        fun min(min: Int) = IntegerArgumentType(true) { value, sourceSpan ->
+            if (value < min) {
+                throw exception(sourceSpan, "整数の読み取りに失敗しました: この引数は $min.. の範囲内でなければなりませんが、 $value が渡されました")
+            }
+        }
+
+        fun nonnegative() = min(0)
+
+        fun positive() = min(1)
+
+        fun radixUnlimited() = IntegerArgumentType(false, null)
     }
 }

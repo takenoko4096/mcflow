@@ -70,13 +70,19 @@ data class SelectorArguments(
     ) {
         override fun toString(): String {
             val s1 = conditions.joinToString(", ") { (id, value) -> "$id=$value" }
+            val s2 = properties.joinToString(", ")
 
-            if (properties.isEmpty()) {
-                return "{$s1}"
+            return if (properties.isEmpty() && conditions.isEmpty()) {
+                throw IllegalStateException("NEVER HAPPENS")
+            }
+            else if (properties.isEmpty()) {
+                "{$s1}"
+            }
+            else if (conditions.isEmpty()) {
+                "{property=[$s2]}"
             }
             else {
-                val s2 = properties.joinToString(", ")
-                return "{$s1, property=[$s2]}"
+                "{$s1, property=[$s2]}"
             }
         }
     }
