@@ -1,9 +1,9 @@
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
-import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
-enum class CameraPreset : StringRepresentable, AliasRepresentable {
+enum class CameraPreset(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null): CommandEnumerable {
     FIRST_PERSON,
     FIXED_BOOM,
     FOLLOW_ORBIT,
@@ -12,11 +12,9 @@ enum class CameraPreset : StringRepresentable, AliasRepresentable {
     THIRD_PERSON_FRONT,
     CONTROL_SCHEME_CAMERA;
 
-    override fun getString(): String {
-        return name.lowercase()
-    }
+    val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 
-    override fun getAliases(): Set<String> {
-        return setOf("minecraft:${getString()}")
+    override fun getNames(): Set<String> {
+        return setOf(identifier.toString())
     }
 }

@@ -1,9 +1,9 @@
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
-enum class CommandName(private val aliases: Set<String>) : StringRepresentable, AliasRepresentable {
+enum class VanillaCommandName(private val aliases: Set<String>) : StringRepresentable, CommandEnumerable {
     AIMASSIST,
     ALLOWLIST("whitelist"),
     CAMERA,
@@ -95,5 +95,5 @@ enum class CommandName(private val aliases: Set<String>) : StringRepresentable, 
         return name.lowercase()
     }
 
-    override fun getAliases() = setOf(getString()) + aliases
+    override fun getNames() = setOf(getString()) + aliases
 }

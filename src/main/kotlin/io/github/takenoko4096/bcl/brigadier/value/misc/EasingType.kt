@@ -1,8 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 
-enum class EasingType : AliasRepresentable {
+enum class EasingType : CommandEnumerable {
     LINEAR,
     SPRING,
     IN_QUAD,
@@ -36,7 +36,7 @@ enum class EasingType : AliasRepresentable {
     OUT_ELASTIC,
     IN_OUT_ELASTIC;
 
-    override fun getAliases(): Set<String> {
+    override fun getNames(): Set<String> {
         return setOf(name.lowercase())
     }
 }

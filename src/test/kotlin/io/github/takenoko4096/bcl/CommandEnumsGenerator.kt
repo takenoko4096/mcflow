@@ -47,12 +47,12 @@ fun main() {
 """
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 
-enum class $className : AliasRepresentable {
+enum class $className : CommandEnumerable {
 ${values.joinToString(",\n    ", prefix = "    ", postfix = ";") { it.uppercase() }}
 
-    override fun getAliases(): Set<String> {
+    override fun getNames(): Set<String> {
         return setOf(name.lowercase())
     }
 }

@@ -382,7 +382,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             throw reader.exception(startFromInv..end, "セレクタ引数 'm' の読み取りに失敗しました: セレクタ引数 m は \"\"否定であっても\"\" 重複できません")
         }
 
-        val gameMode = GameMode.entries.find { it.getAliases().contains(s) }
+        val gameMode = GameMode.entries.find { it.getNames().contains(s) }
             ?: run {
                 throw reader.exception(start..end, "セレクタ引数 'm' の読み取りに失敗しました: ゲームモード '$s' は存在しません")
             }

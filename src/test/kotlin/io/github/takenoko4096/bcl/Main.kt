@@ -83,14 +83,6 @@ fun main() {
         }
     }
 
-    dispatcher.register("difficulty") {
-        "mode"(EnumArgumentType.of<Difficulty>()) {
-            executes {
-                "難易度=${getValue<Difficulty>("mode").getString()}"
-            }
-        }
-    }
-
     dispatcher.register("sel") {
         "selc"(EntitySelectorArgumentType()) {
             executes {

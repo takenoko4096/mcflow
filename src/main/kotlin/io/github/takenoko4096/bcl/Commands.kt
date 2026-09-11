@@ -1,17 +1,25 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.brigadier.Command
+import io.github.takenoko4096.bcl.brigadier.argument.BlockPropertiesArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.BlockTypeArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.BooleanArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.EnumArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.FloatArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.IntegerArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.ItemTypeArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.RotationArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.value.misc.CameraPreset
-import io.github.takenoko4096.bcl.brigadier.value.misc.CommandName
+import io.github.takenoko4096.bcl.brigadier.value.misc.CameraShakeType
+import io.github.takenoko4096.bcl.brigadier.value.misc.CloneMode
+import io.github.takenoko4096.bcl.brigadier.value.misc.ControlScheme
+import io.github.takenoko4096.bcl.brigadier.value.misc.DamageCause
+import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
+import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
 
 object Commands {
     val AIMASSIST = Command.create("aimassist") {
@@ -256,6 +264,126 @@ object Commands {
         }
     }
 
+    val CAMERASHAKE = Command.create("camerashake") {
+        "add" {
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+
+                "intensity"(FloatArgumentType.float(0f..4f)) {
+                    executes()
+
+                    "seconds"(FloatArgumentType.nonnegative()) {
+                        executes()
+
+                        "shake_type"(EnumArgumentType.of<CameraShakeType>()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "stop" {
+            executes()
+
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+            }
+        }
+    }
+
+    val CLEAR = Command.create("clear") {
+        executes()
+
+        "players"(EntitySelectorArgumentType.players()) {
+            executes()
+
+            "item_name"(ItemTypeArgumentType()) {
+                executes()
+
+                "count"(IntegerArgumentType.integer()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val CLEARSPAWNPOINT = Command.create("clearspawnpoint") {
+        executes()
+
+        "players"(EntitySelectorArgumentType.players()) {
+            executes()
+        }
+    }
+
+    val CLONE = Command.create("clone") {
+        "begin"(PositionArgumentType()) {
+            "end"(PositionArgumentType()) {
+                "destination"(PositionArgumentType()) {
+                    executes()
+
+                    "mask_mode"(EnumArgumentType.of<MaskMode>()) {
+                        executes()
+
+                        "clone_mode"(EnumArgumentType.of<CloneMode>()) {
+                            executes()
+                        }
+                    }
+
+                    "filtered" {
+                        "clone_mode"(EnumArgumentType.of<CloneMode>()) {
+                            "tile_name"(BlockTypeArgumentType()) {
+                                executes()
+
+                                "block_properties"(BlockPropertiesArgumentType()) {
+                                    executes()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val CONNECT = Command.create("connect") {
+        "server_uri"(StringArgumentType.greedy()) {
+            executes()
+        }
+    }
+
+    val CONTROLSCHEME = Command.create("controlscheme") {
+        "players"(EntitySelectorArgumentType.players()) {
+            "clear" {
+                executes()
+            }
+
+            "set" {
+                "control_scheme"(EnumArgumentType.of<ControlScheme>()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val DAMAGE = Command.create("damage") {
+        "target"(EntitySelectorArgumentType()) {
+            "amount"(IntegerArgumentType.integer()) {
+                executes()
+
+                "cause"(EnumArgumentType.of<DamageCause>()) {
+                    executes()
+
+                    "entity" {
+                        "damager"(EntitySelectorArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val DAYLOCK = Command.create("daylock") {
         description = "昼夜サイクルを停止及び再開します。"
 
@@ -274,6 +402,44 @@ object Commands {
                     "昼夜サイクルを再開します。"
                 }
             }
+        }
+    }
+
+    val DEOP = Command.create("deop") {
+        "player"(EntitySelectorArgumentType.players()) {
+            executes()
+        }
+    }
+
+    val DIALOGUE = Command.create("dialogue") {
+        "change" {
+            "npc"(EntitySelectorArgumentType()) {
+                "scene_name"(StringArgumentType.isolated()) {
+                    executes()
+
+                    "players"(EntitySelectorArgumentType.players()) {
+                        executes()
+                    }
+                }
+            }
+        }
+
+        "open" {
+            "npc"(EntitySelectorArgumentType()) {
+                "players"(EntitySelectorArgumentType.players()) {
+                    executes()
+
+                    "scene_name"(StringArgumentType.isolated()) {
+                        executes()
+                    }
+                }
+            }
+        }
+    }
+
+    val DIFFICULTY = Command.create("difficulty") {
+        "mode"(EnumArgumentType.of<Difficulty>()) {
+            executes()
         }
     }
 
@@ -305,7 +471,17 @@ object Commands {
     fun getAllVanillaCommands() = listOf(
         AIMASSIST,
         CAMERA,
+        CAMERASHAKE,
+        CLEAR,
+        CLEARSPAWNPOINT,
+        CLONE,
+        CONNECT,
+        CONTROLSCHEME,
+        DAMAGE,
         DAYLOCK,
+        DEOP,
+        DIALOGUE,
+        DIFFICULTY,
         HELP
     )
 }

@@ -1,19 +1,14 @@
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
-import io.github.takenoko4096.bcl.brigadier.value.AliasRepresentable
-import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 
-enum class Difficulty(private val string: String?, private val int: Int?) : StringRepresentable, AliasRepresentable {
+enum class Difficulty(private val alias: String?, private val id: Int) : CommandEnumerable {
     PEACEFUL("p", 0),
     EASY("e", 1),
     NORMAL("n", 2),
     HARD("h", 3);
 
-    override fun getString(): String {
-        return name.lowercase()
-    }
-
-    override fun getAliases(): Set<String> {
-        return setOfNotNull(getString(), string, int?.toString())
+    override fun getNames(): Set<String> {
+        return setOfNotNull(name.lowercase(), alias, id.toString())
     }
 }
