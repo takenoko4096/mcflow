@@ -11,10 +11,17 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.DamageCause
 import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
+import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvents
+import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
+import io.github.takenoko4096.bcl.brigadier.value.misc.BoolGameRule
+import io.github.takenoko4096.bcl.brigadier.value.misc.FogDeleteMode
+import io.github.takenoko4096.bcl.brigadier.value.misc.GameTipsStatus
+import io.github.takenoko4096.bcl.brigadier.value.misc.IntGameRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
+import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
 
-// /event, /execute は一旦飛ばしてる
+// /execute, function, gametest は一旦飛ばしてる
 object Commands {
     val AIMASSIST = Command.create("aimassist") {
         description = "エイムアシストを有効にします。"
@@ -499,6 +506,16 @@ object Commands {
         }
     }
 
+    val EVENT = Command.create("event") {
+        "entity" {
+            "targets"(EntitySelectorArgumentType()) {
+                "event_name"(EnumArgumentType.of<EntityEvents>()) {
+                    executes()
+                }
+            }
+        }
+    }
+
     val FILL = Command.create("fill") {
         "from"(PositionArgumentType()) {
             "to"(PositionArgumentType()) {
@@ -515,6 +532,89 @@ object Commands {
                         "replace_tile_state"(BlockStateArgumentType.blockState()) {
                             executes()
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    val FOG = Command.create("fog") {
+        "victims"(EntitySelectorArgumentType.players()) {
+            "deletion_mode"(EnumArgumentType.of<FogDeleteMode>()) {
+                "user_provider_id"(StringArgumentType.isolated()) {
+                    executes()
+                }
+            }
+
+            "push" {
+                "fog_id"(IdentifierArgumentType.namespaceRequiredQuotable("namespace_required_identifier")) {
+                    "user_provider_id"(StringArgumentType.isolated()) {
+                        executes()
+                    }
+                }
+            }
+        }
+    }
+
+    val GAMEMODE = Command.create("gamemode") {
+        "game_mode"(EnumArgumentType.of<GameMode>()) {
+            executes()
+
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+            }
+        }
+    }
+
+    val GAMERULE = Command.create("gamerule") {
+        "int_game_rule"(EnumArgumentType.of<IntGameRule>()) {
+            executes()
+
+            "value"(IntegerArgumentType.integer()) {
+                executes {
+                    val gameRule = getValue<IntGameRule>("int_game_rule")
+                    val valueArg = getArgument<Int>("value")
+
+                    if (valueArg.value !in gameRule.range) {
+                        throw exception(valueArg.sourceSpan, "ゲームルール '${gameRule.getString()}' は ${gameRule.range.first} ～ ${gameRule.range.last} までの値が有効ですが、 ${valueArg.value} が渡されました")
+                    }
+                }
+            }
+        }
+
+        "bool_game_rule"(EnumArgumentType.of<BoolGameRule>()) {
+            executes()
+
+            "flag"(BooleanArgumentType()) {
+                executes()
+            }
+        }
+
+        "playerwaypoints" {
+            "value"(EnumArgumentType.of<PlayerWaypointsValues>()) {
+                executes()
+            }
+        }
+    }
+
+    val GAMETIPS = Command.create("gametips") {
+        "status"(EnumArgumentType.of<GameTipsStatus>()) {
+            executes()
+        }
+    }
+
+    val GIVE = Command.create("give") {
+        "players"(EntitySelectorArgumentType.players()) {
+            "item_name"(ItemTypeArgumentType()) {
+                executes()
+
+                "amount"(IntegerArgumentType.integer(1..32767)) {
+                    executes()
+
+                    "data"(IntegerArgumentType.integer(0..32767)) {
+                        executes()
+
+                        "components" // TODO JSON!!!!
                     }
                 }
             }
@@ -562,7 +662,13 @@ object Commands {
         DIFFICULTY,
         EFFECT,
         ENCHANT,
+        EVENT,
         FILL,
+        FOG,
+        GAMEMODE,
+        GAMERULE,
+        GAMETIPS,
+        GIVE,
         HELP
     )
 }

@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
+import io.github.takenoko4096.bcl.tokenizer.`!is`
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
@@ -313,12 +314,12 @@ open class TokenSeqReader(
         }
     }
 
-    fun readNamespacedIdentifier(): NamespacedIdentifier {
+    fun readNamespacedIdentifier(quotable: Boolean = false, defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
-        val string = readCommandString()
+        val string = if (quotable) readQuotableCommandString() else readCommandString()
         val end = getPreviousTokenEndPosition()
 
-        val identifier = NamespacedIdentifier.parse(string)
+        val identifier = NamespacedIdentifier.parse(string, defaultNamespace)
             ?: run {
                 throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
             }
@@ -666,5 +667,112 @@ open class TokenSeqReader(
         else {
             readCommandString()
         }
+    }
+
+    fun readJsonValue(): Any? {
+        val vStart = getCurrentTokenStartPosition()
+        val t = peek()
+        return when (t.type) {
+            TokenType.WORD -> {
+                next()
+                val vEnd = getPreviousTokenEndPosition()
+                when (t.value) {
+                    "true" -> true
+                    "false" -> false
+                    "null" -> null
+                    else -> throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
+                }
+            }
+            TokenType.INT -> {
+                next()
+                t.value.toInt()
+            }
+            TokenType.FLOAT -> {
+                next()
+                t.value.toFloat()
+            }
+            TokenType.DOUBLE_QUOTED -> {
+                next()
+                t.value
+            }
+
+            TokenType.SYMBOL -> {
+                if (t `is` Symbol.BRACE_START) {
+                    readJsonObject()
+                }
+                else if (t `is` Symbol.ARRAY_START) {
+                    readJsonArray()
+                }
+                else {
+                    next()
+                    val vEnd = getPreviousTokenEndPosition()
+                    throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
+                }
+            }
+            else -> {
+                next()
+                val vEnd = getPreviousTokenEndPosition()
+                throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
+            }
+        }
+    }
+
+    fun readJsonArray(): List<Any?> {
+        val list = mutableListOf<Any?>()
+
+        expect(Symbol.ARRAY_START)
+
+        while (true) {
+            val element = readJsonValue()
+
+            list.add(element)
+
+            if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` Symbol.ARRAY_END) {
+                next()
+                break
+            }
+            else {
+                throw exception(peek().sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: ${peek()}")
+            }
+        }
+
+        return list
+    }
+
+    fun readJsonObject(): Map<String, Any?> {
+        val map = mutableMapOf<String, Any?>()
+
+        expect(Symbol.BRACE_START)
+
+        while (true) {
+            val kStart = getCurrentTokenStartPosition()
+            val key = readQuotedString()
+            val kEnd = getPreviousTokenEndPosition()
+            expect(Symbol.COLON)
+
+            val value = readJsonValue()
+
+            if (key in map) {
+                throw exception(kStart..kEnd, "json の読み取りに失敗しました: キーが重複しています: ${key}")
+            }
+
+            map[key] = value
+
+            if (peek() `is` Symbol.COMMA) {
+                next()
+            }
+            else if (peek() `is` Symbol.BRACE_END) {
+                next()
+                break
+            }
+            else {
+                throw exception(peek().sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: ${peek()}")
+            }
+        }
+
+        return map
     }
 }

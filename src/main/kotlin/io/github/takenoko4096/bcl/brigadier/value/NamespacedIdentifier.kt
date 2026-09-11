@@ -6,11 +6,13 @@ data class NamespacedIdentifier(val namespace: String, val value: String) {
     }
 
     companion object {
-        fun parse(string: String): NamespacedIdentifier? {
+        fun parse(string: String, defaultNamespace: String? = DEFAULT_NAMESPACE): NamespacedIdentifier? {
             val result = REGEX.matchEntire(string)
                 ?: return null
 
-            val namespace = result.groupValues[1].ifEmpty { DEFAULT_NAMESPACE }
+            val namespace = result.groupValues[1].ifEmpty {
+                defaultNamespace ?: return null
+            }
             val path = result.groupValues[2]
 
             return NamespacedIdentifier(namespace, path)

@@ -8,6 +8,7 @@ repositories {
 }
 
 dependencies {
+    // wasm にするには jvmMain/ にこのあたりは書かないといけない
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:1.0.0")
 
     testImplementation(kotlin("reflect"))
