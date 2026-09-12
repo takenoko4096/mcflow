@@ -724,7 +724,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return Argument(this, EntitySelector(type, arguments), start..end)
         }
 
-        parseSelectorArguments(reader, arguments)
+        if (!reader.isOver()) {
+            parseSelectorArguments(reader, arguments)
+        }
 
         val end = reader.getPreviousTokenEndPosition()
 

@@ -688,6 +688,10 @@ object Commands {
         }
     }
 
+    val EXECUTE = Command.create("execute") {
+
+    }
+
     fun getAllVanillaCommands() = listOf(
         AIMASSIST,
         CAMERA,

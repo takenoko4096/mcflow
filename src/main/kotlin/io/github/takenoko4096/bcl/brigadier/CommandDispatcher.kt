@@ -197,6 +197,13 @@ class CommandDispatcher {
             try {
                 when (node) {
                     is LiteralCommandNode -> {
+                        if (candidateReader.isOver()) {
+                            throw candidateReader.exception(
+                                candidateReader.peekSafely(-1).sourceSpan,
+                                "${state.destination} の次の引数が要求されていますが、引数が不足しています"
+                            )
+                        }
+
                         val token = candidateReader.peek()
 
                         if (token.type != TokenType.WORD || token.value != name) {
@@ -207,6 +214,13 @@ class CommandDispatcher {
                     }
 
                     is ArgumentCommandNode<*> -> {
+                        if (candidateReader.isOver()) {
+                            throw candidateReader.exception(
+                                candidateReader.peekSafely(-1).sourceSpan,
+                                "${state.destination} の次の引数が要求されていますが、引数が不足しています"
+                            )
+                        }
+
                         val argument = node.type.parse(candidateReader)
                         candidateArguments[name] = argument
                     }

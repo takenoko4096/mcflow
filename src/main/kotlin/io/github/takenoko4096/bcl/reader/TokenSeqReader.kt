@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.reader
 
-import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonArray
@@ -8,14 +7,12 @@ import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonValue
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
-import io.github.takenoko4096.bcl.tokenizer.`!is`
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
-import kotlin.collections.set
 
 open class TokenSeqReader(
     val sourceCode: String,
@@ -262,7 +259,6 @@ open class TokenSeqReader(
         return read(TokenType.DOUBLE_QUOTED)
     }
 
-    // TODO
     fun readWord(): String {
         return read(TokenType.WORD)
     }
@@ -741,15 +737,21 @@ open class TokenSeqReader(
 
             list.add(element)
 
-            if (peek() `is` Symbol.COMMA) {
+            if (isOver()) {
+                throw exception(peekSafely(-1).sourceSpan, "json の読み取りに失敗しました: 入力が不足しています")
+            }
+
+            val t = peek()
+
+            if (t `is` Symbol.COMMA) {
                 next()
             }
-            else if (peek() `is` Symbol.ARRAY_END) {
+            else if (t `is` Symbol.ARRAY_END) {
                 next()
                 break
             }
             else {
-                throw exception(peek().sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: ${peek()}")
+                throw exception(t.sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: $t")
             }
         }
 
@@ -788,15 +790,20 @@ open class TokenSeqReader(
             keySpans[key] = kStart..kEnd
             map[key] = value
 
-            if (peek() `is` Symbol.COMMA) {
+            if (isOver()) {
+                throw exception(peekSafely(-1).sourceSpan, "json の読み取りに失敗しました: 入力が不足しています")
+            }
+
+            val t = peek()
+            if (t `is` Symbol.COMMA) {
                 next()
             }
-            else if (peek() `is` Symbol.BRACE_END) {
+            else if (t `is` Symbol.BRACE_END) {
                 next()
                 break
             }
             else {
-                throw exception(peek().sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: ${peek()}")
+                throw exception(t.sourceSpan, "json の読み取りに失敗しました: 無効なトークンです: $t")
             }
         }
 

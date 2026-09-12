@@ -50,13 +50,27 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
     }
 
-    operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit) {
-        children[this] = LiteralCommandNodeBuilder(this, configurator).build()
+    operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit): LiteralCommandNode {
+        val node = LiteralCommandNodeBuilder(this, configurator).build()
+        put(node)
+        return node
     }
 
-    operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) {
-        children[this] = ArgumentCommandNodeBuilder(this, type, configurator).build()
+    operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit): ArgumentCommandNode<T> {
+        val node = ArgumentCommandNodeBuilder(this, type, configurator).build()
+        put(node)
+        return node
     }
+
+    fun put(node: CommandNode) {
+        if (node.name in children) {
+            throw IllegalStateException("コマンドノード名 '$this' が重複しています")
+        }
+
+        children[node.name] = node
+    }
+
+    // TODO fun lazy()
 
     fun executes(callback: CommandContext.() -> Any? = {}) {
         if (executor == null) {

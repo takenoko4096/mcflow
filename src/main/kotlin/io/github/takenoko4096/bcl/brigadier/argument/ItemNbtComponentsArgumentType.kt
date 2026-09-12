@@ -14,6 +14,10 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
     override fun interpret(reader: TokenSeqReader, obj: SpannedJsonObject, sourceSpan: SourceSpan): ItemNbtComponents {
         val keySpans = mutableMapOf<NamespacedIdentifier, SourceSpan>()
 
+        if (obj.map.isEmpty()) {
+            throw reader.exception(sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 空のNBTコンポーネントは無効です")
+        }
+
         val components = obj.map
             .mapKeys { (key, _) ->
                 val keySpan = obj.keySpans[key]!!
@@ -24,7 +28,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             }
             .mapValues { (key, value) ->
                 if (value !is SpannedJsonObject) {
-                    throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 値としてオブジェクトが必要です")
+                    throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: コンポーネントには常にオブジェクトを渡す必要があります")
                 }
 
                 when (key) {
@@ -57,6 +61,12 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
     }
 
     private fun getBlockTypes(reader: TokenSeqReader, name: NamespacedIdentifier, value: SpannedJsonObject): List<BlockType> {
+        for (key in value.map.keys) {
+            if (key != "blocks") {
+                throw reader.exception(value.keySpans[key]!!, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 不明なキーです: '$key'")
+            }
+        }
+
         val blocks = value.map["blocks"]
             ?: throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: キー 'blocks' が見つかりません")
 
@@ -80,6 +90,12 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
     }
 
     private fun getMode(reader: TokenSeqReader, name: NamespacedIdentifier, value: SpannedJsonObject): ItemLockMode {
+        for (key in value.map.keys) {
+            if (key != "mode") {
+                throw reader.exception(value.keySpans[key]!!, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 不明なキーです: '$key'")
+            }
+        }
+
         val mode = value.map["mode"]
             ?: throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: キー 'mode' が見つかりません")
 

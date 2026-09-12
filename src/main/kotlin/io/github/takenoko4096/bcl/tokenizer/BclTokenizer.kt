@@ -249,6 +249,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         var end: SourcePosition
 
         while (true) {
+            if (isOver()) {
+                end = getSourcePositionAtBack()
+                throw exception(start..end, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません: $sb")
+            }
+
             if (peek() == quote) {
                 // クォートだったら解析終了
                 // sb.append(peek())
@@ -261,10 +266,20 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
                 next()
                 break
             }
+            else if (peek() == KeyChar.LINEBREAK) {
+                end = getSourcePositionAtBack()
+                throw exception(start..end, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません; 文字列内で改行するには '${KeyChar.ESCAPE}' を使用してください: $sb")
+            }
             else if (peek() == KeyChar.ESCAPE) {
                 next()
                 // エスケープだったら次の文字を今回のループにおける文字とする
                 var c = peek()
+
+                // ただし改行お前はダメだ
+                if (c == KeyChar.LINEBREAK) {
+                    next()
+                    continue
+                }
 
                 if (c in KeyChar.CONTROL_CHARS) {
                     c = KeyChar.CONTROL_CHARS[c]!!
@@ -277,10 +292,6 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
                 // それ以外なら普通に連結
                 sb.append(peek())
                 next()
-            }
-
-            if (isOver()) {
-                throw exception(start, "文字列の解析中にコードの末尾に到達しました: $sb")
             }
         }
 

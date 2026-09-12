@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import java.io.PrintStream
 
 fun main() {
@@ -12,9 +13,12 @@ fun main() {
 
     val result = dispatcher.evaluate("""
     fill ~~-1 1^-4^ ^20 \
-        composter[  "composter_fill_level" =99] \
+        composter[  "composter_fill_level" =8] \
             replace air
+
+    /help fog
     """)
 
     result.forEach(::println)
+    result.filterIsInstance<CommandLineParseResult.Successful>().map { it.resultValue }.forEach(::println)
 }
