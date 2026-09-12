@@ -13,10 +13,14 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvents
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
+import io.github.takenoko4096.bcl.brigadier.value.entity.InputPermission
 import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
 import io.github.takenoko4096.bcl.brigadier.value.misc.BoolGameRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.FogDeleteMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.GameTipsStatus
+import io.github.takenoko4096.bcl.brigadier.value.misc.HudElement
+import io.github.takenoko4096.bcl.brigadier.value.misc.HudVisibility
+import io.github.takenoko4096.bcl.brigadier.value.misc.InputPermissionState
 import io.github.takenoko4096.bcl.brigadier.value.misc.IntGameRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
@@ -614,7 +618,9 @@ object Commands {
                     "data"(IntegerArgumentType.integer(0..32767)) {
                         executes()
 
-                        "components" // TODO JSON!!!!
+                        "components"(ItemNbtComponentsArgumentType()) {
+                            executes()
+                        }
                     }
                 }
             }
@@ -646,6 +652,42 @@ object Commands {
         }
     }
 
+    val HUD = Command.create("hud") {
+        "players"(EntitySelectorArgumentType.players()) {
+            "visibility"(EnumArgumentType.of<HudVisibility>()) {
+                executes()
+
+                "hud_element"(EnumArgumentType.of<HudElement>()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val INPUTPERMISSION = Command.create("inputpermission") {
+        "query" {
+            "players"(EntitySelectorArgumentType.players()) {
+                "input_permission"(EnumArgumentType.of<InputPermission>()) {
+                    executes()
+
+                    "permission_state"(EnumArgumentType.of<InputPermissionState>()) {
+                        executes()
+                    }
+                }
+            }
+        }
+
+        "set" {
+            "players"(EntitySelectorArgumentType.players()) {
+                "input_permission"(EnumArgumentType.of<InputPermission>()) {
+                    "permission_state"(EnumArgumentType.of<InputPermissionState>()) {
+                        executes()
+                    }
+                }
+            }
+        }
+    }
+
     fun getAllVanillaCommands() = listOf(
         AIMASSIST,
         CAMERA,
@@ -669,6 +711,8 @@ object Commands {
         GAMERULE,
         GAMETIPS,
         GIVE,
-        HELP
+        HELP,
+        HUD,
+        INPUTPERMISSION
     )
 }

@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonObject
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
@@ -15,5 +16,5 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         return Argument(this, value, start..end)
     }
 
-    protected abstract fun interpret(reader: TokenSeqReader, obj: Map<String, Any?>, sourceSpan: SourceSpan): T
+    protected abstract fun interpret(reader: TokenSeqReader, obj: SpannedJsonObject, sourceSpan: SourceSpan): T
 }

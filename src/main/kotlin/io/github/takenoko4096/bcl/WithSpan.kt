@@ -7,7 +7,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
  */
 data class WithSpan<T>(val value: T, val sourceSpan: SourceSpan) {
     companion object {
-        fun <T> noSpan(value: T): WithSpan<T> {
+        fun <T> builtin(value: T): WithSpan<T> {
             return WithSpan(value, SourceSpan.NULL)
         }
     }
