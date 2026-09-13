@@ -11,6 +11,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.DamageCause
 import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
+import io.github.takenoko4096.bcl.brigadier.value.entity.EntityAnchor
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvents
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InputPermission
@@ -702,7 +703,7 @@ object Commands {
         }
 
         "positioned" {
-            "pos"(PositionArgumentType()) {
+            "position"(PositionArgumentType()) {
                 redirect("execute")
             }
 
@@ -713,13 +714,78 @@ object Commands {
             }
         }
 
-        "anchored" {
-            "eyes" {
+        "rotated" {
+            "rotation"(RotationArgumentType()) {
                 redirect("execute")
             }
 
-            "feet" {
+            "as" {
+                "targets"(EntitySelectorArgumentType()) {
+                    redirect("execute")
+                }
+            }
+        }
+
+        "facing" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
+                        redirect("execute")
+                    }
+                }
+            }
+        }
+
+        "anchored" {
+            "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
                 redirect("execute")
+            }
+        }
+
+        "align" {
+            "axes"(AxesArgumentType()) {
+                redirect("execute")
+            }
+        }
+
+        "if" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    redirect("execute")
+                }
+            }
+
+            "block" {
+                "position"(PositionArgumentType()) {
+                    "block_state"(BlockStateArgumentType.blockState()) {
+                        executes()
+
+                        redirect("execute")
+                    }
+                }
+            }
+
+        }
+
+        "unless" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    redirect("execute")
+                }
+            }
+
+            "block" {
+                "position"(PositionArgumentType()) {
+                    "block_state"(BlockStateArgumentType.blockState()) {
+                        executes()
+
+                        redirect("execute")
+                    }
+                }
             }
         }
 
@@ -756,6 +822,7 @@ object Commands {
         HELP,
         HUD,
         INPUTPERMISSION,
+        // Command.create("pass") { executes() },
 
         EXECUTE
     )

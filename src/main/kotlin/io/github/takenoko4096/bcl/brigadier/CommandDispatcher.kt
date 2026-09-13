@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.CommandBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
+import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -11,29 +12,31 @@ import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
 class CommandDispatcher {
-    private val commands = mutableMapOf<String, Command>()
+    private val root = RootCommandNode("root", mutableMapOf())
 
     fun getCommand(name: String): Command? {
-        return commands[name]
+        return root.commands[name]
     }
 
+    fun getRoot(): CommandNode = root
+
     fun getKnownCommands(): Set<Command> {
-        return commands.values.toSet()
+        return root.commands.values.toSet()
     }
 
     fun register(command: Command): Command {
-        if (command.name in commands) {
+        if (command.name in root.commands) {
             throw IllegalArgumentException("コマンド名 '${command.name}' は既に使用されているため登録できません")
         }
 
-        commands[command.name] = command
+        root.commands[command.name] = command
 
         for (string in command.aliases) {
-            if (string in commands) {
+            if (string in root.commands) {
                 throw IllegalArgumentException("コマンド名 '${command.name}' は既に使用されているためエイリアスを登録できません")
             }
 
-            commands[string] = command
+            root.commands[string] = command
         }
 
         return command
@@ -46,45 +49,11 @@ class CommandDispatcher {
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
-        val name = try {
-            reader.readCommandString()
-        }
-        catch (error: BclTokenSeqReadException) {
-            return CommandLineParseResult.Failure(
-                null,
-                listOf(),
-                emptyMap(),
-                listOf(
-                    BclDiagnostic(
-                        "コマンド名の読み取りに失敗しました: ${error.description}",
-                        reader.sourceCode,
-                        error.sourceSpan
-                    )
-                ),
-                start..reader.getPreviousTokenEndPosition()
-            )
-        }
-
-        val root = getCommand(name)
-            ?: return CommandLineParseResult.Failure(
-                null,
-                listOf(),
-                emptyMap(),
-                listOf(
-                    BclDiagnostic(
-                        "不明なコマンド名です: $name",
-                        reader.sourceCode,
-                        start..reader.getPreviousTokenEndPosition()
-                    )
-                ),
-                start..reader.getPreviousTokenEndPosition()
-            )
-
         val initialState = DispatcherParseState(
             reader = reader.clone(),
             arguments = emptyMap(),
-            route = mutableListOf(root),
-            literalCount = 1
+            route = mutableListOf(),
+            literalCount = 0
         )
 
         val potentials = dispatch(
@@ -92,24 +61,6 @@ class CommandDispatcher {
             initialState,
             root.children
         )
-
-        if (root.executor != null) {
-            potentials += RoutePotential(
-                initialState,
-                if (reader.isOver()) {
-                    emptyList()
-                }
-                else {
-                    listOf(
-                        BclDiagnostic(
-                            "予期しない引数です: ${reader.peek()}",
-                            reader.sourceCode,
-                            reader.peek().sourceSpan
-                        )
-                    )
-                }
-            )
-        }
 
         if (potentials.isNotEmpty()) {
             val best = selectBest(potentials)
@@ -122,7 +73,7 @@ class CommandDispatcher {
                 }
                 catch (error: BclCommandExecutionException) {
                     return CommandLineParseResult.Failure(
-                        root,
+                        best.state.route.firstOrNull() as Command?,
                         best.state.route,
                         best.state.arguments,
                         listOf(BclDiagnostic(
@@ -135,7 +86,7 @@ class CommandDispatcher {
                 }
 
                 CommandLineParseResult.Successful(
-                    root,
+                    best.state.route.first() as Command,
                     best.state.route,
                     best.state.arguments,
                     start..best.state.reader.getPreviousTokenEndPosition(),
@@ -144,7 +95,7 @@ class CommandDispatcher {
             }
             else {
                 CommandLineParseResult.Failure(
-                    root,
+                    best.state.route.firstOrNull() as Command?,
                     best.state.route,
                     best.state.arguments,
                     best.diagnostics,
@@ -157,12 +108,12 @@ class CommandDispatcher {
         val sourceSpan = start..end
 
         return CommandLineParseResult.Failure(
-            root,
+            null,
             route = listOf(),
             emptyMap(),
             listOf(
                 BclDiagnostic(
-                    "?",
+                    "不明なコマンド名です: '${sourceSpan.getStringFromSourceCode(reader.sourceCode)}'",
                     reader.sourceCode,
                     sourceSpan
                 )
@@ -224,6 +175,8 @@ class CommandDispatcher {
                         val argument = node.type.parse(candidateReader)
                         candidateArguments[name] = argument
                     }
+
+                    else -> throw IllegalStateException("NEVER HAPPENS")
                 }
             }
             catch (error: BclTokenSeqReadException) {

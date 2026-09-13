@@ -7,7 +7,7 @@ sealed class CommandNode(
     val name: String,
     val executor: (CommandContext.() -> Any?)?,
     val children: Map<String, CommandNode>,
-    var redirects: List<CommandNode>
+    val redirects: List<CommandNode>
 ) {
     private fun getRouteFor(target: CommandNode, list: List<CommandNode>): List<CommandNode>? {
         for ((_, child) in children) {
@@ -80,7 +80,7 @@ sealed class CommandNode(
             val willContinue = if (executor == null) " ..." else ""
 
             val childrenString = children.values.joinToString("") { '\n' + it.getTreeUsage(true, depth + 1) }
-            val redirectsString = redirects.joinToString("") { "\n-> [${it.name}]" }
+            val redirectsString = redirects.joinToString("") { "\n${"    ".repeat(depth + 1)}-> [${it.name}]" }
 
             usage + willContinue + childrenString + redirectsString
         }

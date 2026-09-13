@@ -62,7 +62,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): Command {
-            val command = Command(name, description, aliases, executor, children, mutableListOf())
+            val command = Command(name, description, aliases, executor, children)
 
             for ((node, builder) in builders) {
                 if (builder.redirects.isEmpty()) continue

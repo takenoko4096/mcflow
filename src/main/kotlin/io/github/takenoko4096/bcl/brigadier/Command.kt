@@ -8,9 +8,8 @@ class Command(
     val description: String,
     val aliases: Set<String>,
     executor: (CommandContext.() -> Any?)?,
-    children: Map<String, CommandNode>,
-    redirects: List<CommandNode>
-) : LiteralCommandNode(name, executor, children, redirects) {
+    children: Map<String, CommandNode>
+) : LiteralCommandNode(name, executor, children, listOf()) {
     fun getAllUsages(): List<String> {
         return getAllUsages("/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]"))
     }
