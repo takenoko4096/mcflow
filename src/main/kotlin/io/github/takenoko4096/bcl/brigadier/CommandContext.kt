@@ -1,17 +1,27 @@
 package io.github.takenoko4096.bcl.brigadier
 
+import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import kotlin.reflect.KClass
 
 /**
  * CommandSourceStack はないよ
  */
-class CommandContext(private val sourceCode: String, private val dispatcher: CommandDispatcher, private val arguments: Map<String, Argument<*>>) {
+class CommandContext(
+    private val sourceCode: String,
+    private val dispatcher: CommandDispatcher,
+    private val route: List<CommandNode>,
+    private val arguments: Map<String, Argument<*>>
+) {
     fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclCommandExecutionException {
         return BclCommandExecutionException(message, sourceCode, sourceSpan, cause)
     }
 
     fun getDispatcher() = dispatcher
+
+    fun getRoute(): List<CommandNode> {
+        return route
+    }
 
     fun <T : Any> getArgument(name: String, clazz: KClass<T>): Argument<T> {
         if (name !in arguments) {

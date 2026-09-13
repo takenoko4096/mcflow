@@ -450,7 +450,7 @@ object Commands {
 
     val EFFECT = Command.create("effect") {
         "targets"(EntitySelectorArgumentType()) {
-            "effect"(EnumArgumentType.of<Effect>()) {
+            "effect_type"(EnumArgumentType.of<Effect>()) {
                 executes()
 
                 "seconds"(IntegerArgumentType.nonnegative()) {
@@ -481,7 +481,7 @@ object Commands {
             "clear" {
                 executes()
 
-                "effect"(EnumArgumentType.of<Effect>()) {
+                "effect_type"(EnumArgumentType.of<Effect>()) {
                     executes()
                 }
             }
@@ -689,7 +689,45 @@ object Commands {
     }
 
     val EXECUTE = Command.create("execute") {
+        "as" {
+            "targets"(EntitySelectorArgumentType()) {
+                redirect("execute")
+            }
+        }
 
+        "at" {
+            "targets"(EntitySelectorArgumentType()) {
+                redirect("execute")
+            }
+        }
+
+        "positioned" {
+            "pos"(PositionArgumentType()) {
+                redirect("execute")
+            }
+
+            "as" {
+                "targets"(EntitySelectorArgumentType()) {
+                    redirect("execute")
+                }
+            }
+        }
+
+        "anchored" {
+            "eyes" {
+                redirect("execute")
+            }
+
+            "feet" {
+                redirect("execute")
+            }
+        }
+
+        "run" {
+            "pass" {
+                executes()
+            }
+        }
     }
 
     fun getAllVanillaCommands() = listOf(
@@ -717,6 +755,8 @@ object Commands {
         GIVE,
         HELP,
         HUD,
-        INPUTPERMISSION
+        INPUTPERMISSION,
+
+        EXECUTE
     )
 }

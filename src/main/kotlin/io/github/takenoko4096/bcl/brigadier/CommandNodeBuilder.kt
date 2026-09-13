@@ -10,33 +10,49 @@ sealed class CommandNodeBuilder(protected val name: String) {
 
     protected var executor: (CommandContext.() -> Any?)? = null
 
+    protected lateinit var rootBuilder: CommandBuilder
+
+    protected val redirects = mutableSetOf<String>()
+
     init {
         if (!name.matches(JAVA_IDENTIFIER_STRING_REGEX)) {
             throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; $JAVA_IDENTIFIER_STRING_REGEX に従う必要があります")
         }
     }
 
-    class LiteralCommandNodeBuilder(name: String, configurator: LiteralCommandNodeBuilder.() -> Unit) : CommandNodeBuilder(name) {
+    class LiteralCommandNodeBuilder(name: String, configurator: LiteralCommandNodeBuilder.() -> Unit, rootBuilder: CommandBuilder) : CommandNodeBuilder(name) {
         init {
+            this.rootBuilder = rootBuilder
             configurator()
         }
 
         override fun build(): LiteralCommandNode {
-            return LiteralCommandNode(name, executor, children)
+            return LiteralCommandNode(name, executor, children, mutableListOf()).apply {
+                rootBuilder.builders[this@apply] = this@LiteralCommandNodeBuilder
+            }
         }
     }
 
-    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) : CommandNodeBuilder(name) {
+    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit, rootBuilder: CommandBuilder) : CommandNodeBuilder(name) {
         init {
+            this.rootBuilder = rootBuilder
             configurator()
         }
 
         override fun build(): ArgumentCommandNode<T> {
-            return ArgumentCommandNode(name, type, executor, children)
+            return ArgumentCommandNode(name, type, executor, children, mutableListOf()).apply {
+                rootBuilder.builders[this@apply] = this@ArgumentCommandNodeBuilder
+            }
         }
     }
 
     class CommandBuilder(name: String, configurator: CommandBuilder.() -> Unit) : CommandNodeBuilder(name) {
+        init {
+            this.rootBuilder = this
+        }
+
+        internal val builders = mutableMapOf<CommandNode, CommandNodeBuilder>()
+
         var description: String = "EMPTY DESCRIPTION"
 
         val aliases = mutableSetOf<String>()
@@ -46,18 +62,31 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
 
         override fun build(): Command {
-            return Command(name, description, aliases, executor, children)
+            val command = Command(name, description, aliases, executor, children, mutableListOf())
+
+            for ((node, builder) in builders) {
+                if (builder.redirects.isEmpty()) continue
+
+                for (targetName in builder.redirects) {
+                    val target = node.getNamedParent(command, targetName) ?: throw IllegalArgumentException()
+                    (node.redirects as MutableList<CommandNode>).add(target)
+                }
+            }
+
+            return command
         }
     }
 
     operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit): LiteralCommandNode {
-        val node = LiteralCommandNodeBuilder(this, configurator).build()
+        val builder = LiteralCommandNodeBuilder(this, configurator, rootBuilder)
+        val node = builder.build()
         put(node)
         return node
     }
 
     operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit): ArgumentCommandNode<T> {
-        val node = ArgumentCommandNodeBuilder(this, type, configurator).build()
+        val builder = ArgumentCommandNodeBuilder(this, type, configurator, rootBuilder)
+        val node = builder.build()
         put(node)
         return node
     }
@@ -70,7 +99,9 @@ sealed class CommandNodeBuilder(protected val name: String) {
         children[node.name] = node
     }
 
-    // TODO fun lazy()
+    fun redirect(name: String) {
+        redirects.add(name)
+    }
 
     fun executes(callback: CommandContext.() -> Any? = {}) {
         if (executor == null) {

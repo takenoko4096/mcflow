@@ -7,8 +7,9 @@ class ArgumentCommandNode<T>(
     name: String,
     val type: ArgumentType<T>,
     executor: (CommandContext.() -> Any?)?,
-    children: Map<String, CommandNode>
-) : CommandNode(name, executor, children) {
+    children: Map<String, CommandNode>,
+    redirects: List<CommandNode>
+) : CommandNode(name, executor, children, redirects) {
     override fun toString(): String {
         return "<$name: ${type.name}>"
     }

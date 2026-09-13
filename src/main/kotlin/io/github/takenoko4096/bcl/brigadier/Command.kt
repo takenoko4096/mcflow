@@ -8,28 +8,11 @@ class Command(
     val description: String,
     val aliases: Set<String>,
     executor: (CommandContext.() -> Any?)?,
-    children: Map<String, CommandNode>
-) : LiteralCommandNode(name, executor, children) {
+    children: Map<String, CommandNode>,
+    redirects: List<CommandNode>
+) : LiteralCommandNode(name, executor, children, redirects) {
     fun getAllUsages(): List<String> {
-        val usage = "/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]")
-
-        return getChildrenUsagesOf(this, usage)
-    }
-
-    private fun getChildrenUsagesOf(node: CommandNode, parent: String): List<String> {
-        val usages = mutableListOf<String>()
-
-        for ((_, value) in node.children) {
-            val usage = "$parent $value"
-
-            if (value.executor != null) {
-                usages.add(usage)
-            }
-
-            usages.addAll(getChildrenUsagesOf(value, usage))
-        }
-
-        return usages
+        return getAllUsages("/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]"))
     }
 
     fun getTreeUsage(): String {
@@ -42,10 +25,10 @@ class Command(
 
     override fun toString(): String {
         return if (aliases.isEmpty()) {
-            "Command</$name>"
+            "/$name"
         }
         else {
-            "Command</$name $aliases>"
+            "/$name$aliases"
         }
     }
 

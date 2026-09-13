@@ -17,7 +17,11 @@ fun main() {
             replace air
 
     /help fog
+
+    /execute as @a anchored eyes run pass
     """)
+
+    println(dispatcher.getCommand("execute")!!.getTreeUsage())
 
     result.forEach(::println)
     result.filterIsInstance<CommandLineParseResult.Successful>().map { it.resultValue }.forEach(::println)

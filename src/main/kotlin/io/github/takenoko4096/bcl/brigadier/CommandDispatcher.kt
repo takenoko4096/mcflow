@@ -52,7 +52,7 @@ class CommandDispatcher {
         catch (error: BclTokenSeqReadException) {
             return CommandLineParseResult.Failure(
                 null,
-                null,
+                listOf(),
                 emptyMap(),
                 listOf(
                     BclDiagnostic(
@@ -68,7 +68,7 @@ class CommandDispatcher {
         val root = getCommand(name)
             ?: return CommandLineParseResult.Failure(
                 null,
-                null,
+                listOf(),
                 emptyMap(),
                 listOf(
                     BclDiagnostic(
@@ -83,7 +83,7 @@ class CommandDispatcher {
         val initialState = DispatcherParseState(
             reader = reader.clone(),
             arguments = emptyMap(),
-            destination = root,
+            route = mutableListOf(root),
             literalCount = 1
         )
 
@@ -115,15 +115,15 @@ class CommandDispatcher {
             val best = selectBest(potentials)
 
             return if (best.diagnostics.isEmpty()) {
-                val context = CommandContext(reader.sourceCode, this, best.state.arguments)
+                val context = CommandContext(reader.sourceCode, this, best.state.route, best.state.arguments)
 
                 val resultValue = try {
-                    best.state.destination.executor!!(context)
+                    best.state.route.last().executor!!(context)
                 }
                 catch (error: BclCommandExecutionException) {
                     return CommandLineParseResult.Failure(
                         root,
-                        best.state.destination,
+                        best.state.route,
                         best.state.arguments,
                         listOf(BclDiagnostic(
                             error.description,
@@ -136,7 +136,7 @@ class CommandDispatcher {
 
                 CommandLineParseResult.Successful(
                     root,
-                    best.state.destination,
+                    best.state.route,
                     best.state.arguments,
                     start..best.state.reader.getPreviousTokenEndPosition(),
                     resultValue
@@ -145,7 +145,7 @@ class CommandDispatcher {
             else {
                 CommandLineParseResult.Failure(
                     root,
-                    best.state.destination,
+                    best.state.route,
                     best.state.arguments,
                     best.diagnostics,
                     start..best.state.reader.getPreviousTokenEndPosition()
@@ -158,7 +158,7 @@ class CommandDispatcher {
 
         return CommandLineParseResult.Failure(
             root,
-            destination = null,
+            route = listOf(),
             emptyMap(),
             listOf(
                 BclDiagnostic(
@@ -180,17 +180,17 @@ class CommandDispatcher {
         )
     }
 
-    private fun dispatch(text: String, state: DispatcherParseState, children: Map<String, CommandNode>): MutableList<RoutePotential> {
+    private fun dispatch(text: String, state: DispatcherParseState, childrenAndRedirects: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
-        for ((name, node) in children) {
+        for ((name, node) in childrenAndRedirects) {
             val candidateReader = state.reader.clone()
             val candidateArguments = state.arguments.toMutableMap()
 
             val nextState = DispatcherParseState(
                 candidateReader,
                 candidateArguments,
-                node,
+                state.route + node,
                 state.literalCount + if (node is LiteralCommandNode) 1 else 0
             )
 
@@ -200,7 +200,7 @@ class CommandDispatcher {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
                                 candidateReader.peekSafely(-1).sourceSpan,
-                                "${state.destination} の次の引数が要求されていますが、引数が不足しています"
+                                "${state.route} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
@@ -217,7 +217,7 @@ class CommandDispatcher {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
                                 candidateReader.peekSafely(-1).sourceSpan,
-                                "${state.destination} の次の引数が要求されていますが、引数が不足しています"
+                                "${state.route} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
@@ -234,11 +234,11 @@ class CommandDispatcher {
                             """
                             引数が正しくありません (${error.description})
                             ${
-                                if (children.size == 1) {
-                                    children.values.first().toString() + " が期待されています"
+                                if (childrenAndRedirects.size == 1) {
+                                    childrenAndRedirects.values.first().toString() + " が期待されています"
                                 }
                                 else {
-                                    children.map { it.value.toString() }.joinToString(" | ", postfix = " のいずれかが期待されています")
+                                    childrenAndRedirects.map { it.value.toString() }.joinToString(" | ", postfix = " のいずれかが期待されています")
                                 }
                             }
                             """.trimIndent(),
@@ -270,11 +270,13 @@ class CommandDispatcher {
             }
 
             // さらに子へ進む可能性
-            if (node.children.isNotEmpty()) {
+            if (node.getChildrenAndRedirects().isNotEmpty()) {
+                val childrenAndRedirectsOfCurrent = node.getChildrenAndRedirects()
+
                 val childPotentials = dispatch(
                     text,
                     nextState,
-                    node.children
+                    childrenAndRedirectsOfCurrent
                 )
 
                 if (childPotentials.isNotEmpty()) {
@@ -285,11 +287,11 @@ class CommandDispatcher {
                         nextState,
                         listOf(
                             BclDiagnostic(
-                                if (node.children.size == 1) {
-                                    "予期しない引数です: ${node.children.values.first()} が期待されています"
+                                if (childrenAndRedirectsOfCurrent.size == 1) {
+                                    "予期しない引数です: ${childrenAndRedirectsOfCurrent.values.first()} が期待されています"
                                 }
                                 else {
-                                    node.children.values.joinToString(prefix = "予期しない引数です: ", separator = " | ", postfix = " のいずれかが期待されています")
+                                    childrenAndRedirectsOfCurrent.values.joinToString(prefix = "予期しない引数です: ", separator = " | ", postfix = " のいずれかが期待されています")
                                 },
                                 text,
                                 candidateReader.peek().sourceSpan
