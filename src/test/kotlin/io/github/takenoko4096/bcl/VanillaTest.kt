@@ -8,7 +8,7 @@ fun main() {
     System.setOut(PrintStream(System.out, true, Charsets.UTF_8))
     System.setErr(PrintStream(System.err, true, Charsets.UTF_8))
 
-    val dispatcher = CommandDispatcher()
+    val dispatcher = CommandDispatcher("root")
     Commands.getAllVanillaCommandBuilders().forEach(dispatcher::register)
 
     val execute = dispatcher.getCommand("execute")!!
@@ -20,8 +20,7 @@ fun main() {
 
     /help fog
 
-    /execute as @a at @s if block ~ ~ ~ air align x run gamemode s
-    /root
+    /execute as@a at@s if block~~~air align x run gamemode s
     """)
 
     println(execute.getTreeUsage())

@@ -26,7 +26,7 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.IntGameRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
 
-// /execute, function, gametest は一旦飛ばしてる
+// /function, gametest は一旦飛ばしてる
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
         description = "エイムアシストを有効にします。"

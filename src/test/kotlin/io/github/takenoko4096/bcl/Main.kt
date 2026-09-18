@@ -17,7 +17,7 @@ fun main() {
     System.setOut(PrintStream(System.out, true, Charsets.UTF_8))
     System.setErr(PrintStream(System.err, true, Charsets.UTF_8))
 
-    val dispatcher = CommandDispatcher()
+    val dispatcher = CommandDispatcher("root")
     dispatcher.register("return") {
         description = "return an integer value."
 

@@ -10,8 +10,8 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-class CommandDispatcher {
-    private val root = RootCommandNode("root", mutableMapOf())
+class CommandDispatcher(name: String) {
+    private val root = RootCommandNode(name, mutableMapOf())
 
     fun getCommand(name: String): Command? {
         return root.commands[name]
@@ -170,7 +170,7 @@ class CommandDispatcher {
                         }
 
                         val argument = node.type.parse(candidateReader)
-                        candidateArguments[name] = argument
+                        candidateArguments[name] = argument // TODO
                     }
 
                     else -> throw IllegalStateException("NEVER HAPPENS")
