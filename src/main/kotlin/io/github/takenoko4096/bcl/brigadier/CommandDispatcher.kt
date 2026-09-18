@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.brigadier.CommandNodeBuilder.CommandBuilder
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
@@ -18,13 +17,15 @@ class CommandDispatcher {
         return root.commands[name]
     }
 
-    fun getRoot(): CommandNode = root
+    fun getRoot(): RootCommandNode = root
 
     fun getKnownCommands(): Set<Command> {
         return root.commands.values.toSet()
     }
 
-    fun register(command: Command): Command {
+    fun register(builder: CommandNodeBuilder.CommandBuilder): Command {
+        val command = builder.build(root)
+
         if (command.name in root.commands) {
             throw IllegalArgumentException("コマンド名 '${command.name}' は既に使用されているため登録できません")
         }
@@ -42,8 +43,8 @@ class CommandDispatcher {
         return command
     }
 
-    fun register(name: String, configurator: CommandBuilder.() -> Unit): Command {
-        return register(Command.create(name, configurator))
+    fun register(name: String, configurator: CommandNodeBuilder.CommandBuilder.() -> Unit): Command {
+        return register(Command.builder(name, configurator))
     }
 
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
@@ -63,43 +64,48 @@ class CommandDispatcher {
         )
 
         if (potentials.isNotEmpty()) {
-            val best = selectBest(potentials)
+            val bestRoutePotential = potentials.maxWith(
+                compareBy<RoutePotential> { it.state.reader.isOver() }
+                    .thenBy { it.diagnostics.isEmpty() }
+                    .thenBy { it.state.literalCount }
+                    .thenBy { it.state.reader.cursor }
+            )
 
-            return if (best.diagnostics.isEmpty()) {
-                val context = CommandContext(reader.sourceCode, this, best.state.route, best.state.arguments)
+            return if (bestRoutePotential.diagnostics.isEmpty()) {
+                val context = CommandContext(reader.sourceCode, this, bestRoutePotential.state.route, bestRoutePotential.state.arguments)
 
                 val resultValue = try {
-                    best.state.route.last().executor!!(context)
+                    bestRoutePotential.state.route.last().executor!!(context)
                 }
                 catch (error: BclCommandExecutionException) {
                     return CommandLineParseResult.Failure(
-                        best.state.route.firstOrNull() as Command?,
-                        best.state.route,
-                        best.state.arguments,
+                        bestRoutePotential.state.route.firstOrNull() as Command?,
+                        bestRoutePotential.state.route,
+                        bestRoutePotential.state.arguments,
                         listOf(BclDiagnostic(
                             error.description,
                             reader.sourceCode,
                             error.sourceSpan
                         )),
-                        start..best.state.reader.getPreviousTokenEndPosition()
+                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition()
                     )
                 }
 
                 CommandLineParseResult.Successful(
-                    best.state.route.first() as Command,
-                    best.state.route,
-                    best.state.arguments,
-                    start..best.state.reader.getPreviousTokenEndPosition(),
+                    bestRoutePotential.state.route.first() as Command,
+                    bestRoutePotential.state.route,
+                    bestRoutePotential.state.arguments,
+                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                     resultValue
                 )
             }
             else {
                 CommandLineParseResult.Failure(
-                    best.state.route.firstOrNull() as Command?,
-                    best.state.route,
-                    best.state.arguments,
-                    best.diagnostics,
-                    start..best.state.reader.getPreviousTokenEndPosition()
+                    bestRoutePotential.state.route.firstOrNull() as Command?,
+                    bestRoutePotential.state.route,
+                    bestRoutePotential.state.arguments,
+                    bestRoutePotential.diagnostics,
+                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition()
                 )
             }
         }
@@ -119,15 +125,6 @@ class CommandDispatcher {
                 )
             ),
             sourceSpan
-        )
-    }
-
-    private fun selectBest(potentials: List<RoutePotential>): RoutePotential {
-        return potentials.maxWith(
-            compareBy<RoutePotential> { it.state.reader.isOver() }
-                .thenBy { it.diagnostics.isEmpty() }
-                .thenBy { it.state.literalCount }
-                .thenBy { it.state.reader.cursor }
         )
     }
 

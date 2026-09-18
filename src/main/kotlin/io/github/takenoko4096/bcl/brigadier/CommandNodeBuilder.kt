@@ -4,13 +4,12 @@ import io.github.takenoko4096.bcl.brigadier.argument.ArgumentType
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
+import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
 
 sealed class CommandNodeBuilder(protected val name: String) {
-    protected val children = mutableMapOf<String, CommandNode>()
+    protected val children = mutableMapOf<String, CommandNodeBuilder>()
 
     protected var executor: (CommandContext.() -> Any?)? = null
-
-    protected lateinit var rootBuilder: CommandBuilder
 
     protected val redirects = mutableSetOf<String>()
 
@@ -20,39 +19,66 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
     }
 
-    class LiteralCommandNodeBuilder(name: String, configurator: LiteralCommandNodeBuilder.() -> Unit, rootBuilder: CommandBuilder) : CommandNodeBuilder(name) {
+    class LiteralCommandNodeBuilder(name: String, configurator: LiteralCommandNodeBuilder.() -> Unit) : CommandNodeBuilder(name) {
         init {
-            this.rootBuilder = rootBuilder
             configurator()
         }
 
-        override fun build(): LiteralCommandNode {
-            return LiteralCommandNode(name, executor, children, mutableListOf()).apply {
-                rootBuilder.builders[this@apply] = this@LiteralCommandNodeBuilder
-            }
+        override fun build(nodes: List<CommandNode>): LiteralCommandNode {
+            val map = mutableMapOf<String, CommandNode>()
+            val list = mutableListOf<CommandNode>()
+
+           val literalNode = LiteralCommandNode(
+                name,
+                executor,
+                map,
+                list
+           )
+
+            list.addAll(redirects.map { name ->
+                nodes.findLast { it.name == name }
+                    ?: throw IllegalStateException("ノード '${this.name}' のビルドに失敗しました: 親ノードに '$name' が見つかりません")
+            })
+
+            map.putAll(children.mapValues {
+                it.value.build(nodes + literalNode)
+            })
+
+            return literalNode
         }
     }
 
-    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit, rootBuilder: CommandBuilder) : CommandNodeBuilder(name) {
+    class ArgumentCommandNodeBuilder<T>(name: String, private val type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) : CommandNodeBuilder(name) {
         init {
-            this.rootBuilder = rootBuilder
             configurator()
         }
 
-        override fun build(): ArgumentCommandNode<T> {
-            return ArgumentCommandNode(name, type, executor, children, mutableListOf()).apply {
-                rootBuilder.builders[this@apply] = this@ArgumentCommandNodeBuilder
-            }
+        override fun build(nodes: List<CommandNode>): ArgumentCommandNode<T> {
+            val map = mutableMapOf<String, CommandNode>()
+            val list = mutableListOf<CommandNode>()
+
+            val argumentNode = ArgumentCommandNode(
+                name,
+                type,
+                executor,
+                map,
+                list
+            )
+
+            list.addAll(redirects.map { name ->
+                nodes.findLast { it.name == name }
+                    ?: throw IllegalStateException("ノード '${this.name}' のビルドに失敗しました: 親ノードに '$name' が見つかりません")
+            })
+
+            map.putAll(children.mapValues {
+                it.value.build(nodes + argumentNode)
+            })
+
+            return argumentNode
         }
     }
 
     class CommandBuilder(name: String, configurator: CommandBuilder.() -> Unit) : CommandNodeBuilder(name) {
-        init {
-            this.rootBuilder = this
-        }
-
-        internal val builders = mutableMapOf<CommandNode, CommandNodeBuilder>()
-
         var description: String = "EMPTY DESCRIPTION"
 
         val aliases = mutableSetOf<String>()
@@ -61,42 +87,50 @@ sealed class CommandNodeBuilder(protected val name: String) {
             configurator()
         }
 
-        override fun build(): Command {
-            val command = Command(name, description, aliases, executor, children)
+        override fun build(nodes: List<CommandNode>): Command {
+            val map = mutableMapOf<String, CommandNode>()
+            val list = mutableListOf<CommandNode>()
 
-            for ((node, builder) in builders) {
-                if (builder.redirects.isEmpty()) continue
+            val command = Command(
+                name,
+                description,
+                aliases,
+                executor,
+                map,
+                list
+            )
 
-                for (targetName in builder.redirects) {
-                    val target = node.getNamedParent(command, targetName) ?: throw IllegalArgumentException()
-                    (node.redirects as MutableList<CommandNode>).add(target)
-                }
-            }
+            list.addAll(redirects.map { name ->
+                nodes.findLast { it.name == name }
+                    ?: throw IllegalStateException("ノード '${this.name}' のビルドに失敗しました: 親ノードに '$name' が見つかりません")
+            })
+
+            map.putAll(children.mapValues {
+                it.value.build(nodes + command)
+            })
 
             return command
         }
+
+        fun build(root: RootCommandNode): Command = build(listOf(root))
     }
 
-    operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit): LiteralCommandNode {
-        val builder = LiteralCommandNodeBuilder(this, configurator, rootBuilder)
-        val node = builder.build()
-        put(node)
-        return node
+    operator fun String.invoke(configurator: LiteralCommandNodeBuilder.() -> Unit) {
+        val builder = LiteralCommandNodeBuilder(this, configurator)
+        put(builder)
     }
 
-    operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit): ArgumentCommandNode<T> {
-        val builder = ArgumentCommandNodeBuilder(this, type, configurator, rootBuilder)
-        val node = builder.build()
-        put(node)
-        return node
+    operator fun <T> String.invoke(type: ArgumentType<T>, configurator: ArgumentCommandNodeBuilder<T>.() -> Unit) {
+        val builder = ArgumentCommandNodeBuilder(this, type, configurator)
+        put(builder)
     }
 
-    fun put(node: CommandNode) {
-        if (node.name in children) {
+    fun put(builder: CommandNodeBuilder) {
+        if (builder.name in children) {
             throw IllegalStateException("コマンドノード名 '$this' が重複しています")
         }
 
-        children[node.name] = node
+        children[builder.name] = builder
     }
 
     fun redirect(name: String) {
@@ -112,7 +146,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
     }
 
-    abstract fun build(): CommandNode
+    // 最初に渡すのは listOf(root)
+    protected abstract fun build(nodes: List<CommandNode>): CommandNode
 
     companion object {
         val JAVA_IDENTIFIER_STRING_REGEX = "^[a-zA-Z_][a-zA-Z0-9_]*$".toRegex()

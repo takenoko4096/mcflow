@@ -35,6 +35,32 @@ data class SelectorArguments(
     var y: CoordinateComponent? = null,
     var z: CoordinateComponent? = null
 ) {
+    fun isEmpty()
+        = c == null
+        && dx == null
+        && dy == null
+        && dz == null
+        && family.isEmpty()
+        && hasProperty == null
+        && hasItem.isEmpty()
+        && hasPermission == null
+        && l == null
+        && lm == null
+        && m == null
+        && name.isEmpty()
+        && r == null
+        && rm == null
+        && rx == null
+        && rxm == null
+        && ry == null
+        && rym == null
+        && scores == null
+        && tag.isEmpty()
+        && type.isEmpty()
+        && x == null
+        && y == null
+        && z == null
+
     override fun toString(): String {
         return listOfNotNull(
             c?.run { "c=$value" },

@@ -90,7 +90,7 @@ fun main() {
         }
     }
 
-    Commands.getAllVanillaCommands().forEach(dispatcher::register)
+    Commands.getAllVanillaCommandBuilders().forEach(dispatcher::register)
 
     println(dispatcher.getCommand("say")!!.getAllUsages())
 

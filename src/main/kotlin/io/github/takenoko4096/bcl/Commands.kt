@@ -28,7 +28,7 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
 
 // /execute, function, gametest は一旦飛ばしてる
 object Commands {
-    val AIMASSIST = Command.create("aimassist") {
+    val AIMASSIST = Command.builder("aimassist") {
         description = "エイムアシストを有効にします。"
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -70,7 +70,7 @@ object Commands {
         }
     }
 
-    val CAMERA = Command.create("camera") {
+    val CAMERA = Command.builder("camera") {
         "players"(EntitySelectorArgumentType.players()) {
             "attach_to_entity" {
                 "target"(EntitySelectorArgumentType()) {
@@ -270,7 +270,7 @@ object Commands {
         }
     }
 
-    val CAMERASHAKE = Command.create("camerashake") {
+    val CAMERASHAKE = Command.builder("camerashake") {
         "add" {
             "players"(EntitySelectorArgumentType.players()) {
                 executes()
@@ -298,7 +298,7 @@ object Commands {
         }
     }
 
-    val CLEAR = Command.create("clear") {
+    val CLEAR = Command.builder("clear") {
         executes()
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -314,7 +314,7 @@ object Commands {
         }
     }
 
-    val CLEARSPAWNPOINT = Command.create("clearspawnpoint") {
+    val CLEARSPAWNPOINT = Command.builder("clearspawnpoint") {
         executes()
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -322,7 +322,7 @@ object Commands {
         }
     }
 
-    val CLONE = Command.create("clone") {
+    val CLONE = Command.builder("clone") {
         "begin"(PositionArgumentType()) {
             "end"(PositionArgumentType()) {
                 "destination"(PositionArgumentType()) {
@@ -352,13 +352,13 @@ object Commands {
         }
     }
 
-    val CONNECT = Command.create("connect") {
+    val CONNECT = Command.builder("connect") {
         "server_uri"(StringArgumentType.greedy()) {
             executes()
         }
     }
 
-    val CONTROLSCHEME = Command.create("controlscheme") {
+    val CONTROLSCHEME = Command.builder("controlscheme") {
         "players"(EntitySelectorArgumentType.players()) {
             "clear" {
                 executes()
@@ -372,7 +372,7 @@ object Commands {
         }
     }
 
-    val DAMAGE = Command.create("damage") {
+    val DAMAGE = Command.builder("damage") {
         "target"(EntitySelectorArgumentType()) {
             "amount"(IntegerArgumentType.integer()) {
                 executes()
@@ -390,7 +390,7 @@ object Commands {
         }
     }
 
-    val DAYLOCK = Command.create("daylock") {
+    val DAYLOCK = Command.builder("daylock") {
         description = "昼夜サイクルを停止及び再開します。"
 
         aliases.add("alwaysday")
@@ -411,13 +411,13 @@ object Commands {
         }
     }
 
-    val DEOP = Command.create("deop") {
+    val DEOP = Command.builder("deop") {
         "player"(EntitySelectorArgumentType.players()) {
             executes()
         }
     }
 
-    val DIALOGUE = Command.create("dialogue") {
+    val DIALOGUE = Command.builder("dialogue") {
         "change" {
             "npc"(EntitySelectorArgumentType()) {
                 "scene_name"(StringArgumentType.isolated()) {
@@ -443,13 +443,13 @@ object Commands {
         }
     }
 
-    val DIFFICULTY = Command.create("difficulty") {
+    val DIFFICULTY = Command.builder("difficulty") {
         "mode"(EnumArgumentType.of<Difficulty>()) {
             executes()
         }
     }
 
-    val EFFECT = Command.create("effect") {
+    val EFFECT = Command.builder("effect") {
         "targets"(EntitySelectorArgumentType()) {
             "effect_type"(EnumArgumentType.of<Effect>()) {
                 executes()
@@ -489,7 +489,7 @@ object Commands {
         }
     }
 
-    val ENCHANT = Command.create("enchant") {
+    val ENCHANT = Command.builder("enchant") {
         "targets"(EntitySelectorArgumentType()) {
             "enchant"(EnumArgumentType.of<Enchant>()) {
                 executes()
@@ -511,7 +511,7 @@ object Commands {
         }
     }
 
-    val EVENT = Command.create("event") {
+    val EVENT = Command.builder("event") {
         "entity" {
             "targets"(EntitySelectorArgumentType()) {
                 "event_name"(EnumArgumentType.of<EntityEvents>()) {
@@ -521,7 +521,7 @@ object Commands {
         }
     }
 
-    val FILL = Command.create("fill") {
+    val FILL = Command.builder("fill") {
         "from"(PositionArgumentType()) {
             "to"(PositionArgumentType()) {
                 "tile_state"(BlockStateArgumentType.blockState()) {
@@ -543,7 +543,7 @@ object Commands {
         }
     }
 
-    val FOG = Command.create("fog") {
+    val FOG = Command.builder("fog") {
         "victims"(EntitySelectorArgumentType.players()) {
             "deletion_mode"(EnumArgumentType.of<FogDeleteMode>()) {
                 "user_provider_id"(StringArgumentType.isolated()) {
@@ -561,7 +561,7 @@ object Commands {
         }
     }
 
-    val GAMEMODE = Command.create("gamemode") {
+    val GAMEMODE = Command.builder("gamemode") {
         "game_mode"(EnumArgumentType.of<GameMode>()) {
             executes()
 
@@ -571,7 +571,7 @@ object Commands {
         }
     }
 
-    val GAMERULE = Command.create("gamerule") {
+    val GAMERULE = Command.builder("gamerule") {
         "int_game_rule"(EnumArgumentType.of<IntGameRule>()) {
             executes()
 
@@ -602,13 +602,13 @@ object Commands {
         }
     }
 
-    val GAMETIPS = Command.create("gametips") {
+    val GAMETIPS = Command.builder("gametips") {
         "status"(EnumArgumentType.of<GameTipsStatus>()) {
             executes()
         }
     }
 
-    val GIVE = Command.create("give") {
+    val GIVE = Command.builder("give") {
         "players"(EntitySelectorArgumentType.players()) {
             "item_name"(ItemTypeArgumentType()) {
                 executes()
@@ -628,7 +628,7 @@ object Commands {
         }
     }
 
-    val HELP = Command.create("help") {
+    val HELP = Command.builder("help") {
         description = "コマンドの一覧またはヘルプを呼び出します。"
 
         aliases.add("?")
@@ -653,7 +653,7 @@ object Commands {
         }
     }
 
-    val HUD = Command.create("hud") {
+    val HUD = Command.builder("hud") {
         "players"(EntitySelectorArgumentType.players()) {
             "visibility"(EnumArgumentType.of<HudVisibility>()) {
                 executes()
@@ -665,7 +665,7 @@ object Commands {
         }
     }
 
-    val INPUTPERMISSION = Command.create("inputpermission") {
+    val INPUTPERMISSION = Command.builder("inputpermission") {
         "query" {
             "players"(EntitySelectorArgumentType.players()) {
                 "input_permission"(EnumArgumentType.of<InputPermission>()) {
@@ -689,7 +689,7 @@ object Commands {
         }
     }
 
-    val EXECUTE = Command.create("execute") {
+    val EXECUTE = Command.builder("execute") {
         "as" {
             "targets"(EntitySelectorArgumentType()) {
                 redirect("execute")
@@ -790,13 +790,11 @@ object Commands {
         }
 
         "run" {
-            "pass" {
-                executes()
-            }
+            redirect("root")
         }
     }
 
-    fun getAllVanillaCommands() = listOf(
+    fun getAllVanillaCommandBuilders() = listOf(
         AIMASSIST,
         CAMERA,
         CAMERASHAKE,
@@ -822,7 +820,6 @@ object Commands {
         HELP,
         HUD,
         INPUTPERMISSION,
-        // Command.create("pass") { executes() },
 
         EXECUTE
     )

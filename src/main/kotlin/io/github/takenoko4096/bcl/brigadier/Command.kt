@@ -8,8 +8,9 @@ class Command(
     val description: String,
     val aliases: Set<String>,
     executor: (CommandContext.() -> Any?)?,
-    children: Map<String, CommandNode>
-) : LiteralCommandNode(name, executor, children, listOf()) {
+    children: Map<String, CommandNode>,
+    redirects: List<CommandNode> = listOf()
+) : LiteralCommandNode(name, executor, children, redirects) {
     fun getAllUsages(): List<String> {
         return getAllUsages("/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]"))
     }
@@ -32,8 +33,8 @@ class Command(
     }
 
     companion object {
-        fun create(name: String, configurator: CommandNodeBuilder.CommandBuilder.() -> Unit): Command {
-            return CommandNodeBuilder.CommandBuilder(name, configurator).build()
+        fun builder(name: String, configurator: CommandNodeBuilder.CommandBuilder.() -> Unit): CommandNodeBuilder.CommandBuilder {
+            return CommandNodeBuilder.CommandBuilder(name, configurator)
         }
     }
 }
