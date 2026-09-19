@@ -379,14 +379,19 @@ open class TokenSeqReader(
         else if (t.type == TokenType.INT) {
             next()
             val min = t.value.toInt()
-            val max = if (peek() `is` Symbol.RANGE) {
+            val max = if (!isOver() && peek() `is` Symbol.RANGE) {
                 next()
-                val t = peek()
-                if (t.type == TokenType.INT) {
-                    next()
-                    t.value.toInt()
+                if (isOver()) {
+                    Int.MAX_VALUE
                 }
-                else Int.MAX_VALUE
+                else {
+                    val t = peek()
+                    if (t.type == TokenType.INT) {
+                        next()
+                        t.value.toInt()
+                    }
+                    else Int.MAX_VALUE
+                }
             }
             else min
             min..max

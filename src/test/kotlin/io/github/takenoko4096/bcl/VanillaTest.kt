@@ -13,16 +13,14 @@ fun main() {
     Commands.getAllVanillaCommandBuilders().forEach(dispatcher::register)
 
     val result = dispatcher.evaluate("""
-    fill ~~-1 1^-4^ ^20 \
-        composter[  "composter_fill_level" =8] \
-            replace air
-
-    /help execute
-
-    /execute as@a at@s if block~~~air align x run gamemode s
     
-    execute if entity @e[name=a]
+    execute if score @s foo = @s bar run list
     """)
+
+    // TODO execute if score だけ　なぜかリダイレクトできない
+    // redirects が空？？？？？？？？？？？？？？？？？？
+
+    println(dispatcher.getCommand("execute")!!.children["if"]!!.children["score"]!!.children["target1"]!!.children["objective1"]!!.children["matches"]!!.redirects)
 
     result.forEach(::println)
     result.filterIsInstance<CommandLineParseResult.Successful>().map { it.resultValue }.forEach(::println)

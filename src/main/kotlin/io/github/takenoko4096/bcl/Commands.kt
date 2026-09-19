@@ -875,6 +875,26 @@ object Commands {
                     }
                 }
             }
+
+            "score" {
+                "target1"(EntitySelectorArgumentType.single()) {
+                    "objective1"(StringArgumentType.isolated()) {
+                        "comparator"(ScoreComparatorArgumentType()) {
+                            "target2"(EntitySelectorArgumentType.single()) {
+                                "objective2"(StringArgumentType.isolated()) {
+                                    executes()
+                                }
+                            }
+                        }
+
+                        "matches" {
+                            "range"(InvertibleIntegerRangeArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         "unless" {
@@ -901,6 +921,30 @@ object Commands {
                     "end"(PositionArgumentType()) {
                         "destination"(PositionArgumentType()) {
                             "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
+
+            "score" {
+                "target1"(EntitySelectorArgumentType.single()) {
+                    "objective1"(StringArgumentType.isolated()) {
+                        "comparator"(ScoreComparatorArgumentType()) {
+                            "target2"(EntitySelectorArgumentType.single()) {
+                                "objective2"(StringArgumentType.isolated()) {
+                                    executes()
+
+                                    redirect("execute")
+                                }
+                            }
+                        }
+
+                        "matches" {
+                            "range"(InvertibleIntegerRangeArgumentType()) {
                                 executes()
 
                                 redirect("execute")

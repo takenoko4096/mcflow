@@ -210,7 +210,7 @@ class CommandDispatcher(name: String) {
                     else {
                         listOf(
                             BclDiagnostic(
-                                "予期しない引数です: ${candidateReader.peek()}",
+                                "予期しない引数です: ${candidateReader.peek()} ${node.redirects}",
                                 candidateReader.sourceCode,
                                 candidateReader.peek().sourceSpan
                             )
