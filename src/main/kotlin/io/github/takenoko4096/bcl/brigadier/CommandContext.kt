@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier
 
+import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import kotlin.reflect.KClass
@@ -11,7 +12,7 @@ class CommandContext(
     private val sourceCode: String,
     private val dispatcher: CommandDispatcher,
     private val route: List<CommandNode>,
-    private val arguments: Map<String, Argument<*>>
+    private val arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>
 ) {
     fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclCommandExecutionException {
         return BclCommandExecutionException(message, sourceCode, sourceSpan, cause)
@@ -23,18 +24,25 @@ class CommandContext(
         return route
     }
 
+    fun getArguments() = arguments.toList()
+
     fun <T : Any> getArgument(name: String, clazz: KClass<T>): Argument<T> {
-        if (name !in arguments) {
-            throw IllegalArgumentException("'$name' は不明な引数名です")
+        val result = mutableListOf<Argument<T>>()
+        for ((node, argument) in arguments) {
+            if (node.name == name && clazz.isInstance(argument.value)) {
+                result.add(argument as Argument<T>)
+            }
         }
 
-        val argument = arguments[name]!!
-
-        if (!clazz.isInstance(argument.value)) {
-            throw IllegalArgumentException("クラス '${clazz.simpleName}' は引数 '$name' の型ではありません")
+        if (result.size == 1) {
+            return result.first()
         }
-
-        return argument as Argument<T>
+        else if (result.size > 1) {
+            throw IllegalArgumentException("引数 ${clazz.simpleName} $name が複数見つかりました")
+        }
+        else {
+            throw IllegalArgumentException("引数 ${clazz.simpleName} $name が見つかりません")
+        }
     }
 
     inline fun <reified T : Any> getArgument(name: String): Argument<T> {

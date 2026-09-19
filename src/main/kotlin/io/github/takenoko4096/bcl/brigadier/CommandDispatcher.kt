@@ -52,7 +52,7 @@ class CommandDispatcher(name: String) {
 
         val initialState = DispatcherParseState(
             reader = reader.clone(),
-            arguments = emptyMap(),
+            arguments = emptyList(),
             route = mutableListOf(),
             literalCount = 0
         )
@@ -116,7 +116,7 @@ class CommandDispatcher(name: String) {
         return CommandLineParseResult.Failure(
             null,
             route = listOf(),
-            emptyMap(),
+            emptyList(),
             listOf(
                 BclDiagnostic(
                     "不明なコマンド名です: '${sourceSpan.getStringFromSourceCode(reader.sourceCode)}'",
@@ -133,7 +133,7 @@ class CommandDispatcher(name: String) {
 
         for ((name, node) in childrenAndRedirects) {
             val candidateReader = state.reader.clone()
-            val candidateArguments = state.arguments.toMutableMap()
+            val candidateArguments = state.arguments.toMutableList()
 
             val nextState = DispatcherParseState(
                 candidateReader,
@@ -170,7 +170,7 @@ class CommandDispatcher(name: String) {
                         }
 
                         val argument = node.type.parse(candidateReader)
-                        candidateArguments[name] = argument // TODO
+                        candidateArguments.add(node to argument)
                     }
 
                     else -> throw IllegalStateException("NEVER HAPPENS")
@@ -220,8 +220,8 @@ class CommandDispatcher(name: String) {
             }
 
             // さらに子へ進む可能性
-            if (node.getChildrenAndRedirects().isNotEmpty()) {
-                val childrenAndRedirectsOfCurrent = node.getChildrenAndRedirects()
+            if (node.getEffectiveChildren().isNotEmpty()) {
+                val childrenAndRedirectsOfCurrent = node.getEffectiveChildren()
 
                 val childPotentials = dispatch(
                     text,

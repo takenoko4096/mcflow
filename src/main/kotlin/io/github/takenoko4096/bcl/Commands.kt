@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.argument.*
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
+import io.github.takenoko4096.bcl.brigadier.value.block.ScanMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.CameraPreset
 import io.github.takenoko4096.bcl.brigadier.value.misc.CameraShakeType
 import io.github.takenoko4096.bcl.brigadier.value.misc.CloneMode
@@ -12,10 +13,11 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
 import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
 import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityAnchor
-import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvents
+import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvent
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InputPermission
 import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
+import io.github.takenoko4096.bcl.brigadier.value.location.Biome
 import io.github.takenoko4096.bcl.brigadier.value.misc.BoolGameRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.FogDeleteMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.GameTipsStatus
@@ -497,13 +499,22 @@ object Commands {
                 "level"(IntegerArgumentType.positive()) {
                     executes {
                         val enchant = getValue<Enchant>("enchant")
-                        val levelArg = getArgument<Int>("level")
+                        val levelArgument = getArgument<Int>("level")
 
-                        val rangeStr = if (enchant.levels.first == enchant.levels.last) enchant.levels.first
-                            else "${enchant.levels.first} ～ ${enchant.levels.last}"
+                        val range = if (enchant.levels.first == enchant.levels.last) {
+                            enchant.levels.first.toString()
+                        }
+                        else {
+                            "${enchant.levels.first} ～ ${enchant.levels.last}"
+                        }
 
-                        if (levelArg.value !in enchant.levels) {
-                            throw exception(levelArg.sourceSpan, "エンチャント '${enchant.getString()}' はレベル ${levelArg.value} に対応していません: 有効なレベルは $rangeStr です")
+                        val level = levelArgument.value
+
+                        if (level !in enchant.levels) {
+                            throw exception(
+                                levelArgument.sourceSpan,
+                                "エンチャント '${enchant.getString()}' はレベル $level に対応していません: 有効なレベルは $range です"
+                            )
                         }
                     }
                 }
@@ -514,7 +525,7 @@ object Commands {
     val EVENT = Command.builder("event") {
         "entity" {
             "targets"(EntitySelectorArgumentType()) {
-                "event_name"(EnumArgumentType.of<EntityEvents>()) {
+                "event_name"(EnumArgumentType.of<EntityEvent>()) {
                     executes()
                 }
             }
@@ -689,6 +700,90 @@ object Commands {
         }
     }
 
+    val KICK = Command.builder("kick") {
+        "target"(EntitySelectorArgumentType.players()) {
+            executes()
+
+            "reason"(StringArgumentType.greedy()) {
+                executes()
+            }
+        }
+    }
+
+    val KILL = Command.builder("kill") {
+        "targets"(EntitySelectorArgumentType()) {
+            executes()
+        }
+    }
+
+    val LIST = Command.builder("list") {
+        executes()
+    }
+
+    val LOCATE = Command.builder("locate") {
+        "biome" {
+            "id"(EnumArgumentType.of<Biome>()) {
+                executes()
+            }
+        }
+
+        "structure" {
+            "id"(StringArgumentType.isolated()) {
+                executes()
+
+                "use_new_chunks_only"(BooleanArgumentType()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val LOOT = Command.builder("loot") {
+        "give" {
+            "players"(EntitySelectorArgumentType.players()) {
+                "kill" {
+                    "target"(EntitySelectorArgumentType()) {
+                        executes()
+                    }
+                }
+
+                "loot" {
+                    "loot_table"(StringArgumentType.isolated() /*TODO EnumArgumentType.of<LootTable>()*/) {
+                        "tool"(ItemTypeArgumentType()) {
+                            executes()
+                        }
+
+                        "mainhand" {
+                            executes()
+                        }
+
+                        "offhand" {
+                            executes()
+                        }
+                    }
+                }
+
+                "mine" {
+                    "position"(PositionArgumentType()) {
+                        executes()
+
+                        "tool"(ItemTypeArgumentType()) {
+                            executes()
+                        }
+
+                        "mainhand" {
+                            executes()
+                        }
+
+                        "offhand" {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val EXECUTE = Command.builder("execute") {
         "as" {
             "targets"(EntitySelectorArgumentType()) {
@@ -767,6 +862,19 @@ object Commands {
                 }
             }
 
+            "blocks" {
+                "begin"(PositionArgumentType()) {
+                    "end"(PositionArgumentType()) {
+                        "destination"(PositionArgumentType()) {
+                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         "unless" {
@@ -784,6 +892,20 @@ object Commands {
                         executes()
 
                         redirect("execute")
+                    }
+                }
+            }
+
+            "blocks" {
+                "begin"(PositionArgumentType()) {
+                    "end"(PositionArgumentType()) {
+                        "destination"(PositionArgumentType()) {
+                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
                     }
                 }
             }
@@ -820,6 +942,11 @@ object Commands {
         HELP,
         HUD,
         INPUTPERMISSION,
+        KICK,
+        KILL,
+        LIST,
+        LOCATE,
+        LOOT,
 
         EXECUTE
     )

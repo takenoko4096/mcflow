@@ -1,14 +1,15 @@
 package io.github.takenoko4096.bcl.brigadier
 
 import io.github.takenoko4096.bcl.ast.Node
+import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
-sealed class CommandLineParseResult(val route: List<CommandNode>, val arguments: Map<String, Argument<*>>, sourceSpan: SourceSpan) : Node(sourceSpan) {
+sealed class CommandLineParseResult(val route: List<CommandNode>, val arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>, sourceSpan: SourceSpan) : Node(sourceSpan) {
     class Successful(
         val command: Command,
         route: List<CommandNode>,
-        arguments: Map<String, Argument<*>>,
+        arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>,
         sourceSpan: SourceSpan,
         val resultValue: Any?
     ) : CommandLineParseResult(route, arguments, sourceSpan) {
@@ -20,7 +21,7 @@ sealed class CommandLineParseResult(val route: List<CommandNode>, val arguments:
     class Failure(
         val command: Command?,
         route: List<CommandNode>,
-        arguments: Map<String, Argument<*>>,
+        arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>,
         val diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan
     ) : CommandLineParseResult(route, arguments, sourceSpan) {

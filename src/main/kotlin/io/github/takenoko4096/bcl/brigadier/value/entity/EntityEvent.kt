@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 
-enum class EntityEvents : StringRepresentable, CommandEnumerable {
+enum class EntityEvent : StringRepresentable, CommandEnumerable {
     ABORT_SHELTERING,
     ADMIRE_ITEM_STARTED_EVENT,
     ADMIRE_ITEM_STOPPED_EVENT,
