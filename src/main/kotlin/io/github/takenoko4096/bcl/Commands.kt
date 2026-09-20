@@ -924,7 +924,27 @@ object Commands {
 
         "jigsaw" {
             "pool"(FilePathArgumentType()) {
-                // TODO
+                "target"(StringArgumentType.isolated()) {
+                    "max_depth"(IntegerArgumentType.integer(1..20)) {
+                        executes()
+
+                        "position"(PositionArgumentType()) {
+                            executes()
+
+                            "keep_jigsaws"(BooleanArgumentType()) {
+                                executes()
+
+                                "include_entities"(BooleanArgumentType()) {
+                                    executes()
+
+                                    "liquid_settings"(BooleanArgumentType()) {
+                                        executes()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1183,6 +1203,7 @@ object Commands {
         PACKSTACK,
         PARTICLE,
         PERMISSION,
+        PLACE,
 
         TELL,
 

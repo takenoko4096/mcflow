@@ -18,6 +18,8 @@ fun main() {
     ? list
     packstack client verbose exclude-vanilla
     fill 7 2 12 7 4 18 composter ["composter_fill_level"=8] replace structure_void
+    kill @e[name=-+]
+    place jigsaw "+/a----a/------/-a" foo 1
     execute as @p at @s positioned ~0.5~~0.5 rotated as @e[tag=a] positioned ^^^0.7071 rotated as @e[tag=a] positioned ^^^1.4142 if entity @s[r=1.5,rm=0.1] run list
     """.trimIndent())
 

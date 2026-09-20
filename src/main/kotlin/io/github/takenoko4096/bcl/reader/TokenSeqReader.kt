@@ -63,6 +63,28 @@ open class TokenSeqReader(
         cursor++
     }
 
+    fun testThenAdvance(predicate: (Token) -> Boolean): Boolean {
+        val result = predicate(peek())
+        return if (result) {
+            next()
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fun testThenAdvanceIgnoreNewLine(predicate: (Token) -> Boolean): Boolean {
+        val result = predicate(peekIgnoreNewLine())
+        return if (result) {
+            nextIgnoreNewLine()
+            true
+        }
+        else {
+            false
+        }
+    }
+
     fun expect(symbol: Symbol) {
         val start = getCurrentTokenStartPosition()
         if (peek() `is` symbol) {
@@ -610,7 +632,7 @@ open class TokenSeqReader(
         return map
     }
 
-    fun readCommandString(allowFloat: Boolean = false): String {
+    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false): String {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "CommandWord の解析に失敗しました: 入力が不足しています")
         }
@@ -622,18 +644,30 @@ open class TokenSeqReader(
         val firstChar = sourceCode.getOrNull(startIndex)
         val secondChar = sourceCode.getOrNull(startIndex + 1)
 
+        var index = startIndex
+
         if (firstChar == KeyChar.COLON) {
             next()
             val end = getPreviousTokenEndPosition()
             throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.COLON}' で開始できません")
         }
-        else if (firstChar == KeyChar.MINUS && secondChar != null && secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
-            next()
-            val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.MINUS}$secondChar' で開始できません")
+
+        if (firstChar in setOf(KeyChar.PLUS, KeyChar.MINUS)) {
+            if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+                next()
+
+                if (allowSingleSignOnly) {
+                    return firstChar.toString()
+                }
+
+                val end = getPreviousTokenEndPosition()
+
+                throw exception(start..end, "コマンド文字列の解析に失敗しました: コマンド文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
+            }
+
+            index++
         }
 
-        var index = startIndex
         while (sourceCode[index] !in KeyChar.COMMAND_WORD_TERMINATORS) {
             index++
             if (index >= sourceCode.length) break
@@ -651,9 +685,6 @@ open class TokenSeqReader(
 
         if (string.isEmpty()) {
             throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
-        }
-        else if (KeyChar.PLUS in string.substring(1)) {
-            throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 文字 '${KeyChar.PLUS}' は一文字目以外に配置することができません")
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
             throw exception(start..end, "CommandWord の解析に失敗しました: 数値として構成される CommandWord は不正です")

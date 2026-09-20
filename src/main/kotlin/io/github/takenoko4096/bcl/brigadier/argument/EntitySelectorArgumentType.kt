@@ -692,6 +692,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
             parser(reader, arguments)
 
+            val start3 = reader.getCurrentTokenStartPosition()
             if (reader.isOver()) {
                 val end2 = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start2..end2, "セレクタ引数リストの読み取りに失敗しました: セレクタ引数リストが '${Symbol.ARRAY_END.value}' で閉じられていません")
@@ -706,8 +707,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             else {
                 val p = reader.peek()
                 reader.next()
-                val end2 = reader.getPreviousTokenEndPosition()
-                throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: 不明なトークンです: $p")
+                val end3 = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start3..end3, "セレクタ引数の読み取りに失敗しました: 不明なトークンです: $p")
             }
         }
     }
