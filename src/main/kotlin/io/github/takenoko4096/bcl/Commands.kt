@@ -33,6 +33,7 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.JigsawStructure
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.MusicRepeatMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
+import io.github.takenoko4096.bcl.brigadier.value.misc.RECIPES
 import io.github.takenoko4096.bcl.brigadier.value.misc.StackType
 
 // /function, gametest は一旦飛ばしてる
@@ -975,6 +976,74 @@ object Commands {
         }
     }
 
+    val PLAYANIMATION = Command.builder("playanimation") {
+        "targets"(EntitySelectorArgumentType()) {
+            "animation"(StringArgumentType.isolated()) {
+                executes()
+
+                "next_state"(StringArgumentType.isolated()) {
+                    executes()
+
+                    "blend_out_time"(FloatArgumentType.float()) {
+                        executes()
+
+                        "stop_expression"(StringArgumentType.isolated()) {
+                            executes()
+
+                            "controller"(StringArgumentType.isolated()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val PLAYSOUND = Command.builder("playsound") {
+        "sound"(StringArgumentType.isolated()) {
+            executes()
+
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+
+                "position"(PositionArgumentType()) {
+                    executes()
+
+                    "volume"(FloatArgumentType.float()) {
+                        executes()
+
+                        "pitch"(FloatArgumentType.float()) {
+                            executes()
+
+                            "min_volume"(FloatArgumentType.float()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val RECIPE = Command.builder("recipe") {
+        "give" {
+            "players"(EntitySelectorArgumentType.players()) {
+                "recipe"(StringEnumArgumentType.of("recipe", RECIPES)) {
+                    executes()
+                }
+            }
+        }
+
+        "take" {
+            "players"(EntitySelectorArgumentType.players()) {
+                "recipe"(StringEnumArgumentType.of("recipe", RECIPES)) {
+                    executes()
+                }
+            }
+        }
+    }
+
     val TELL = Command.builder("tell") {
         aliases.add("msg")
         aliases.add("w")
@@ -1204,6 +1273,9 @@ object Commands {
         PARTICLE,
         PERMISSION,
         PLACE,
+        PLAYANIMATION,
+        PLAYSOUND,
+        RECIPE,
 
         TELL,
 

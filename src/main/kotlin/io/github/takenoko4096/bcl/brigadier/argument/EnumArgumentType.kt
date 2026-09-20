@@ -9,17 +9,16 @@ import kotlin.enums.enumEntries
 class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : ArgumentType<E>(name) where E : Enum<E>, E : CommandEnumerable {
     override fun parse(reader: TokenSeqReader): Argument<E> {
         val start = reader.getCurrentTokenStartPosition()
-        // TODO
-        val word = reader.readCommandString(allowFloat = true)
+        val string = reader.readCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in entries) {
-            if (entry.getNames().contains(word)) {
+            if (entry.getNames().contains(string)) {
                 return Argument(this, entry, start..end)
             }
         }
 
-        throw reader.exception(start..end, "不明なエントリです: '$word'")
+        throw reader.exception(start..end, "不明なエントリです: '$string'")
     }
 
     companion object {

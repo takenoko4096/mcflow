@@ -63,10 +63,12 @@ open class TokenSeqReader(
         cursor++
     }
 
-    fun testThenAdvance(predicate: (Token) -> Boolean): Boolean {
+    fun testThenAdvance(predicate: (Token) -> Boolean, preAdvance: (() -> Unit)? = null, postAdvance: (() -> Unit)? = null): Boolean {
         val result = predicate(peek())
         return if (result) {
+            preAdvance?.invoke()
             next()
+            postAdvance?.invoke()
             true
         }
         else {
@@ -74,15 +76,23 @@ open class TokenSeqReader(
         }
     }
 
-    fun testThenAdvanceIgnoreNewLine(predicate: (Token) -> Boolean): Boolean {
+    fun testThenAdvanceIgnoreNewLine(predicate: (Token) -> Boolean, preAdvance: (() -> Unit)? = null, postAdvance: (() -> Unit)? = null): Boolean {
         val result = predicate(peekIgnoreNewLine())
         return if (result) {
+            preAdvance?.invoke()
             nextIgnoreNewLine()
+            postAdvance?.invoke()
             true
         }
         else {
             false
         }
+    }
+
+    fun getWhitespaceBetweenPreviousAndCurrent(): String{
+        val from = getPreviousTokenEndPosition().index + 1
+        val to = getCurrentTokenStartPosition().index - 1
+        return sourceCode.slice(from..to)
     }
 
     fun expect(symbol: Symbol) {
@@ -649,7 +659,12 @@ open class TokenSeqReader(
         if (firstChar == KeyChar.COLON) {
             next()
             val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.COLON}' で開始できません")
+            throw exception(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません")
+        }
+
+        if (firstChar == KeyChar.WILDCARD) {
+            next()
+            return firstChar.toString()
         }
 
         if (firstChar in setOf(KeyChar.PLUS, KeyChar.MINUS)) {
@@ -662,7 +677,7 @@ open class TokenSeqReader(
 
                 val end = getPreviousTokenEndPosition()
 
-                throw exception(start..end, "コマンド文字列の解析に失敗しました: コマンド文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
+                throw exception(start..end, "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
             }
 
             index++
@@ -684,13 +699,13 @@ open class TokenSeqReader(
         val end = getPreviousTokenEndPosition()
 
         if (string.isEmpty()) {
-            throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
+            throw exception(peekSafely(0).sourceSpan, "文字列の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
-            throw exception(start..end, "CommandWord の解析に失敗しました: 数値として構成される CommandWord は不正です")
+            throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")
         }
         else if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
-            throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
+            throw exception(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
         }
 
         return string
@@ -698,7 +713,7 @@ open class TokenSeqReader(
 
     fun readQuotableCommandString(): String {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "Quoted または CommandWord の解析に失敗しました: 入力が不足しています")
+            throw exception(peekSafely(-1).sourceSpan, "二重引用符付き文字列または文字列の解析に失敗しました: 入力が不足しています")
         }
 
         return if (peek().type == TokenType.DOUBLE_QUOTED) {

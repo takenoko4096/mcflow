@@ -39,6 +39,7 @@ object KeyChar {
     const val COORDINATE_LOCAL = '^'
     const val PLUS = '+'
     const val MINUS = '-'
+    const val WILDCARD = '*'
 
     val COMMAND_WORD_TERMINATORS = charArrayOf(
         ' ', '{', '}', '[', ']', ',', '!', ';', '"', '\'', '`', '@', '=', '~', '^', '|', '/', '+', '#', '$', '<','>', '*', '&', '\r', '\n', '\t'

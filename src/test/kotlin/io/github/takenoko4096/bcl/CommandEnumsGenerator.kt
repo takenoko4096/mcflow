@@ -30,6 +30,7 @@ fun main() {
                 }
                 else s
             }
+            .distinct()
 
         val className = if (name.first().isJavaIdentifierStart()) name else "`$name`"
 
