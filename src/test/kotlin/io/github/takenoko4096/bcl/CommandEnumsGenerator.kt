@@ -20,17 +20,10 @@ fun main() {
     for (property in properties) {
         var name = property.getOrThrow("name", JsonValueTypes.STRING).value
         if (name.first().isLowerCase()) name = name.toUpperCamel()
-        if (name.contains(':') || name.contains('-')) continue
-
-        if (name in setOf("EntityType")) continue
 
         val values = property.getOrThrow("values", JsonValueTypes.ARRAY).typed(JsonValueTypes.OBJECT)
             .map {
-                var s = it.getOrThrow("value", JsonValueTypes.STRING).value
-
-                if (s.startsWith("minecraft:")) {
-                    s = s.replaceFirst("minecraft:", "")
-                }
+                val s = it.getOrThrow("value", JsonValueTypes.STRING).value
 
                 if (!s.first().isJavaIdentifierStart() || s.any { !it.isJavaIdentifierPart() }) {
                     "`$s`"
@@ -47,14 +40,15 @@ fun main() {
 """
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
+import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 
-enum class $className : CommandEnumerable {
+enum class $className : StringRepresentable, CommandEnumerable {
 ${values.joinToString(",\n    ", prefix = "    ", postfix = ";") { it.uppercase() }}
 
-    override fun getNames(): Set<String> {
-        return setOf(name.lowercase())
-    }
+    override fun getString() = name.lowercase()
+
+    override fun getNames() = setOf(getString())
 }
 
 """.trimIndent()

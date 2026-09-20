@@ -29,5 +29,11 @@ class FloatArgumentType(private val validator: (TokenSeqReader.(Float, SourceSpa
                 throw exception(sourceSpan, "浮動小数点数の読み取りに失敗しました: この引数は正の値でなければなりませんが、 $value が渡されました")
             }
         }
+
+        fun nonnegative() = FloatArgumentType { value, sourceSpan ->
+            if (value < 0f) {
+                throw exception(sourceSpan, "浮動小数点数の読み取りに失敗しました: この引数は非負の値でなければなりませんが、 $value が渡されました")
+            }
+        }
     }
 }

@@ -150,6 +150,6 @@ sealed class CommandNodeBuilder(protected val name: String) {
     protected abstract fun build(nodes: List<CommandNode>): CommandNode
 
     companion object {
-        val JAVA_IDENTIFIER_STRING_REGEX = "^[a-zA-Z_][a-zA-Z0-9_]*$".toRegex()
+        val JAVA_IDENTIFIER_STRING_REGEX = "^[a-zA-Z_][a-zA-Z0-9_\\-]*$".toRegex()
     }
 }

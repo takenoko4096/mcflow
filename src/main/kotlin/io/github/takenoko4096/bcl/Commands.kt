@@ -16,17 +16,24 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.EntityAnchor
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvent
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InputPermission
+import io.github.takenoko4096.bcl.brigadier.value.entity.MobEvent
+import io.github.takenoko4096.bcl.brigadier.value.entity.PermissionLevel
 import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
 import io.github.takenoko4096.bcl.brigadier.value.location.Biome
 import io.github.takenoko4096.bcl.brigadier.value.misc.BoolGameRule
+import io.github.takenoko4096.bcl.brigadier.value.misc.Feature
+import io.github.takenoko4096.bcl.brigadier.value.misc.FeatureRule
 import io.github.takenoko4096.bcl.brigadier.value.misc.FogDeleteMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.GameTipsStatus
 import io.github.takenoko4096.bcl.brigadier.value.misc.HudElement
 import io.github.takenoko4096.bcl.brigadier.value.misc.HudVisibility
 import io.github.takenoko4096.bcl.brigadier.value.misc.InputPermissionState
 import io.github.takenoko4096.bcl.brigadier.value.misc.IntGameRule
+import io.github.takenoko4096.bcl.brigadier.value.misc.JigsawStructure
 import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
+import io.github.takenoko4096.bcl.brigadier.value.misc.MusicRepeatMode
 import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
+import io.github.takenoko4096.bcl.brigadier.value.misc.StackType
 
 // /function, gametest は一旦飛ばしてる
 object Commands {
@@ -784,6 +791,181 @@ object Commands {
         }
     }
 
+    val ME = Command.builder("me") {
+        "message"(StringArgumentType.greedy()) {
+            executes()
+        }
+    }
+
+    val MOBEVENT = Command.builder("mobevent") {
+        "event"(EnumArgumentType.of<MobEvent>()) {
+            executes()
+
+            "value"(BooleanArgumentType()) {
+                executes()
+            }
+        }
+    }
+
+    val MUSIC = Command.builder("music") {
+        "play" {
+            "track_name"(StringArgumentType.isolated()) {
+                executes()
+
+                "volume"(FloatArgumentType.nonnegative()) {
+                    executes()
+
+                    "fade_seconds"(FloatArgumentType.nonnegative()) {
+                        executes()
+
+                        "repeat_mode"(EnumArgumentType.of<MusicRepeatMode>()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "queue" {
+            "track_name"(StringArgumentType.isolated()) {
+                executes()
+
+                "volume"(FloatArgumentType.nonnegative()) {
+                    executes()
+
+                    "fade_seconds"(FloatArgumentType.nonnegative()) {
+                        executes()
+
+                        "repeat_mode"(EnumArgumentType.of<MusicRepeatMode>()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "stop" {
+            executes()
+
+            "fade_seconds"(FloatArgumentType.nonnegative()) {
+                executes()
+            }
+        }
+
+        "volume" {
+            "volume"(FloatArgumentType.nonnegative()) {
+                executes()
+            }
+        }
+    }
+
+    val OP = Command.builder("op") {
+        "players"(EntitySelectorArgumentType.players()) {
+            executes()
+        }
+    }
+
+    val PACKSTACK = Command.builder("packstack") {
+        "stack_type"(EnumArgumentType.of<StackType>()) {
+            executes()
+
+            "verbose" {
+                executes()
+
+                "exclude-vanilla" {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val PARTICLE = Command.builder("particle") {
+        "effect"(StringArgumentType.isolated()) {
+            executes()
+
+            "position"(PositionArgumentType()) {
+                executes()
+            }
+        }
+    }
+
+    val PERMISSION = Command.builder("permission") {
+        "set" {
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+
+                "permission_level"(EnumArgumentType.of<PermissionLevel>()) {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val PLACE = Command.builder("place") {
+        "feature" {
+            "feature"(EnumArgumentType.of<Feature>()) {
+                executes()
+
+                "position"(PositionArgumentType()) {
+                    executes()
+                }
+            }
+        }
+
+        "featurerule" {
+            "feature_rule"(EnumArgumentType.of<FeatureRule>()) {
+                executes()
+
+                "position"(PositionArgumentType()) {
+                    executes()
+                }
+            }
+        }
+
+        "jigsaw" {
+            "pool"(FilePathArgumentType()) {
+                // TODO
+            }
+        }
+
+        "structure" {
+            "jigsaw_structure"(EnumArgumentType.of<JigsawStructure>()) {
+                executes()
+
+                "position"(PositionArgumentType()) {
+                    executes()
+
+                    "ignore_start_height"(BooleanArgumentType()) {
+                        executes()
+
+                        "keep_jigsaws"(BooleanArgumentType()) {
+                            executes()
+
+                            "include_entities"(BooleanArgumentType()) {
+                                executes()
+
+                                "liquid_settings"(BooleanArgumentType()) {
+                                    executes()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val TELL = Command.builder("tell") {
+        aliases.add("msg")
+        aliases.add("w")
+
+        "target"(EntitySelectorArgumentType.players()) {
+            "message"(StringArgumentType.greedy()) {
+                executes()
+            }
+        }
+    }
+
     val EXECUTE = Command.builder("execute") {
         "as" {
             "targets"(EntitySelectorArgumentType()) {
@@ -883,6 +1065,8 @@ object Commands {
                             "target2"(EntitySelectorArgumentType.single()) {
                                 "objective2"(StringArgumentType.isolated()) {
                                     executes()
+
+                                    redirect("execute")
                                 }
                             }
                         }
@@ -890,6 +1074,8 @@ object Commands {
                         "matches" {
                             "range"(InvertibleIntegerRangeArgumentType()) {
                                 executes()
+
+                                redirect("execute")
                             }
                         }
                     }
@@ -991,6 +1177,14 @@ object Commands {
         LIST,
         LOCATE,
         LOOT,
+        ME,
+        MUSIC,
+        OP,
+        PACKSTACK,
+        PARTICLE,
+        PERMISSION,
+
+        TELL,
 
         EXECUTE
     )

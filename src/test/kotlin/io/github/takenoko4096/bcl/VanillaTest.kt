@@ -13,14 +13,13 @@ fun main() {
     Commands.getAllVanillaCommandBuilders().forEach(dispatcher::register)
 
     val result = dispatcher.evaluate("""
-    
-    execute if score @s foo = @s bar run list
-    """)
-
-    // TODO execute if score だけ　なぜかリダイレクトできない
-    // redirects が空？？？？？？？？？？？？？？？？？？
-
-    println(dispatcher.getCommand("execute")!!.children["if"]!!.children["score"]!!.children["target1"]!!.children["objective1"]!!.children["matches"]!!.redirects)
+    execute if score @s foo = @s bar run tell @a f
+    music volume 3
+    ? list
+    packstack client verbose exclude-vanilla
+    fill 7 2 12 7 4 18 composter ["composter_fill_level"=8] replace structure_void
+    execute as @p at @s positioned ~0.5~~0.5 rotated as @e[tag=a] positioned ^^^0.7071 rotated as @e[tag=a] positioned ^^^1.4142 if entity @s[r=1.5,rm=0.1] run list
+    """.trimIndent())
 
     result.forEach(::println)
     result.filterIsInstance<CommandLineParseResult.Successful>().map { it.resultValue }.forEach(::println)

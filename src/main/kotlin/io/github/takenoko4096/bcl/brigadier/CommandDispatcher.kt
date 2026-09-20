@@ -8,7 +8,6 @@ import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import io.github.takenoko4096.bcl.tokenizer.TokenType
 
 class CommandDispatcher(name: String) {
     private val root = RootCommandNode(name, mutableMapOf())
@@ -19,7 +18,7 @@ class CommandDispatcher(name: String) {
 
     fun getRoot(): RootCommandNode = root
 
-    fun getKnownCommands(): Set<Command> {
+    fun getCommands(): Set<Command> {
         return root.commands.values.toSet()
     }
 
@@ -128,10 +127,10 @@ class CommandDispatcher(name: String) {
         )
     }
 
-    private fun dispatch(text: String, state: DispatcherParseState, childrenAndRedirects: Map<String, CommandNode>): MutableList<RoutePotential> {
+    private fun dispatch(text: String, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
-        for ((name, node) in childrenAndRedirects) {
+        for ((name, node) in effectiveChildren) {
             val candidateReader = state.reader.clone()
             val candidateArguments = state.arguments.toMutableList()
 
@@ -148,24 +147,23 @@ class CommandDispatcher(name: String) {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
                                 candidateReader.peekSafely(-1).sourceSpan,
-                                "${state.route} の次の引数が要求されていますが、引数が不足しています"
+                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
-                        val token = candidateReader.peek()
-
-                        if (token.type != TokenType.WORD || token.value != name) {
+                        val cursor = candidateReader.cursor
+                        val literal = candidateReader.readCommandString()
+                        if (literal != name) {
+                            candidateReader.cursor = cursor
                             continue
                         }
-
-                        candidateReader.next()
                     }
 
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
                                 candidateReader.peekSafely(-1).sourceSpan,
-                                "${state.route} の次の引数が要求されていますが、引数が不足しています"
+                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
@@ -184,11 +182,11 @@ class CommandDispatcher(name: String) {
                             """
                             引数が正しくありません (${error.description})
                             ${
-                                if (childrenAndRedirects.size == 1) {
-                                    childrenAndRedirects.values.first().toString() + " が期待されています"
+                                if (effectiveChildren.size == 1) {
+                                    effectiveChildren.values.first().toString() + " が期待されています"
                                 }
                                 else {
-                                    childrenAndRedirects.map { it.value.toString() }.joinToString(" | ", postfix = " のいずれかが期待されています")
+                                    effectiveChildren.map { it.value.toString() }.joinToString(" | ", postfix = " のいずれかが期待されています")
                                 }
                             }
                             """.trimIndent(),
@@ -210,9 +208,9 @@ class CommandDispatcher(name: String) {
                     else {
                         listOf(
                             BclDiagnostic(
-                                "予期しない引数です: ${candidateReader.peek()} ${node.redirects}",
+                                "予期しない引数です: ${candidateReader.getRemainingSourceSpan().getStringFromSourceCode(candidateReader.sourceCode)}",
                                 candidateReader.sourceCode,
-                                candidateReader.peek().sourceSpan
+                                candidateReader.getRemainingSourceSpan()
                             )
                         )
                     }

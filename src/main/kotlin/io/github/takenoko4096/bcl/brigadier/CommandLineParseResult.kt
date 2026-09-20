@@ -27,13 +27,13 @@ sealed class CommandLineParseResult(val route: List<CommandNode>, val arguments:
     ) : CommandLineParseResult(route, arguments, sourceSpan) {
         override fun toString(): String {
             return if (command == null) {
-                "Failure<UNKNOWN COMMAND> $arguments; ${diagnostics.joinToString("; ")}"
+                "Failure<UNKNOWN COMMAND> $arguments;\n${diagnostics.joinToString("; ")}"
             }
             else if (route.isEmpty()) {
-                "Failure<${command.name}> $arguments; ${diagnostics.joinToString("; ")}"
+                "Failure<${command.name}> $arguments;\n${diagnostics.joinToString("; ")}"
             }
             else {
-                "Failure<${route.joinToString(" ") { it.toString() }}> $arguments; ${diagnostics.joinToString("; ")}"
+                "Failure<${route.joinToString(" ") { it.toString() }}> $arguments;\n${diagnostics.joinToString("; ")}"
             }
         }
     }

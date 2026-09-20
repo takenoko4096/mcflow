@@ -37,10 +37,11 @@ object KeyChar {
 
     const val COORDINATE_RELATIVE = '~'
     const val COORDINATE_LOCAL = '^'
+    const val PLUS = '+'
     const val MINUS = '-'
 
     val COMMAND_WORD_TERMINATORS = charArrayOf(
-        ' ', '{', '}', '[', ']', ',', '!', ';', '"', '\'', '`', '@', '=', '~', '^', '|', '/', '#', '$', '<','>', '*', '+', '&', '\r', '\n', '\t'
+        ' ', '{', '}', '[', ']', ',', '!', ';', '"', '\'', '`', '@', '=', '~', '^', '|', '/', '#', '$', '<','>', '*', '&', '\r', '\n', '\t'
     )
 
     const val COLON = ':'

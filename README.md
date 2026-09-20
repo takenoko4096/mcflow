@@ -12,6 +12,7 @@
     - `EntitySelector`
       - テスト足りてない
       - `has_property` のプロパティ名バリデーション
+  - `ArgumentNodeBuilder::complete()` の提供
 
 ## 制約
 

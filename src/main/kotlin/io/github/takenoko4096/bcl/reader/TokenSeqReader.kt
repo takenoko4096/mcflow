@@ -619,14 +619,15 @@ open class TokenSeqReader(
 
         val startIndex = peek().sourceSpan.start.index
 
+        val firstChar = sourceCode.getOrNull(startIndex)
         val secondChar = sourceCode.getOrNull(startIndex + 1)
 
-        if (sourceCode[startIndex] == KeyChar.COLON) {
+        if (firstChar == KeyChar.COLON) {
             next()
             val end = getPreviousTokenEndPosition()
             throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.COLON}' で開始できません")
         }
-        else if (sourceCode[startIndex] == KeyChar.MINUS && secondChar != null && secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+        else if (firstChar == KeyChar.MINUS && secondChar != null && secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
             next()
             val end = getPreviousTokenEndPosition()
             throw exception(start..end, "CommandWord の解析に失敗しました: CommandWord は '${KeyChar.MINUS}$secondChar' で開始できません")
@@ -650,6 +651,9 @@ open class TokenSeqReader(
 
         if (string.isEmpty()) {
             throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
+        }
+        else if (KeyChar.PLUS in string.substring(1)) {
+            throw exception(peekSafely(0).sourceSpan, "CommandWord の解析に失敗しました: 文字 '${KeyChar.PLUS}' は一文字目以外に配置することができません")
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
             throw exception(start..end, "CommandWord の解析に失敗しました: 数値として構成される CommandWord は不正です")
