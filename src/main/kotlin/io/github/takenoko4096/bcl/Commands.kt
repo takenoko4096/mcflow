@@ -4,39 +4,13 @@ import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.argument.*
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
 import io.github.takenoko4096.bcl.brigadier.value.block.ScanMode
-import io.github.takenoko4096.bcl.brigadier.value.misc.CameraPreset
-import io.github.takenoko4096.bcl.brigadier.value.misc.CameraShakeType
-import io.github.takenoko4096.bcl.brigadier.value.misc.CloneMode
-import io.github.takenoko4096.bcl.brigadier.value.misc.ControlScheme
-import io.github.takenoko4096.bcl.brigadier.value.entity.DamageCause
-import io.github.takenoko4096.bcl.brigadier.value.misc.Difficulty
-import io.github.takenoko4096.bcl.brigadier.value.misc.EasingType
-import io.github.takenoko4096.bcl.brigadier.value.entity.Effect
-import io.github.takenoko4096.bcl.brigadier.value.entity.EntityAnchor
-import io.github.takenoko4096.bcl.brigadier.value.entity.EntityEvent
-import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
-import io.github.takenoko4096.bcl.brigadier.value.entity.InputPermission
-import io.github.takenoko4096.bcl.brigadier.value.entity.MobEvent
-import io.github.takenoko4096.bcl.brigadier.value.entity.PermissionLevel
+import io.github.takenoko4096.bcl.brigadier.value.entity.*
 import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
+import io.github.takenoko4096.bcl.brigadier.value.item.ItemReplaceMode
 import io.github.takenoko4096.bcl.brigadier.value.location.Biome
-import io.github.takenoko4096.bcl.brigadier.value.misc.BoolGameRule
-import io.github.takenoko4096.bcl.brigadier.value.misc.Feature
-import io.github.takenoko4096.bcl.brigadier.value.misc.FeatureRule
-import io.github.takenoko4096.bcl.brigadier.value.misc.FogDeleteMode
-import io.github.takenoko4096.bcl.brigadier.value.misc.GameTipsStatus
-import io.github.takenoko4096.bcl.brigadier.value.misc.HudElement
-import io.github.takenoko4096.bcl.brigadier.value.misc.HudVisibility
-import io.github.takenoko4096.bcl.brigadier.value.misc.InputPermissionState
-import io.github.takenoko4096.bcl.brigadier.value.misc.IntGameRule
-import io.github.takenoko4096.bcl.brigadier.value.misc.JigsawStructure
-import io.github.takenoko4096.bcl.brigadier.value.misc.MaskMode
-import io.github.takenoko4096.bcl.brigadier.value.misc.MusicRepeatMode
-import io.github.takenoko4096.bcl.brigadier.value.misc.PlayerWaypointsValues
-import io.github.takenoko4096.bcl.brigadier.value.misc.RECIPES
-import io.github.takenoko4096.bcl.brigadier.value.misc.StackType
+import io.github.takenoko4096.bcl.brigadier.value.misc.*
 
-// /function, gametest は一旦飛ばしてる
+// gametest, script は一旦飛ばしてる
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
         description = "エイムアシストを有効にします。"
@@ -226,7 +200,7 @@ object Commands {
                                 }
 
                                 "rot" {
-                                    "rotation"(RotationArgumentType()) {
+                                    "rotation"(RotationArgumentType()) { // TODO pitch を省略できてしまう
                                         executes()
 
                                         "entity_offset" {
@@ -540,6 +514,186 @@ object Commands {
         }
     }
 
+    val EXECUTE = Command.builder("execute") {
+        "as" {
+            "targets"(EntitySelectorArgumentType()) {
+                redirect("execute")
+            }
+        }
+
+        "at" {
+            "targets"(EntitySelectorArgumentType()) {
+                redirect("execute")
+            }
+        }
+
+        "positioned" {
+            "position"(PositionArgumentType()) {
+                redirect("execute")
+            }
+
+            "as" {
+                "targets"(EntitySelectorArgumentType()) {
+                    redirect("execute")
+                }
+            }
+        }
+
+        "rotated" {
+            "rotation"(RotationArgumentType()) {
+                redirect("execute")
+            }
+
+            "as" {
+                "targets"(EntitySelectorArgumentType()) {
+                    redirect("execute")
+                }
+            }
+        }
+
+        "facing" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
+                        redirect("execute")
+                    }
+                }
+            }
+        }
+
+        "anchored" {
+            "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
+                redirect("execute")
+            }
+        }
+
+        "align" {
+            "axes"(AxesArgumentType()) {
+                redirect("execute")
+            }
+        }
+
+        "if" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    redirect("execute")
+                }
+            }
+
+            "block" {
+                "position"(PositionArgumentType()) {
+                    "block_state"(BlockStateArgumentType.blockState()) {
+                        executes()
+
+                        redirect("execute")
+                    }
+                }
+            }
+
+            "blocks" {
+                "begin"(PositionArgumentType()) {
+                    "end"(PositionArgumentType()) {
+                        "destination"(PositionArgumentType()) {
+                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
+
+            "score" {
+                "target1"(EntitySelectorArgumentType.single()) {
+                    "objective1"(StringArgumentType.isolated()) {
+                        "comparator"(ScoreComparatorArgumentType()) {
+                            "target2"(EntitySelectorArgumentType.single()) {
+                                "objective2"(StringArgumentType.isolated()) {
+                                    executes()
+
+                                    redirect("execute")
+                                }
+                            }
+                        }
+
+                        "matches" {
+                            "range"(InvertibleIntegerRangeArgumentType()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "unless" {
+            "entity" {
+                "targets"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    redirect("execute")
+                }
+            }
+
+            "block" {
+                "position"(PositionArgumentType()) {
+                    "block_state"(BlockStateArgumentType.blockState()) {
+                        executes()
+
+                        redirect("execute")
+                    }
+                }
+            }
+
+            "blocks" {
+                "begin"(PositionArgumentType()) {
+                    "end"(PositionArgumentType()) {
+                        "destination"(PositionArgumentType()) {
+                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
+
+            "score" {
+                "target1"(EntitySelectorArgumentType.single()) {
+                    "objective1"(StringArgumentType.isolated()) {
+                        "comparator"(ScoreComparatorArgumentType()) {
+                            "target2"(EntitySelectorArgumentType.single()) {
+                                "objective2"(StringArgumentType.isolated()) {
+                                    executes()
+
+                                    redirect("execute")
+                                }
+                            }
+                        }
+
+                        "matches" {
+                            "range"(InvertibleIntegerRangeArgumentType()) {
+                                executes()
+
+                                redirect("execute")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "run" {
+            redirect("root")
+        }
+    }
+
     val FILL = Command.builder("fill") {
         "from"(PositionArgumentType()) {
             "to"(PositionArgumentType()) {
@@ -571,12 +725,18 @@ object Commands {
             }
 
             "push" {
-                "fog_id"(IdentifierArgumentType.namespaceRequiredQuotable("namespace_required_identifier")) {
+                "fog_id"(IdentifierArgumentType.requireNamespace("namespace_required_identifier")) {
                     "user_provider_id"(StringArgumentType.isolated()) {
                         executes()
                     }
                 }
             }
+        }
+    }
+
+    val FUNCTION = Command.builder("function") {
+        "name"(FilePathArgumentType(strict = true)) {
+            executes()
         }
     }
 
@@ -924,7 +1084,7 @@ object Commands {
         }
 
         "jigsaw" {
-            "pool"(FilePathArgumentType()) {
+            "pool"(FilePathArgumentType(strict = false)) {
                 "target"(StringArgumentType.isolated()) {
                     "max_depth"(IntegerArgumentType.integer(1..20)) {
                         executes()
@@ -1029,7 +1189,7 @@ object Commands {
     val RECIPE = Command.builder("recipe") {
         "give" {
             "players"(EntitySelectorArgumentType.players()) {
-                "recipe"(StringEnumArgumentType.of("recipe", RECIPES)) {
+                "recipe"(RECIPE_ARGUMENT_TYPE) {
                     executes()
                 }
             }
@@ -1037,8 +1197,739 @@ object Commands {
 
         "take" {
             "players"(EntitySelectorArgumentType.players()) {
-                "recipe"(StringEnumArgumentType.of("recipe", RECIPES)) {
+                "recipe"(RECIPE_ARGUMENT_TYPE) {
                     executes()
+                }
+            }
+        }
+    }
+
+    val RELOAD = Command.builder("reload") {
+        executes()
+
+        "all" {
+            executes()
+        }
+    }
+
+    val REPLACEITEM = Command.builder("replaceitem") {
+        "block" {
+            "position"(PositionArgumentType()) {
+                "slot.container" {
+                    "slot_id"(IntegerArgumentType.integer()) {
+                        "old_item_handling"(EnumArgumentType.of<ItemReplaceMode>()) {
+                            "item_name"(ItemTypeArgumentType()) {
+                                executes()
+
+                                "amount"(IntegerArgumentType.positive()) {
+                                    executes()
+
+                                    "data"(IntegerArgumentType.integer()) {
+                                        executes()
+
+                                        "components"(ItemNbtComponentsArgumentType()) {
+                                            executes()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        "item_name"(ItemTypeArgumentType()) {
+                            executes()
+
+                            "amount"(IntegerArgumentType.positive()) {
+                                executes()
+
+                                "data"(IntegerArgumentType.integer()) {
+                                    executes()
+
+                                    "components"(ItemNbtComponentsArgumentType()) {
+                                        executes()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "entity" {
+            "targets"(EntitySelectorArgumentType()) {
+                "slot_type"(EnumArgumentType.of<EntityContainerSlotType>()) {
+                    "slot_id"(IntegerArgumentType.integer()) {
+                        "old_item_handling"(EnumArgumentType.of<ItemReplaceMode>()) {
+                            "item_name"(ItemTypeArgumentType()) {
+                                executes()
+
+                                "amount"(IntegerArgumentType.positive()) {
+                                    executes()
+
+                                    "data"(IntegerArgumentType.integer()) {
+                                        executes()
+
+                                        "components"(ItemNbtComponentsArgumentType()) {
+                                            executes()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        "item_name"(ItemTypeArgumentType()) {
+                            executes()
+
+                            "amount"(IntegerArgumentType.positive()) {
+                                executes()
+
+                                "data"(IntegerArgumentType.integer()) {
+                                    executes()
+
+                                    "components"(ItemNbtComponentsArgumentType()) {
+                                        executes()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val RIDE = Command.builder("ride") {
+        "riders"(EntitySelectorArgumentType()) {
+            "start_riding" {
+                "vehicle"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    "teleport_rule"(EnumArgumentType.of<TeleportRule>()) {
+                        executes()
+
+                        "fill_type"(EnumArgumentType.of<VehicleFillType>()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "stop_riding" {
+                executes()
+            }
+
+            "summon_ride" {
+                "entity_type"(EntityTypeArgumentType()) {
+                    executes()
+
+                    "ride_rule"(EnumArgumentType.of<RideRule>()) {
+                        executes()
+
+                        "spawn_event"(EnumArgumentType.of<EntityEvent>()) {
+                            executes()
+
+                            "name_tag"(StringArgumentType.isolated()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "rides"(EntitySelectorArgumentType()) {
+            "evict_riders" {
+                executes()
+            }
+
+            "summon_rider" {
+                "entity_type"(EntityTypeArgumentType()) {
+                    executes()
+
+                    "spawn_event"(EnumArgumentType.of<EntityEvent>()) {
+                        executes()
+
+                        "name_tag"(StringArgumentType.isolated()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val SAY = Command.builder("say") {
+        "message"(StringArgumentType.greedy()) {
+            executes()
+        }
+    }
+
+    val SCHEDULE = Command.builder("schedule") {
+        "clear" {
+            "function"(FilePathArgumentType(strict = true)) {
+                executes()
+            }
+        }
+
+        "delay" {
+            "add" {
+                "function"(FilePathArgumentType(strict = true)) {
+                    "time"(TimeDurationArgumentType()) {
+                        executes()
+
+                        "replace" {
+                            executes()
+                        }
+
+                        "append" {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "clear" {
+                "function"(FilePathArgumentType(strict = true)) {
+                    executes()
+                }
+            }
+        }
+
+        "on_area_loaded" {
+            "add" {
+                "from"(PositionArgumentType()) {
+                    "to"(PositionArgumentType()) {
+                        "function"(FilePathArgumentType(strict = true)) {
+                            executes()
+                        }
+                    }
+                }
+
+                "circle" {
+                    "center"(PositionArgumentType()) {
+                        "radius"(IntegerArgumentType.nonnegative()) {
+                            "function"(FilePathArgumentType(strict = true)) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+
+                "tickingarea" {
+                    "name"(StringArgumentType.isolated()) {
+                        "function"(FilePathArgumentType(strict = true)) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "clear" {
+                "function" {
+                    "function"(FilePathArgumentType(strict = true)) {
+                        executes()
+                    }
+                }
+
+                "tickingarea" {
+                    "name"(StringArgumentType.isolated()) {
+                        executes()
+
+                        "function"(FilePathArgumentType(strict = true)) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val SCOREBOARD = Command.builder("scoreboard") {
+        "objectives" {
+            "add" {
+                "objective"(StringArgumentType.isolated()) {
+                    "dummy" {
+                        executes()
+
+                        "display_name"(StringArgumentType.isolated()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "list" {
+                executes()
+            }
+
+            "remove" {
+                "objective"(StringArgumentType.isolated()) {
+                    executes()
+                }
+            }
+
+            "setdisplay" {
+                inline("list", "sidebar") {
+                    executes()
+
+                    "objective"(StringArgumentType.isolated()) {
+                        executes()
+
+                        inline("ascending", "descending") {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "players" {
+            inline("add", "remove", "set") {
+                "targets"(EntitySelectorArgumentType()) {
+                    "objective"(StringArgumentType.isolated()) {
+                        "count"(IntegerArgumentType.integer()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "list" {
+                executes()
+
+                "player_name"(EntitySelectorArgumentType()) {
+                    executes()
+                }
+            }
+
+            "operation" {
+                "targets"(EntitySelectorArgumentType()) {
+                    "target_objective"(StringArgumentType.isolated()) {
+                        "operation"(ScoreOperatorArgumentType()) {
+                            "sources"(EntitySelectorArgumentType()) {
+                                "source_objective"(StringArgumentType.isolated()) {
+                                    executes {
+                                        val target = getArgument<EntitySelector>("target")
+                                        val source = getArgument<EntitySelector>("source")
+
+                                        if (target.value.isWildcard && source.value.isWildcard) {
+                                            throw exception(source.sourceSpan, "scoreboard operation ではワイルドカードは target または source のどちらか片方にのみ使用できます")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            "random" {
+                "targets"(EntitySelectorArgumentType()) {
+                    "objective"(StringArgumentType.isolated()) {
+                        "min"(IntegerArgumentType.integer()) {
+                            "max"(IntegerArgumentType.integer()) {
+                                executes {
+                                    val min = getArgument<Int>("min")
+                                    val max = getArgument<Int>("max")
+
+                                    if (min.value > max.value) {
+                                        throw exception(min.sourceSpan.start..max.sourceSpan.end, "最小値が最大値を上回っています (${min.value} > ${max.value})")
+                                    }
+                                    else if (min.value == max.value) {
+                                        throw exception(min.sourceSpan.start..max.sourceSpan.end, "最小値と最大値は 1 以上離れている必要があります")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            "reset" {
+                "targets"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    "objective"(StringArgumentType.isolated()) {
+                        executes()
+                    }
+                }
+            }
+
+            "test" {
+                "targets"(EntitySelectorArgumentType()) {
+                    "objective"(StringArgumentType.isolated()) {
+                        "min"(WildcardIntegerArgumentType()) {
+                            executes()
+
+                            "max"(WildcardIntegerArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val SCRIPTEVENT = Command.builder("scriptevent") {
+        "id"(IdentifierArgumentType.nonDefaultNamespace("script_event_id")) {
+            executes()
+
+            "message"(StringArgumentType.greedy()) {
+                executes()
+            }
+        }
+    }
+
+    val SETBLOCK = Command.builder("setblock") {
+        "position"(PositionArgumentType()) {
+            "block_state"(BlockStateArgumentType.blockState()) {
+                executes()
+
+                inline("replace", "destroy", "keep") {
+                    executes()
+                }
+            }
+        }
+    }
+
+    val SETMAXPLAYERS = Command.builder("setmaxplayers") {
+        "max_players"(IntegerArgumentType.integer()) {
+            executes()
+        }
+    }
+
+    val SETWORLDSPAWN = Command.builder("setworldspawn") {
+        executes()
+
+        "position"(PositionArgumentType()) {
+            executes()
+        }
+    }
+
+    val SPAWNPOINT = Command.builder("spawnpoint") {
+        executes()
+
+        "players"(EntitySelectorArgumentType.players()) {
+            executes()
+
+            "position"(PositionArgumentType()) {
+                executes()
+            }
+        }
+    }
+
+    val SPREADPLAYERS = Command.builder("spreadplayers") {
+        "x"(CoordinateComponentArgumentType()) {
+            "z"(CoordinateComponentArgumentType()) {
+                "spread_distance"(FloatArgumentType.nonnegative()) {
+                    "max_range"(FloatArgumentType.float(1f..Float.MAX_VALUE)) {
+                        "victims"(EntitySelectorArgumentType()) {
+                            executes()
+
+                            "max_height"(FloatArgumentType.float()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val STOPSOUND = Command.builder("stopsound") {
+        "players"(EntitySelectorArgumentType.players()) {
+            executes()
+
+            "sound"(StringArgumentType.isolated()) {
+                executes()
+            }
+        }
+    }
+
+    val STRUCTURE = Command.builder("structure") {
+        "delete" {
+            "name"(IdentifierArgumentType.unstrict("structure_id", "mystructure")) {
+                executes()
+            }
+        }
+
+        "load" {
+            "name"(IdentifierArgumentType.unstrict("structure_id", "mystructure")) {
+                "to"(PositionArgumentType()) {
+                    executes()
+
+                    "rotation"(EnumArgumentType.of<StructureRotation>()) {
+                        executes()
+
+                        "mirror"(EnumArgumentType.of<StructureMirror>()) {
+                            executes()
+
+                            "animation_mode"(EnumArgumentType.of<StructureAnimationMode>()) {
+                                executes()
+
+                                "animation_seconds"(FloatArgumentType.nonnegative()) {
+                                    executes()
+
+                                    "include_entities"(BooleanArgumentType()) {
+                                        executes()
+
+                                        "include_blocks"(BooleanArgumentType()) {
+                                            executes()
+
+                                            "waterlogged"(BooleanArgumentType()) {
+                                                executes()
+
+                                                "integrity"(FloatArgumentType.float(0f..100f)) {
+                                                    executes()
+
+                                                    "seed"(StringArgumentType.isolated()) {
+                                                        executes()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            "include_entities"(BooleanArgumentType()) {
+                                executes()
+
+                                "include_blocks"(BooleanArgumentType()) {
+                                    executes()
+
+                                    "waterlogged"(BooleanArgumentType()) {
+                                        executes()
+
+                                        "integrity"(FloatArgumentType.float(0f..100f)) {
+                                            executes()
+
+                                            "seed"(StringArgumentType.isolated()) {
+                                                executes()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "save" {
+            "from"(PositionArgumentType()) {
+                "to"(PositionArgumentType()) {
+                    executes()
+
+                    "include_entities"(BooleanArgumentType()) {
+                        executes()
+
+                        "save_mode"(EnumArgumentType.of<StructureSaveMode>()) {
+                            executes()
+
+                            "include_blocks"(BooleanArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
+
+                    "save_mode"(EnumArgumentType.of<StructureSaveMode>()) {
+                        executes()
+                    }
+                }
+            }
+        }
+    }
+
+    val SUMMON = Command.builder("summon") {
+        "entity_type"(EntityTypeArgumentType()) {
+            executes()
+
+            "name_tag"(StringArgumentType.isolated()) {
+                executes()
+
+                "position"(PositionArgumentType()) {
+                    executes()
+                }
+            }
+
+            "position"(PositionArgumentType()) {
+                executes()
+
+                "rotation"(RotationArgumentType()) { // TODO pitch を省略できてしまう
+                    executes()
+
+                    "spawn_event"(EnumArgumentType.of<EntityEvent>()) { // TODO ここは無効な文字列を入力しても問題ない
+                        executes()
+
+                        "name_tag"(StringArgumentType.isolated()) {
+                            executes()
+                        }
+                    }
+                }
+
+                "facing" {
+                    "look_at_entity"(EntitySelectorArgumentType()) {
+                        executes()
+
+                        "spawn_event"(EnumArgumentType.of<EntityEvent>()) { // TODO ここは無効な文字列を入力しても問題ない
+                            executes()
+
+                            "name_tag"(StringArgumentType.isolated()) {
+                                executes()
+                            }
+                        }
+                    }
+
+                    "look_at_position"(PositionArgumentType()) {
+                        executes()
+
+                        "spawn_event"(EnumArgumentType.of<EntityEvent>()) { // TODO ここは無効な文字列を入力しても問題ない
+                            executes()
+
+                            "name_tag"(StringArgumentType.isolated()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val TAG = Command.builder("tag") {
+        "targets"(EntitySelectorArgumentType()) {
+            inline("add", "remove") {
+                "name"(StringArgumentType.isolated()) {
+                    executes()
+                }
+            }
+
+            "list" {
+                executes()
+            }
+        }
+    }
+
+    val TELEPORT = Command.builder("teleport") {
+        aliases.add("tp")
+
+        "destination_entity"(EntitySelectorArgumentType()) {
+            executes()
+        }
+
+        "destination"(PositionArgumentType()) {
+            executes()
+
+            "check_for_blocks"(BooleanArgumentType()) {
+                executes()
+
+                "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                    executes()
+                }
+            }
+
+            "yaw"(CoordinateComponentArgumentType()) {
+                executes()
+
+                "pitch"(CoordinateComponentArgumentType()) {
+                    executes()
+
+                    "check_for_blocks"(BooleanArgumentType()) {
+                        executes()
+
+                        "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+
+            "facing" {
+                "look_at_entity"(EntitySelectorArgumentType()) {
+                    executes()
+
+                    "check_for_blocks"(BooleanArgumentType()) {
+                        executes()
+
+                        "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+
+                "look_at_position"(PositionArgumentType()) {
+                    executes()
+
+                    "check_for_blocks"(BooleanArgumentType()) {
+                        executes()
+
+                        "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "victims"(EntitySelectorArgumentType()) {
+            "destination_entity"(EntitySelectorArgumentType()) {
+                executes()
+            }
+
+            "destination"(PositionArgumentType()) {
+                executes()
+
+                "check_for_blocks"(BooleanArgumentType()) {
+                    executes()
+
+                    "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                        executes()
+                    }
+                }
+
+                "yaw"(CoordinateComponentArgumentType()) {
+                    executes()
+
+                    "pitch"(CoordinateComponentArgumentType()) {
+                        executes()
+
+                        "check_for_blocks"(BooleanArgumentType()) {
+                            executes()
+
+                            "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
+                }
+
+                "facing" {
+                    "look_at_entity"(EntitySelectorArgumentType()) {
+                        executes()
+
+                        "check_for_blocks"(BooleanArgumentType()) {
+                            executes()
+
+                            "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
+
+                    "look_at_position"(PositionArgumentType()) {
+                        executes()
+
+                        "check_for_blocks"(BooleanArgumentType()) {
+                            executes()
+
+                            "force_provided_position_on_dimension_change"(BooleanArgumentType()) {
+                                executes()
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1055,183 +1946,9 @@ object Commands {
         }
     }
 
-    val EXECUTE = Command.builder("execute") {
-        "as" {
-            "targets"(EntitySelectorArgumentType()) {
-                redirect("execute")
-            }
-        }
+    val TELLRAW = Command.builder("tellraw") {
+        "targets"(EntitySelectorArgumentType.players()) {
 
-        "at" {
-            "targets"(EntitySelectorArgumentType()) {
-                redirect("execute")
-            }
-        }
-
-        "positioned" {
-            "position"(PositionArgumentType()) {
-                redirect("execute")
-            }
-
-            "as" {
-                "targets"(EntitySelectorArgumentType()) {
-                    redirect("execute")
-                }
-            }
-        }
-
-        "rotated" {
-            "rotation"(RotationArgumentType()) {
-                redirect("execute")
-            }
-
-            "as" {
-                "targets"(EntitySelectorArgumentType()) {
-                    redirect("execute")
-                }
-            }
-        }
-
-        "facing" {
-            "entity" {
-                "targets"(EntitySelectorArgumentType()) {
-                    "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
-                        redirect("execute")
-                    }
-                }
-            }
-        }
-
-        "anchored" {
-            "entity_anchor"(EnumArgumentType.of<EntityAnchor>()) {
-                redirect("execute")
-            }
-        }
-
-        "align" {
-            "axes"(AxesArgumentType()) {
-                redirect("execute")
-            }
-        }
-
-        "if" {
-            "entity" {
-                "targets"(EntitySelectorArgumentType()) {
-                    executes()
-
-                    redirect("execute")
-                }
-            }
-
-            "block" {
-                "position"(PositionArgumentType()) {
-                    "block_state"(BlockStateArgumentType.blockState()) {
-                        executes()
-
-                        redirect("execute")
-                    }
-                }
-            }
-
-            "blocks" {
-                "begin"(PositionArgumentType()) {
-                    "end"(PositionArgumentType()) {
-                        "destination"(PositionArgumentType()) {
-                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
-                                executes()
-
-                                redirect("execute")
-                            }
-                        }
-                    }
-                }
-            }
-
-            "score" {
-                "target1"(EntitySelectorArgumentType.single()) {
-                    "objective1"(StringArgumentType.isolated()) {
-                        "comparator"(ScoreComparatorArgumentType()) {
-                            "target2"(EntitySelectorArgumentType.single()) {
-                                "objective2"(StringArgumentType.isolated()) {
-                                    executes()
-
-                                    redirect("execute")
-                                }
-                            }
-                        }
-
-                        "matches" {
-                            "range"(InvertibleIntegerRangeArgumentType()) {
-                                executes()
-
-                                redirect("execute")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        "unless" {
-            "entity" {
-                "targets"(EntitySelectorArgumentType()) {
-                    executes()
-
-                    redirect("execute")
-                }
-            }
-
-            "block" {
-                "position"(PositionArgumentType()) {
-                    "block_state"(BlockStateArgumentType.blockState()) {
-                        executes()
-
-                        redirect("execute")
-                    }
-                }
-            }
-
-            "blocks" {
-                "begin"(PositionArgumentType()) {
-                    "end"(PositionArgumentType()) {
-                        "destination"(PositionArgumentType()) {
-                            "scan_mode"(EnumArgumentType.of<ScanMode>()) {
-                                executes()
-
-                                redirect("execute")
-                            }
-                        }
-                    }
-                }
-            }
-
-            "score" {
-                "target1"(EntitySelectorArgumentType.single()) {
-                    "objective1"(StringArgumentType.isolated()) {
-                        "comparator"(ScoreComparatorArgumentType()) {
-                            "target2"(EntitySelectorArgumentType.single()) {
-                                "objective2"(StringArgumentType.isolated()) {
-                                    executes()
-
-                                    redirect("execute")
-                                }
-                            }
-                        }
-
-                        "matches" {
-                            "range"(InvertibleIntegerRangeArgumentType()) {
-                                executes()
-
-                                redirect("execute")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        "run" {
-            redirect("root")
         }
     }
 
@@ -1252,8 +1969,10 @@ object Commands {
         EFFECT,
         ENCHANT,
         EVENT,
+        EXECUTE,
         FILL,
         FOG,
+        FUNCTION,
         GAMEMODE,
         GAMERULE,
         GAMETIPS,
@@ -1276,9 +1995,22 @@ object Commands {
         PLAYANIMATION,
         PLAYSOUND,
         RECIPE,
-
-        TELL,
-
-        EXECUTE
+        RELOAD,
+        REPLACEITEM,
+        RIDE,
+        SAY,
+        SCHEDULE,
+        SCOREBOARD,
+        SCRIPTEVENT,
+        SETBLOCK,
+        SETMAXPLAYERS,
+        SETWORLDSPAWN,
+        SPAWNPOINT,
+        SPREADPLAYERS,
+        STOPSOUND,
+        STRUCTURE,
+        SUMMON,
+        TELEPORT,
+        TELL
     )
 }

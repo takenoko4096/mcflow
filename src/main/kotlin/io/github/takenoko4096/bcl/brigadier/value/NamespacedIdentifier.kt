@@ -11,7 +11,7 @@ data class NamespacedIdentifier(val namespace: String, val value: String) {
                 ?: return null
 
             val namespace = result.groupValues[1].ifEmpty {
-                defaultNamespace ?: return null
+                defaultNamespace ?: throw IllegalArgumentException("名前空間が必要です")
             }
             val path = result.groupValues[2]
 

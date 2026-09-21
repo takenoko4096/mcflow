@@ -1,8 +1,9 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
-enum class EntityContainerSlotType(private val string: String) : StringRepresentable {
+enum class EntityContainerSlotType(private val string: String) : StringRepresentable, CommandEnumerable {
     ARMOR("slot.armor"),
     ARMOR_HEAD("slot.armor.head"),
     ARMOR_CHEST("slot.armor.chest"),
@@ -21,6 +22,10 @@ enum class EntityContainerSlotType(private val string: String) : StringRepresent
 
     override fun getString(): String {
         return string
+    }
+
+    override fun getNames(): Set<String> {
+        return setOf(getString())
     }
 
     companion object {

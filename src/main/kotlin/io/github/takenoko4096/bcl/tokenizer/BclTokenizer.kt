@@ -196,15 +196,42 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
         val suffix = peek()
         var signed = true
+        var timePostfix: Char? = null
         if (suffix == KeyChar.UNSIGNED) {
             signed = false
             next()
+        }
+        else if (suffix in charArrayOf('d', 's', 't')) {
+            next()
+            timePostfix = suffix
         }
 
         if (sb.startsWith(KeyChar.MINUS) && !signed) {
             end = getCurrentSourcePosition()
             next()
             throw exception(start..end, "符号無し整数に負の符号が付いています")
+        }
+
+        if (timePostfix != null) {
+            if (radix != Radix.DECIMAL || sb.startsWith(KeyChar.MINUS)) {
+                end = getCurrentSourcePosition()
+                next()
+                throw exception(start..end, "時間の単位を示す接尾辞は10進正整数に対してのみ有効です")
+            }
+
+            val type = when (timePostfix) {
+                'd' -> TokenType.TIME_D
+                's' -> TokenType.TIME_S
+                't' -> TokenType.TIME_T
+                else -> throw IllegalStateException("NEVER HAPPENS")
+            }
+
+            return tokenOf(
+                type,
+                sb.toString(),
+                start,
+                end
+            )
         }
 
         return tokenOf(

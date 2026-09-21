@@ -22,6 +22,7 @@ fun main() {
     place jigsaw +/a----a/    ------         /-a foo 1
     execute as @p at @s positioned ~0.5~~0.5 rotated as @e[tag=a] positioned ^^^0.7071 rotated as @e[tag=a] positioned ^^^1.4142 if entity @s[r=1.5,rm=0.1] run list
     recipe take @s *
+    schedule delay add fn/4 0
     """.trimIndent())
 
     result.forEach(::println)

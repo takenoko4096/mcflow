@@ -21,7 +21,11 @@ enum class TokenType(private val description: String) {
     SYMBOL("記号"),
 
     COORDINATE_RELATIVE("相対座標成分"),
-    COORDINATE_LOCAL("ローカル座標成分");
+    COORDINATE_LOCAL("ローカル座標成分"),
+
+    TIME_D("日数"),
+    TIME_S("秒数"),
+    TIME_T("ティック数");
 
     override fun toString(): String {
         return "$name ($description)"

@@ -66,8 +66,8 @@ class CommandDispatcher(name: String) {
             val bestRoutePotential = potentials.maxWith(
                 compareBy<RoutePotential> { it.state.reader.isOver() }
                     .thenBy { it.diagnostics.isEmpty() }
-                    .thenBy { it.state.literalCount }
                     .thenBy { it.state.reader.cursor }
+                    .thenBy { it.state.literalCount }
             )
 
             return if (bestRoutePotential.diagnostics.isEmpty()) {

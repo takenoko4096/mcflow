@@ -14,8 +14,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
     protected val redirects = mutableSetOf<String>()
 
     init {
-        if (!name.matches(JAVA_IDENTIFIER_STRING_REGEX)) {
-            throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; $JAVA_IDENTIFIER_STRING_REGEX に従う必要があります")
+        if (!name.matches(COMMAND_NODE_NAME_REGEX)) {
+            throw IllegalArgumentException("コマンドノードの作成に失敗しました: 不正なコマンドノード名です: $name; $COMMAND_NODE_NAME_REGEX に従う必要があります")
         }
     }
 
@@ -125,6 +125,13 @@ sealed class CommandNodeBuilder(protected val name: String) {
         put(builder)
     }
 
+    fun inline(vararg strings: String, configurator: LiteralCommandNodeBuilder.() -> Unit) {
+        for (string in strings) {
+            val builder = LiteralCommandNodeBuilder(string, configurator)
+            put(builder)
+        }
+    }
+
     fun put(builder: CommandNodeBuilder) {
         if (builder.name in children) {
             throw IllegalStateException("コマンドノード名 '$this' が重複しています")
@@ -150,6 +157,6 @@ sealed class CommandNodeBuilder(protected val name: String) {
     protected abstract fun build(nodes: List<CommandNode>): CommandNode
 
     companion object {
-        val JAVA_IDENTIFIER_STRING_REGEX = "^[a-zA-Z_][a-zA-Z0-9_\\-]*$".toRegex()
+        val COMMAND_NODE_NAME_REGEX = "^[a-zA-Z_.][a-zA-Z0-9_\\-.]*$".toRegex()
     }
 }

@@ -16,6 +16,7 @@ object KeyChar {
     const val STRING_QUOTE = '"'
     const val SPECIAL_STRING_QUOTE = '`'
     const val ESCAPE = '\\'
+    const val SLASH = '/'
 
     val WHITESPACE_CHARS = setOf(SPACE, TAB, LINEBREAK)
     val QUOTE_CHARS = setOf(STRING_QUOTE, SPECIAL_STRING_QUOTE)

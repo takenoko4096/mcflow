@@ -54,7 +54,8 @@ enum class Symbol(val value: String, val expressionStartable: Boolean) {
     NEWLINE('\n', false),
     HASH('#', false),
     RANGE("..", false),
-    ESCAPE('\\', false);
+    ESCAPE('\\', false),
+    SWAP("><", false);
 
     constructor(char: Char, expressionStartable: Boolean) : this(char.toString(), expressionStartable)
 

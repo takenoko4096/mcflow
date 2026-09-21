@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import io.github.takenoko4096.bcl.tokenizer.Symbol
 
 class IntegerArgumentType(
     private val signedDecimalOnly: Boolean,

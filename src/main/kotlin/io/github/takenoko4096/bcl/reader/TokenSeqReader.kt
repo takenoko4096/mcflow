@@ -5,6 +5,8 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.misc.TimeDuration
+import io.github.takenoko4096.bcl.brigadier.value.misc.TimeUnit
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
@@ -279,6 +281,30 @@ open class TokenSeqReader(
         return v
     }
 
+    fun readTimeDuration(): TimeDuration {
+        if (isOver()) {
+            throw exception(peekSafely(-1).sourceSpan, "時間が期待されましたが、入力が不足しています")
+        }
+
+        val start = getCurrentTokenStartPosition()
+
+        val u = peek()
+
+        val v = when (u.type) {
+            TokenType.TIME_D -> TimeDuration(u.value.toInt(), TimeUnit.DAY)
+            TokenType.TIME_S -> TimeDuration(u.value.toInt(), TimeUnit.SECOND)
+            TokenType.TIME_T, TokenType.INT -> TimeDuration(u.value.toInt(), TimeUnit.TICK)
+            else -> {
+                next()
+                throw exception(start, "時間の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+            }
+        }
+
+        next()
+
+        return v
+    }
+
     fun readFloat(): Float {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan.end, "浮動小数点数が期待されましたが、入力が不足しています")
@@ -346,15 +372,28 @@ open class TokenSeqReader(
         }
     }
 
-    fun readNamespacedIdentifier(quotable: Boolean = false, defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE): NamespacedIdentifier {
+    fun readNamespacedIdentifier(quotable: Boolean = false, defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE, strict: Boolean = true): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
         val string = if (quotable) readQuotableCommandString() else readCommandString()
         val end = getPreviousTokenEndPosition()
 
-        val identifier = NamespacedIdentifier.parse(string, defaultNamespace)
-            ?: run {
-                throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
-            }
+        val identifier = try {
+            NamespacedIdentifier.parse(string, defaultNamespace)
+                ?: run {
+                    if (strict) {
+                        throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
+                    }
+                    else if (defaultNamespace != null) {
+                        NamespacedIdentifier(defaultNamespace, string)
+                    }
+                    else {
+                        throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (非厳格モードですが、フォールバックの名前空間が指定されていません)")
+                    }
+                }
+        }
+        catch (error: IllegalArgumentException) {
+            throw exception(start..end, "識別子の読み取りに失敗しました: 名前空間が要求されていますが、名前空間が見つかりませんでした", error)
+        }
 
         return identifier
     }
@@ -644,7 +683,7 @@ open class TokenSeqReader(
 
     fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false): String {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "CommandWord の解析に失敗しました: 入力が不足しています")
+            throw exception(peekSafely(-1).sourceSpan, "文字列の解析に失敗しました: 入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()

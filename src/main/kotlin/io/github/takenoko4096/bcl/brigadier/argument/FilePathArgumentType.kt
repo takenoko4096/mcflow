@@ -2,10 +2,11 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-class FilePathArgumentType : ArgumentType<String>("filepath") {
+class FilePathArgumentType(private val strict: Boolean) : ArgumentType<String>("filepath") {
     override fun parse(reader: TokenSeqReader): Argument<String> {
         val sb = StringBuilder()
 
@@ -17,7 +18,7 @@ class FilePathArgumentType : ArgumentType<String>("filepath") {
             sb.append(t.value)
         }
         else do {
-            sb.append(reader.readCommandString(allowSingleSignOnly = true))
+            sb.append(reader.readCommandString(allowSingleSignOnly = true, allowFloat = true))
         }
         while (
             reader.testThenAdvance(
@@ -29,6 +30,19 @@ class FilePathArgumentType : ArgumentType<String>("filepath") {
 
         val end = reader.getPreviousTokenEndPosition()
 
-        return Argument(this, sb.toString(), start..end)
+        val filepath = sb.toString()
+        val sourceSpan = start..end
+
+        if (strict) {
+            for (char in KeyChar.COMMAND_WORD_TERMINATORS) {
+                if (char == KeyChar.SLASH) continue
+
+                if (char in filepath) {
+                    throw reader.exception(sourceSpan, "ファイルパスの読み取りに失敗しました: 厳格モードのファイルパスには文字 '$char' を含めることができません")
+                }
+            }
+        }
+
+        return Argument(this, filepath, sourceSpan)
     }
 }

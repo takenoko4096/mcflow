@@ -1,5 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.value.misc
 
+import io.github.takenoko4096.bcl.brigadier.argument.StringEnumArgumentType
+
 val RECIPES = arrayOf(
     "*",
     "minecraft:black_concrete_slab",
@@ -4204,3 +4206,5 @@ val RECIPES = arrayOf(
     "weapon_arrow_recipe_46",
     "decorated_pot_base_recipeId"
 )
+
+val RECIPE_ARGUMENT_TYPE = StringEnumArgumentType.of("recipe", RECIPES)
