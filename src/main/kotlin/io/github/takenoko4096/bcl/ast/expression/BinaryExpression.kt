@@ -8,4 +8,4 @@ class BinaryExpression(
     val operation: BinaryOperation,
     val left: Expression,
     val right: Expression
-) : Expression(sourceSpan)
+) : Expression(sourceSpan, null)

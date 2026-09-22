@@ -8,4 +8,4 @@ class AssignmentExpression(
     val operation: AssignmentOperation,
     val target: VariableExpression,
     val value: Expression
-) : Expression(sourceSpan)
+) : Expression(sourceSpan, null)

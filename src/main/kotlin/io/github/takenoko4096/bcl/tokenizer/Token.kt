@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.tokenizer
 
 import io.github.takenoko4096.bcl.parser.Keyword
 
-data class Token(val id: Int, val type: TokenType, val value: String, val sourceSpan: SourceSpan) {
+open class Token(val id: Int, val type: TokenType, val value: String, val sourceSpan: SourceSpan) {
     infix fun `is`(symbol: Symbol): Boolean {
         return type == TokenType.SYMBOL && value == symbol.value
     }
@@ -13,5 +13,11 @@ data class Token(val id: Int, val type: TokenType, val value: String, val source
 
     override fun toString(): String {
         return "(${type.name}) [[ $value ]]"
+    }
+
+    class Invalid(id: Int, val message: String, sourceSpan: SourceSpan) : Token(id, TokenType.INVALID, message, sourceSpan) {
+        override fun toString(): String {
+            return message
+        }
     }
 }

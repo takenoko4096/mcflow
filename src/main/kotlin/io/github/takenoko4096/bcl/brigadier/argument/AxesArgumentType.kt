@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.value.location.Axis
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
     override fun parse(reader: TokenSeqReader): Argument<Set<Axis>> {

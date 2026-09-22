@@ -9,4 +9,4 @@ class IfElseStatement(
     val condition: Expression,
     val thenBlock: Block,
     val elseBlock: Block?
-) : Statement(sourceSpan)
+) : Statement(sourceSpan, null)

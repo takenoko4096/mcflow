@@ -5,7 +5,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 abstract class BclTokenSeqReadException(
     message: String,
-    text: String,
-    span: SourceSpan,
+    sourceCode: String,
+    sourceSpan: SourceSpan,
     cause: Throwable?
-) : BclException(message, text, span, cause)
+) : BclException(message, sourceCode, sourceSpan, cause)

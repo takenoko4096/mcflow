@@ -51,6 +51,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
         val initialState = DispatcherParseState(
             reader = reader.clone(),
+            literals = emptyList(),
             arguments = emptyList(),
             route = mutableListOf(),
             literalCount = 0
@@ -80,6 +81,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     return CommandLineParseResult.Failure(
                         bestRoutePotential.state.route.firstOrNull() as Command?,
                         bestRoutePotential.state.route,
+                        bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
                         listOf(BclDiagnostic(
                             error.description,
@@ -93,6 +95,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 CommandLineParseResult.Successful(
                     bestRoutePotential.state.route.first() as Command,
                     bestRoutePotential.state.route,
+                    bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                     resultValue
@@ -102,6 +105,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 CommandLineParseResult.Failure(
                     bestRoutePotential.state.route.firstOrNull() as Command?,
                     bestRoutePotential.state.route,
+                    bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
                     bestRoutePotential.diagnostics,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition()
@@ -115,6 +119,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         return CommandLineParseResult.Failure(
             null,
             route = listOf(),
+            emptyList(),
             emptyList(),
             listOf(
                 BclDiagnostic(
@@ -132,10 +137,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
         for ((name, node) in effectiveChildren) {
             val candidateReader = state.reader.clone()
+            val candidateLiterals = state.literals.toMutableList()
             val candidateArguments = state.arguments.toMutableList()
 
             val nextState = DispatcherParseState(
                 candidateReader,
+                candidateLiterals,
                 candidateArguments,
                 state.route + node,
                 state.literalCount + if (node is LiteralCommandNode) 1 else 0
@@ -146,23 +153,26 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     is LiteralCommandNode -> {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
-                                candidateReader.peekSafely(-1).sourceSpan,
+                                candidateReader.getOverNextSourceSpan(),
                                 "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
                         val cursor = candidateReader.cursor
+                        val start = candidateReader.getCurrentTokenStartPosition()
                         val literal = candidateReader.readCommandString()
                         if (literal != name) {
                             candidateReader.cursor = cursor
                             continue
                         }
+                        val end = candidateReader.getPreviousTokenEndPosition()
+                        candidateLiterals.add(node to start..end)
                     }
 
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
                             throw candidateReader.exception(
-                                candidateReader.peekSafely(-1).sourceSpan,
+                                candidateReader.getOverNextSourceSpan(),
                                 "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }

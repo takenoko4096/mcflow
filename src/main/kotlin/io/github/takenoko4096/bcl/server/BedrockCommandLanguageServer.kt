@@ -26,13 +26,22 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
         this.client = client
     }
 
+    private fun getServerCapabilities(): ServerCapabilities {
+        val capabilities = ServerCapabilities()
+        capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
+        capabilities.completionProvider = CompletionOptions()
+        capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions(
+            SemanticTokensLegend(
+                BclSemanticTokenType.entries.map { it.getString() },
+                emptyList()
+            )
+        )
+
+        return capabilities
+    }
+
     override fun initialize(initializeParams: InitializeParams): CompletableFuture<InitializeResult> {
-        return CompletableFuture.completedFuture(InitializeResult(
-            ServerCapabilities().apply {
-                textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
-                completionProvider = CompletionOptions()
-            }
-        ))
+        return CompletableFuture.completedFuture(InitializeResult(getServerCapabilities()))
     }
 
     override fun shutdown(): CompletableFuture<Any> {

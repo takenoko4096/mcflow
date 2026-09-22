@@ -26,17 +26,23 @@ abstract class BclException protected constructor(
             }
             val endB = ((i1 + 1) + ERROR_POINTER_SPAN_SIZE).coerceIn(0..sourceCode.lastIndex)
 
-            val a = if (endA != null) sourceCode.slice(startA..endA)
-                .replace(KeyChar.LINEBREAK, ';')
-                .replace("\\s+".toRegex(), KeyChar.SPACE.toString()) else ""
+            val a = if (endA != null) {
+                if (startA < 0 || endA > sourceCode.lastIndex) ""
+                else sourceCode.slice(startA..endA)
+                    .replace(KeyChar.LINEBREAK, ';')
+                    .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
+            } else ""
 
-            val m = sourceCode.slice(i0..i1)
+            val m = if (i0 < 0 || i1 > sourceCode.lastIndex) "" else sourceCode.slice(i0..i1)
                 .replace(KeyChar.LINEBREAK, ';')
                 .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
 
-            val b = if (startB != null) sourceCode.slice(startB..endB)
-                .replace(KeyChar.LINEBREAK, ';')
-                .replace("\\s+".toRegex(), KeyChar.SPACE.toString()) else ""
+            val b = if (startB != null) {
+                if (endB > sourceCode.lastIndex) ""
+                else sourceCode.slice(startB..endB)
+                    .replace(KeyChar.LINEBREAK, ';')
+                    .replace("\\s+".toRegex(), KeyChar.SPACE.toString())
+            } else ""
 
             val halfWidth = "[\\x20-\\x7E\\uFF61-\\uFF9F]".toRegex()
             val fullWidth = "[^\\x20-\\x7E\\uFF61-\\uFF9F]".toRegex()

@@ -8,4 +8,4 @@ class MacroStatement(
     val identifier: String,
     val parameters: List<String>,
     val result: CommandLineParseResult
-) : Statement(sourceSpan)
+) : Statement(sourceSpan, null)

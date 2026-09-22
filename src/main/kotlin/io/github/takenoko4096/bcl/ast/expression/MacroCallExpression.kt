@@ -6,4 +6,4 @@ class MacroCallExpression(
     sourceSpan: SourceSpan,
     val identifier: String,
     val arguments: List<Expression>
-) : Expression(sourceSpan)
+) : Expression(sourceSpan, null)

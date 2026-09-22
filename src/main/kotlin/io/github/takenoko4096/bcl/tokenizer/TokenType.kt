@@ -25,7 +25,9 @@ enum class TokenType(private val description: String) {
 
     TIME_D("日数"),
     TIME_S("秒数"),
-    TIME_T("ティック数");
+    TIME_T("ティック数"),
+
+    INVALID("無効なトークン");
 
     override fun toString(): String {
         return "$name ($description)"

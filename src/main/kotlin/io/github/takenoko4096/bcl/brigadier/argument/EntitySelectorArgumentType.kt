@@ -651,6 +651,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
                 reader.next()
                 val end = reader.getPreviousTokenEndPosition()
+
+                if (t.value.startsWith(Symbol.AT.value)) {
+                    throw reader.exception(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです: '${t.value}'")
+                }
+
                 arguments.name.add(InvertibleValue.uninverted(t.value, start..end))
                 SelectorType.PLAYER
             }

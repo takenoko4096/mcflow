@@ -35,8 +35,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         for (result in results) {
             if (result !is CommandLineParseResult.Failure) continue
 
-            System.err.println("stderr: '${result}'")
-
             diagnostics.addAll(
                 result.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic)
             )
@@ -46,6 +44,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             PublishDiagnosticsParams(uri, diagnostics)
         )
     }
+
+    /*override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
+        val semanticTokens = SemanticTokens()
+
+        return CompletableFuture.completedFuture(semanticTokens)
+    }*/
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         val document = params.textDocument
