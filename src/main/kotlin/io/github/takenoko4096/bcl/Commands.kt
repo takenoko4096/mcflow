@@ -1948,7 +1948,9 @@ object Commands {
 
     val TELLRAW = Command.builder("tellraw") {
         "targets"(EntitySelectorArgumentType.players()) {
-
+            "message"(RawTextComponentArgumentType()) {
+                executes()
+            }
         }
     }
 
@@ -2011,6 +2013,7 @@ object Commands {
         STRUCTURE,
         SUMMON,
         TELEPORT,
-        TELL
+        TELL,
+        TELLRAW
     )
 }

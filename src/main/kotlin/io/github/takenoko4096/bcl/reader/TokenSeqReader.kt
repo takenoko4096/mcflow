@@ -2,9 +2,9 @@ package io.github.takenoko4096.bcl.reader
 
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
-import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.SpannedJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeDuration
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeUnit
 import io.github.takenoko4096.bcl.parser.BclParseException
@@ -763,7 +763,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readJsonValue(): SpannedJsonValue<*> {
+    fun readJsonValue(): CommandJsonValue<*> {
         val vStart = getCurrentTokenStartPosition()
         val t = peek()
         return when (t.type) {
@@ -771,26 +771,26 @@ open class TokenSeqReader(
                 next()
                 val vEnd = getPreviousTokenEndPosition()
                 when (t.value) {
-                    "true" -> SpannedJsonValue(true, vStart..vEnd)
-                    "false" -> SpannedJsonValue(false, vStart..vEnd)
-                    "null" -> SpannedJsonValue(null, vStart..vEnd)
+                    "true" -> CommandJsonValue(true, vStart..vEnd)
+                    "false" -> CommandJsonValue(false, vStart..vEnd)
+                    "null" -> CommandJsonValue(null, vStart..vEnd)
                     else -> throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
                 }
             }
             TokenType.INT -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                SpannedJsonValue(t.value.toInt(), vStart..vEnd)
+                CommandJsonValue(t.value.toInt(), vStart..vEnd)
             }
             TokenType.FLOAT -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                SpannedJsonValue(t.value.toFloat(), vStart..vEnd)
+                CommandJsonValue(t.value.toFloat(), vStart..vEnd)
             }
             TokenType.DOUBLE_QUOTED -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                SpannedJsonValue(t.value, vStart..vEnd)
+                CommandJsonValue(t.value, vStart..vEnd)
             }
             TokenType.SYMBOL -> {
                 if (t `is` Symbol.BRACE_START) {
@@ -813,8 +813,8 @@ open class TokenSeqReader(
         }
     }
 
-    fun readJsonArray(): SpannedJsonArray {
-        val list = mutableListOf<SpannedJsonValue<*>>()
+    fun readJsonArray(): CommandJsonArray {
+        val list = mutableListOf<CommandJsonValue<*>>()
 
         val start = getCurrentTokenStartPosition()
 
@@ -823,7 +823,7 @@ open class TokenSeqReader(
         if (peek() `is` Symbol.ARRAY_END) {
             next()
             val end = getPreviousTokenEndPosition()
-            return SpannedJsonArray(list, start..end)
+            return CommandJsonArray(list, start..end)
         }
 
         while (true) {
@@ -851,11 +851,11 @@ open class TokenSeqReader(
 
         val end = getPreviousTokenEndPosition()
 
-        return SpannedJsonArray(list, start..end)
+        return CommandJsonArray(list, start..end)
     }
 
-    fun readJsonObject(): SpannedJsonObject {
-        val map = mutableMapOf<String, SpannedJsonValue<*>>()
+    fun readJsonObject(): CommandJsonObject {
+        val entries = mutableListOf<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>()
 
         val start = getCurrentTokenStartPosition()
 
@@ -864,10 +864,8 @@ open class TokenSeqReader(
         if (peek() `is` Symbol.BRACE_END) {
             next()
             val end = getPreviousTokenEndPosition()
-            return SpannedJsonObject(map, emptyMap(), start..end)
+            return CommandJsonObject(entries, start..end)
         }
-
-        val keySpans = mutableMapOf<String, SourceSpan>()
 
         while (true) {
             val kStart = getCurrentTokenStartPosition()
@@ -877,12 +875,7 @@ open class TokenSeqReader(
 
             val value = readJsonValue()
 
-            if (key in map) {
-                throw exception(kStart..kEnd, "json の読み取りに失敗しました: キーが重複しています: $key")
-            }
-
-            keySpans[key] = kStart..kEnd
-            map[key] = value
+            entries.add(CommandJsonValue(key, kStart..kEnd) to value)
 
             if (isOver()) {
                 throw exception(peekSafely(-1).sourceSpan, "json の読み取りに失敗しました: 入力が不足しています")
@@ -903,6 +896,6 @@ open class TokenSeqReader(
 
         val end = getPreviousTokenEndPosition()
 
-        return SpannedJsonObject(map, keySpans, start..end)
+        return CommandJsonObject(entries, start..end)
     }
 }

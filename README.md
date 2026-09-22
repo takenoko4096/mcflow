@@ -14,24 +14,5 @@
       - `has_property` のプロパティ名バリデーション
   - `ArgumentNodeBuilder::complete()` の提供
 
-## 制約
-
-コマンドラインに文字列マクロを除く拡張構文はない。例えば
-```mcfunction
-@calculate x = 42
-scoreboard players set @s test x
-```
-は解釈不可能。
-
-```mcfunction
-@define x = (@s test)
-@calculate x = 42
-```
-
-または
-
-```mcfunction
-@calculate (@s test) = 42
-```
-
-と記述する。
+## 既知のバグ
+- `ItemNbtComponentsArgumentType`, `RawTextComponentArgumentType` がキーの重複時使用されないキーの値を解釈しない
