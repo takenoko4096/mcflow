@@ -9,7 +9,7 @@ import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
-class CommandDispatcher(name: String) {
+class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
     private val root = RootCommandNode(name, mutableMapOf())
 
     fun getCommand(name: String): Command? {
@@ -175,12 +175,14 @@ class CommandDispatcher(name: String) {
                 }
             }
             catch (error: BclTokenSeqReadException) {
+                if (detailedOutput) error.printStackTrace(System.err)
+
                 potentials += RoutePotential(
                     nextState,
                     listOf(
                         BclDiagnostic(
                             """
-                            引数が正しくありません (${error.description})
+                            ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
                             ${
                                 if (effectiveChildren.size == 1) {
                                     effectiveChildren.values.first().toString() + " が期待されています"

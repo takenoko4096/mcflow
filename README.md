@@ -16,3 +16,4 @@
 
 ## 既知のバグ
 - `ItemNbtComponentsArgumentType`, `RawTextComponentArgumentType` がキーの重複時使用されないキーの値を解釈しない
+- `RawTextComponentArgumentType` の `score` が 必要なキーを含まない場合キャスト例外やヌルポインタ例外を投げる

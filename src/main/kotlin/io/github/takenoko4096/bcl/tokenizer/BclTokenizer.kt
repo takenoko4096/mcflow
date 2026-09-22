@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.tokenizer
 
 class BclTokenizer(text: String, private val interpretComments: Boolean) {
-    private val text: String = text
+    val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
@@ -17,7 +17,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
      * カーソルが文字列外であれば`true`
      */
     private fun isOver(): Boolean {
-        return cursor >= text.length
+        return cursor >= sourceCode.length
     }
 
     private fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenizationException {
@@ -25,7 +25,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
     }
 
     private fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenizationException {
-        return BclTokenizationException(message, text, sourceSpan, cause)
+        return BclTokenizationException(message, sourceCode, sourceSpan, cause)
     }
 
     private fun peek(): Char {
@@ -33,11 +33,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
             throw exception(getSourcePositionAtBack()..getSourcePositionAtBack(), "入力が不足しています")
         }
 
-        return text[cursor]
+        return sourceCode[cursor]
     }
 
     private fun peek(offset: Int): Char? {
-        return text.getOrNull(cursor + offset)
+        return sourceCode.getOrNull(cursor + offset)
     }
 
     private fun next() {
@@ -407,7 +407,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
             if (numToken.type == TokenType.UINT) {
                 val end = getSourcePositionAtBack()
-                throw exception(start..end, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(text)}'")
+                throw exception(start..end, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
 
             val number = numToken.value

@@ -1,16 +1,20 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.WithSpan
+import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.text.AbstractTextComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.RawText
+import io.github.takenoko4096.bcl.brigadier.value.text.ScoreComponent
+import io.github.takenoko4096.bcl.brigadier.value.text.SelectorComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.TextComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.TranslateComponent
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
+// TODO めんどいから JsonSchema をつくる
 class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") {
     override fun interpret(reader: TokenSeqReader, obj: CommandJsonObject): RawText {
         if ("rawtext" !in obj) {
@@ -103,11 +107,35 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
         }
 
         if ("selector" in obj) {
-            TODO()
+            val (_, selectorString) = obj.getFirst("selector")!!
+
+            if (selectorString.value !is String) {
+                throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector は文字列である必要があります")
+            }
+
+            val selector = EntitySelector.parse(selectorString.value)
+
+            return SelectorComponent(
+                WithSpan(selector, selectorString.sourceSpan),
+                obj
+            )
         }
 
         if ("score" in obj) {
-            TODO()
+            val (_, score) = obj.getFirst("score")!!
+
+            if (score.value !is CommandJsonObject) {
+                throw reader.exception(score.sourceSpan, "rawtext の解釈に失敗しました: score はオブジェクトである必要があります")
+            }
+
+            val name = score.value.getLast("name")!!.second as CommandJsonValue<String>
+            val objective = score.value.getLast("objective")!!.second as CommandJsonValue<String>
+
+            return ScoreComponent(
+                WithSpan(name.value, name.sourceSpan),
+                WithSpan(objective.value, objective.sourceSpan),
+                score.value
+            )
         }
 
         return AbstractTextComponent.Empty(obj)

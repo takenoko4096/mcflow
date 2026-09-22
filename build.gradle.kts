@@ -1,5 +1,9 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     kotlin("jvm") version "2.3.10"
+    id("com.gradleup.shadow") version "9.1.0"
+    application
 }
 
 repositories {
@@ -27,4 +31,29 @@ tasks {
     test {
         useJUnitPlatform()
     }
+
+    shadowJar {
+        archiveFileName.set("mcflow-lsp.jar")
+        manifest {
+            attributes["Main-Class"] = "io.github.takenoko4096.bcl.server.MainKt"
+        }
+    }
+
+    register<Copy>("putJar") {
+        val shadowJarTask = named<ShadowJar>("shadowJar")
+
+        dependsOn(shadowJarTask)
+
+        from(shadowJarTask.flatMap { it.archiveFile })
+
+        into("D:/workspace/GitHub/mcflow/server")
+    }
+
+    named("shadowJar") {
+        finalizedBy("putJar")
+    }
+}
+
+application {
+    mainClass.set("io.github.takenoko4096.mcflow.lsp.MainKt")
 }

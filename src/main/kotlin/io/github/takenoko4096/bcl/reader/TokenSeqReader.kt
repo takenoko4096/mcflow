@@ -738,7 +738,8 @@ open class TokenSeqReader(
         val end = getPreviousTokenEndPosition()
 
         if (string.isEmpty()) {
-            throw exception(peekSafely(0).sourceSpan, "文字列の解析に失敗しました: 無効なトークンです: ${peekSafely(0)}")
+            val pS = peek().sourceSpan
+            throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です debug:terminator='${sourceCode[index].code}'")
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
             throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")
