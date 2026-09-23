@@ -9,7 +9,8 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 data class DispatcherParseState(
     val reader: TokenSeqReader,
     val literals: List<Pair<LiteralCommandNode, SourceSpan>>,
-    val arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>,
+    val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     val route: List<CommandNode>,
-    val literalCount: Int
+    val literalCount: Int,
+    var noUnfatal: Boolean
 )

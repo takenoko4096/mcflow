@@ -1,6 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.WithSpan
+import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
@@ -12,7 +14,6 @@ import io.github.takenoko4096.bcl.brigadier.value.text.SelectorComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.TextComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.TranslateComponent
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 // TODO めんどいから JsonSchema をつくる
 class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") {
@@ -113,12 +114,18 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                 throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector は文字列である必要があります")
             }
 
-            val selector = EntitySelector.parse(selectorString.value)
+            val selectorParseResult = EntitySelector.parse(selectorString.value)
 
-            return SelectorComponent(
-                WithSpan(selector, selectorString.sourceSpan),
-                obj
-            )
+            if (selectorParseResult is Argument<EntitySelector>) {
+                return SelectorComponent(
+                    WithSpan(selectorParseResult.value, selectorString.sourceSpan),
+                    obj
+                )
+            }
+            else if (selectorParseResult is ArgumentParseResult.Failure<EntitySelector>) {
+                // TODO
+                throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector の解析に失敗しました: ${selectorParseResult.diagnostics.joinToString { it.message }}")
+            }
         }
 
         if ("score" in obj) {

@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.reader
 
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
@@ -21,6 +22,8 @@ open class TokenSeqReader(
     protected val tokens: List<Token>,
     private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?) -> BclTokenSeqReadException
 ) {
+    var diagnostics: MutableList<BclDiagnostic> = mutableListOf()
+
     var cursor: Int = 0
 
     fun clone(): TokenSeqReader {
@@ -285,7 +288,7 @@ open class TokenSeqReader(
     }
 
     fun getOverNextSourceSpan(): SourceSpan {
-        val last = tokens.last().sourceSpan.end
+        val last = tokens.lastOrNull()?.sourceSpan?.end ?: SourcePosition(1, 0, 0)
         val over = SourcePosition(last.line, last.column + 1, last.index + 1)
         return over..over
     }
@@ -432,7 +435,7 @@ open class TokenSeqReader(
 
     fun readNamespacedIdentifier(quotable: Boolean = false, defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE, strict: Boolean = true): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
-        val string = if (quotable) readQuotableCommandString() else readCommandString()
+        val string = if (quotable) readQuotableCommandStringAsFatal() else readCommandStringAsFatal()
         val end = getPreviousTokenEndPosition()
 
         val identifier = try {
@@ -469,6 +472,10 @@ open class TokenSeqReader(
 
     fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenSeqReadException {
         return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause)
+    }
+
+    fun diagnostic(sourceSpan: SourceSpan, message: String): BclDiagnostic {
+        return BclDiagnostic(message, sourceCode, sourceSpan)
     }
 
     protected fun createCommandLineSubReader(): TokenSeqReader {
@@ -537,7 +544,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun <V> readList(prefix: Symbol, postfix: Symbol, elementParser: TokenSeqReader.() -> V): List<V> {
+    fun <V> readList(prefix: Symbol, postfix: Symbol, elementParser: TokenSeqReader.() -> V?): List<V> {
         val list = mutableListOf<V>()
 
         val start = getCurrentTokenStartPosition()
@@ -555,7 +562,7 @@ open class TokenSeqReader(
 
         while (true) {
             val elem = elementParser()
-            list.add(elem)
+            if (elem != null) list.add(elem)
 
             if (isOver()) {
                 val end = getPreviousTokenEndPosition()
@@ -584,7 +591,7 @@ open class TokenSeqReader(
         return list
     }
 
-    fun <K : Any, S, V> readPairList(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(S) -> V): List<Pair<K, V>> {
+    fun <K : Any, S, V> readPairList(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(K?, S) -> V?): List<Pair<K, V>> {
         val list = mutableListOf<Pair<K, V>>()
 
         val start = getCurrentTokenStartPosition()
@@ -603,10 +610,11 @@ open class TokenSeqReader(
         while (true) {
             val key = keyParser()
 
-            if (key != null) {
-                val separator = kvSeparatorParser()
+            val separator = kvSeparatorParser()
 
-                val value = valueParser(separator)
+            val value = valueParser(key, separator)
+
+            if (key != null && value != null) {
                 list.add(key to value)
             }
 
@@ -788,10 +796,19 @@ open class TokenSeqReader(
         return map
     }
 
-    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false): String {
+    fun readCommandStringAsFatal(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf()): String {
+        return readCommandString(allowFloat, allowSingleSignOnly, nonTerminators, null)!!
+    }
+
+    /**
+     * TODO allowFloat = false とかにしたとき非致命例外にしたいな...
+     */
+    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf(), diagnostics: MutableList<BclDiagnostic>?): String? {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "文字列の解析に失敗しました: 入力が不足しています")
         }
+
+        var unfatalError = false
 
         val start = getCurrentTokenStartPosition()
 
@@ -805,15 +822,19 @@ open class TokenSeqReader(
         if (firstChar == KeyChar.COLON) {
             next()
             val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません")
+            if (diagnostics == null) {
+                throw exception(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません")
+            }
+            else {
+                unfatalError = true
+                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません"))
+            }
         }
-
-        if (firstChar == KeyChar.WILDCARD) {
+        else if (firstChar == KeyChar.WILDCARD) {
             next()
             return firstChar.toString()
         }
-
-        if (firstChar in setOf(KeyChar.PLUS, KeyChar.MINUS)) {
+        else if (firstChar in setOf(KeyChar.PLUS, KeyChar.MINUS)) {
             if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
                 next()
 
@@ -823,13 +844,22 @@ open class TokenSeqReader(
 
                 val end = getPreviousTokenEndPosition()
 
-                throw exception(start..end, "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
+                if (diagnostics == null) {
+                    throw exception(start..end, "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
+                }
+                else {
+                    diagnostics.add(diagnostic(
+                        start..end,
+                        "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません"
+                    ))
+                    unfatalError = true
+                }
             }
 
             index++
         }
 
-        while (sourceCode[index] !in KeyChar.COMMAND_WORD_TERMINATORS) {
+        while (sourceCode[index] !in (KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators })) {
             index++
             if (index >= sourceCode.length) break
         }
@@ -846,19 +876,42 @@ open class TokenSeqReader(
 
         if (string.isEmpty()) {
             val pS = peek().sourceSpan
-            throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です")
+
+            if (diagnostics == null) {
+                throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です")
+            }
+            else {
+                unfatalError = true
+                diagnostics.add(diagnostic(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です"))
+            }
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
-            throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")
+            if (diagnostics == null) {
+                throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")
+            }
+            else {
+                unfatalError = true
+                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です"))
+            }
         }
         else if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
-            throw exception(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
+            if (diagnostics == null) {
+                throw exception(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
+            }
+            else {
+                unfatalError = true
+                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません"))
+            }
         }
 
-        return string
+        return if (unfatalError) null else string
     }
 
-    fun readQuotableCommandString(): String {
+    fun readQuotableCommandStringAsFatal(): String {
+        return readQuotableCommandString(null)!!
+    }
+
+    fun readQuotableCommandString(diagnostics: MutableList<BclDiagnostic>?): String? {
         if (isOver()) {
             throw exception(peekSafely(-1).sourceSpan, "二重引用符付き文字列または文字列の解析に失敗しました: 入力が不足しています")
         }
@@ -867,7 +920,7 @@ open class TokenSeqReader(
             readQuotedString()
         }
         else {
-            readCommandString()
+            readCommandString(diagnostics = diagnostics)
         }
     }
 

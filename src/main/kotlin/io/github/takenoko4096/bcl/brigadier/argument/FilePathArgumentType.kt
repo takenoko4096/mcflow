@@ -18,7 +18,7 @@ class FilePathArgumentType(private val strict: Boolean) : ArgumentType<String>("
             sb.append(t.value)
         }
         else do {
-            sb.append(reader.readCommandString(allowSingleSignOnly = true, allowFloat = true))
+            sb.append(reader.readCommandStringAsFatal(allowSingleSignOnly = true, allowFloat = true))
         }
         while (
             reader.testThenAdvance(

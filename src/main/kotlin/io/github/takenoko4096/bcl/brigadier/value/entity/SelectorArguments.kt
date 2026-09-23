@@ -7,7 +7,6 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
-import kotlin.reflect.KProperty
 
 data class SelectorArguments(
     var c: WithSpan<Int>? = null,

@@ -2,7 +2,8 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
-enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null) {
+// TODO summonable
+enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null, private val summonable: Boolean = true) {
     ALLAY,
     ARMADILLO,
     ARMOR_STAND,
@@ -120,7 +121,7 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     ZOMBIE_NAUTILUS,
     ZOMBIE_PIGMAN,
     ZOMBIE_VILLAGER,
-    PLAYER;
+    PLAYER(summonable = false);
 
     val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 

@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.item
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
 enum class ItemType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null) {
+    AIR,
     ACACIA_BOAT,
     ACACIA_BUTTON,
     ACACIA_CHEST_BOAT,

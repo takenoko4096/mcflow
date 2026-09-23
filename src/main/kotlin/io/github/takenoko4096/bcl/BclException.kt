@@ -16,6 +16,10 @@ abstract class BclException protected constructor(
             val i0 = sourceSpan.start.index
             val i1 = sourceSpan.end.index
 
+            if (sourceCode.lastIndex == -1) {
+                return "$message @$sourceSpan; >> <<"
+            }
+
             val startA = ((i0 - 1) - ERROR_POINTER_SPAN_SIZE).coerceIn(0..sourceCode.lastIndex)
             val endA = (i0 - 1).let {
                 if (it in 0..sourceCode.lastIndex) it else null

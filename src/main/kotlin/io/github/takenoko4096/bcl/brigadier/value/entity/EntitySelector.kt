@@ -1,5 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -22,15 +24,17 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
-        fun parse(string: String): EntitySelector {
-            val tokens = BclTokenizer(string, interpretComments = false).tokenize()
-            val reader = TokenSeqReader(string, tokens, ::BclParseException)
+        fun parse(string: String): ArgumentParseResult<EntitySelector> {
+            val tokenizer = BclTokenizer(string, interpretComments = false)
+            val tokens = tokenizer.tokenize()
+            val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
             val selector = EntitySelectorArgumentType().parse(reader)
             if (!(reader.isOver())) {
                 val span = reader.getRemainingSourceSpan()
                 throw reader.exception(span, "セレクターの読み取りに失敗しました: 不明なトークン列です: ${span.getStringFromSourceCode(string)}")
             }
-            return selector.value
+
+            return selector
         }
     }
 }

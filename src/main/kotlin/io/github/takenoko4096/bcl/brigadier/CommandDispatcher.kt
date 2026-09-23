@@ -54,7 +54,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             literals = emptyList(),
             arguments = emptyList(),
             route = mutableListOf(),
-            literalCount = 0
+            literalCount = 0,
+            noUnfatal = true
         )
 
         val potentials = dispatch(
@@ -72,7 +73,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             )
 
             return if (bestRoutePotential.diagnostics.isEmpty()) {
-                val context = CommandContext(reader.sourceCode, this, bestRoutePotential.state.route, bestRoutePotential.state.arguments)
+                val context = CommandContext(
+                    reader.sourceCode,
+                    this,
+                    bestRoutePotential.state.route,
+                    bestRoutePotential.state.arguments
+                )
 
                 val resultValue = try {
                     bestRoutePotential.state.route.last().executor!!(context)
@@ -132,7 +138,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         )
     }
 
-    private fun dispatch(text: String, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
+    /*private fun dispatch(text: String, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
         for ((name, node) in effectiveChildren) {
@@ -144,9 +150,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 candidateReader,
                 candidateLiterals,
                 candidateArguments,
-                state.route + node,
-                state.literalCount + if (node is LiteralCommandNode) 1 else 0
+                route = state.route + node,
+                literalCount = state.literalCount + if (state.noUnfatal && node is LiteralCommandNode) 1 else 0,
+                noUnfatal = true
             )
+
+            var unfatalErrors = listOf<BclDiagnostic>()
 
             try {
                 when (node) {
@@ -179,6 +188,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                         val argument = node.type.parse(candidateReader)
                         candidateArguments.add(node to argument)
+
+                        unfatalErrors = argument.unfatalErrors
+                        nextState.noUnfatal = false
                     }
 
                     else -> throw IllegalStateException("NEVER HAPPENS")
@@ -205,11 +217,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             text,
                             error.sourceSpan
                         )
-                    )
+                    ) + unfatalErrors
                 )
 
-                // TODO カーソル位置はそのままにチェックのみ続行したい できるだろうか？？？
-                // 引数は例外を吐くときにその引数の終わりの位置を予測して返すべき？
                 continue
             }
 
@@ -268,6 +278,256 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 text,
                                 candidateReader.peek().sourceSpan
                             )
+                        )
+                    )
+                }
+            }
+        }
+
+        return potentials
+    }*/
+
+    private fun dispatch(
+        text: String,
+        state: DispatcherParseState,
+        effectiveChildren: Map<String, CommandNode>
+    ): MutableList<RoutePotential> {
+        val potentials = mutableListOf<RoutePotential>()
+
+        for ((name, node) in effectiveChildren) {
+            val candidateReader = state.reader.clone()
+            val candidateLiterals = state.literals.toMutableList()
+            val candidateArguments = state.arguments.toMutableList()
+
+            val nextState = DispatcherParseState(
+                reader = candidateReader,
+                literals = candidateLiterals,
+                arguments = candidateArguments,
+                route = state.route + node,
+                literalCount = state.literalCount + if (state.noUnfatal && node is LiteralCommandNode) 1 else 0,
+                noUnfatal = true
+            )
+
+            var unfatalErrors = emptyList<BclDiagnostic>()
+
+            // 非致命エラーが発生した直後の状態。
+            // 発生しなければ null。
+            var unfatalState: DispatcherParseState? = null
+
+            try {
+                when (node) {
+                    is LiteralCommandNode -> {
+                        if (candidateReader.isOver()) {
+                            throw candidateReader.exception(
+                                candidateReader.getOverNextSourceSpan(),
+                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
+                            )
+                        }
+
+                        val cursor = candidateReader.cursor
+                        val start = candidateReader.getCurrentTokenStartPosition()
+                        val literal = candidateReader.readCommandStringAsFatal()
+
+                        if (literal != name) {
+                            candidateReader.cursor = cursor
+                            continue
+                        }
+
+                        val end = candidateReader.getPreviousTokenEndPosition()
+                        candidateLiterals.add(node to start..end)
+                    }
+
+                    is ArgumentCommandNode<*> -> {
+                        if (candidateReader.isOver()) {
+                            throw candidateReader.exception(
+                                candidateReader.getOverNextSourceSpan(),
+                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
+                            )
+                        }
+
+                        when (val argumentParseResult = node.type.parse(candidateReader)) {
+                            is Argument -> {
+                                candidateArguments.add(node to argumentParseResult)
+                            }
+                            is ArgumentParseResult.Failure -> {
+                                candidateArguments.add(node to argumentParseResult)
+                                unfatalErrors = argumentParseResult.diagnostics
+                            }
+                        }
+
+                        if (unfatalErrors.isNotEmpty()) {
+                            /*
+                             * parse() が非致命エラーを返した時点の
+                             * candidateReader.cursor を保存する。
+                             *
+                             * route には node が既に追加されているので、
+                             * [foo, ArgumentNode<Int>] になる。
+                             *
+                             * その後の解析では candidateReader をそのまま
+                             * 使ってよいが、最終的な RoutePotential には
+                             * この状態を使う。
+                             */
+                            unfatalState = nextState.copy(
+                                reader = candidateReader.clone(),
+                                literals = candidateLiterals.toList(),
+                                arguments = candidateArguments.toList()
+                            )
+                        }
+                    }
+
+                    else -> throw IllegalStateException("NEVER HAPPENS")
+                }
+            }
+            catch (error: BclTokenSeqReadException) {
+                val argumentDiagnostics = candidateReader.diagnostics
+                candidateReader.diagnostics = mutableListOf()
+                if (detailedOutput) error.printStackTrace(System.err)
+
+                potentials += RoutePotential(
+                    nextState,
+                    argumentDiagnostics + listOf(
+                        BclDiagnostic(
+                            """
+                        ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
+                        ${
+                                if (effectiveChildren.size == 1) {
+                                    effectiveChildren.values.first().toString() +
+                                        " が期待されています"
+                                }
+                                else {
+                                    effectiveChildren.values.joinToString(
+                                        " | ",
+                                        postfix = " のいずれかが期待されています"
+                                    )
+                                }
+                            }
+                        """.trimIndent(),
+                            text,
+                            error.sourceSpan
+                        )
+                    )
+                )
+
+                continue
+            }
+
+            /*
+             * 非致命エラーがなければ、今まで通り nextState が
+             * 「ここまで正常に解析できた状態」。
+             *
+             * 非致命エラーがあれば、解析を続けるための state は
+             * nextState のまま、最終候補として使う state は
+             * unfatalState にする。
+             */
+            val resultState = unfatalState ?: nextState
+
+            // node自身で終了する可能性
+            if (node.executor != null) {
+                val diagnostics = if (unfatalState != null) {
+                    unfatalErrors
+                }
+                else {
+                    emptyList()
+                }
+
+                potentials += RoutePotential(
+                    resultState,
+                    if (candidateReader.isOver()) {
+                        diagnostics
+                    }
+                    else {
+                        val efC = node.getEffectiveChildren()
+
+                        val additional = if (efC.isEmpty()) {
+                            ""
+                        }
+                        else if (efC.size == 1) {
+                            "; ${efC.values.first()} が期待されています"
+                        }
+                        else {
+                            efC.values.joinToString(
+                                prefix = "; ",
+                                separator = " | ",
+                                postfix = " のいずれかが期待されています"
+                            )
+                        }
+
+                        diagnostics + BclDiagnostic(
+                            "予期しない引数です: " +
+                                "'${candidateReader.getRemainingSourceSpan()
+                                    .getStringFromSourceCode(candidateReader.sourceCode)}'" +
+                                additional,
+                            candidateReader.sourceCode,
+                            candidateReader.getRemainingSourceSpan()
+                        )
+                    }
+                )
+            }
+
+            // さらに子へ進む可能性
+            if (node.getEffectiveChildren().isNotEmpty()) {
+                val childrenAndRedirectsOfCurrent = node.getEffectiveChildren()
+
+                /*
+                 * ここでは必ず nextState を渡す。
+                 *
+                 * つまり非致命エラーがあっても、
+                 * candidateReader の現在位置から先を解析する。
+                 */
+                val childPotentials = dispatch(
+                    text,
+                    nextState,
+                    childrenAndRedirectsOfCurrent
+                )
+
+                if (childPotentials.isNotEmpty()) {
+                    if (unfatalState == null) {
+                        potentials += childPotentials
+                    }
+                    else {
+                        /*
+                         * 子の解析結果は「解析を最後まで進めた結果」だが、
+                         * このルートでは既に非致命エラーが発生している。
+                         *
+                         * したがって、
+                         *   - diagnostics は非致命エラーを先頭に追加
+                         *   - state はエラー発生時点の state に戻す
+                         *
+                         * 子を解析したこと自体は「この先に構文上何があるか」
+                         * を判定するためだけに利用する。
+                         */
+                        potentials += childPotentials.map { potential ->
+                            potential.copy(
+                                state = unfatalState,
+                                diagnostics = unfatalErrors + potential.diagnostics
+                            )
+                        }
+                    }
+                }
+                else {
+                    val diagnostics = if (unfatalState != null) {
+                        unfatalErrors
+                    }
+                    else {
+                        emptyList()
+                    }
+
+                    potentials += RoutePotential(
+                        resultState,
+                        diagnostics + BclDiagnostic(
+                            if (childrenAndRedirectsOfCurrent.size == 1) {
+                                "予期しない引数です: " +
+                                    "${childrenAndRedirectsOfCurrent.values.first()} が期待されています"
+                            }
+                            else {
+                                childrenAndRedirectsOfCurrent.values.joinToString(
+                                    prefix = "予期しない引数です: ",
+                                    separator = " | ",
+                                    postfix = " のいずれかが期待されています"
+                                )
+                            },
+                            text,
+                            candidateReader.peek().sourceSpan
                         )
                     )
                 }

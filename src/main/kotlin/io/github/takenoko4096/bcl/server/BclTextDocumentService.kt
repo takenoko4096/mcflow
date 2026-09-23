@@ -37,12 +37,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         ))
     }
 
-    /*override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
-        val semanticTokens = SemanticTokens()
-
-        return CompletableFuture.completedFuture(semanticTokens)
-    }*/
-
     override fun didOpen(params: DidOpenTextDocumentParams) {
         val document = params.textDocument
         val block = parse(document.uri, document.text)
@@ -57,11 +51,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         publishDiagnostics(uri, block)
     }
 
-    override fun didClose(params: DidCloseTextDocumentParams) {
-    }
+    override fun didClose(params: DidCloseTextDocumentParams) {}
 
-    override fun didSave(params: DidSaveTextDocumentParams) {
-    }
+    override fun didSave(params: DidSaveTextDocumentParams) {}
 
     override fun inlayHint(params: InlayHintParams): CompletableFuture<List<InlayHint>> {
         val document = params.textDocument
@@ -76,7 +68,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                 val pos = argument.sourceSpan.start.toLsp4jPosition() ?: continue
                 hints.add(InlayHint().apply {
                     position = pos
-                    label = Either.forLeft("${node.name}: ")
+                    label = Either.forLeft("${node.name}:")
                     kind = InlayHintKind.Parameter
                     paddingRight = true
                 })
@@ -89,4 +81,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
         return super.completion(position)
     }
+
+    /*override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
+        val semanticTokens = SemanticTokens()
+
+        return CompletableFuture.completedFuture(semanticTokens)
+    }*/
 }

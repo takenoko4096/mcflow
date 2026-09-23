@@ -12,7 +12,7 @@ class CommandContext(
     private val sourceCode: String,
     private val dispatcher: CommandDispatcher,
     private val route: List<CommandNode>,
-    private val arguments: List<Pair<ArgumentCommandNode<*>, Argument<*>>>
+    private val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>
 ) {
     fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclCommandExecutionException {
         return BclCommandExecutionException(message, sourceCode, sourceSpan, cause)
@@ -29,6 +29,9 @@ class CommandContext(
     fun <T : Any> getArgument(name: String, clazz: KClass<T>): Argument<T> {
         val result = mutableListOf<Argument<T>>()
         for ((node, argument) in arguments) {
+            if (argument !is Argument<*>) {
+                throw IllegalStateException("引数 ${clazz.simpleName} $name が無効な値です (NEVER HAPPENS?)")
+            }
             if (node.name == name && clazz.isInstance(argument.value)) {
                 result.add(argument as Argument<T>)
             }
