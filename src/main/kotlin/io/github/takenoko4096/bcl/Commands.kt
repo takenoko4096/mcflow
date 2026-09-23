@@ -192,23 +192,27 @@ object Commands {
                                         }
 
                                         "rot" {
-                                            "rotation"(RotationArgumentType()) {
-                                                executes()
+                                            "yaw"(CoordinateComponentArgumentType()) {
+                                                "pitch"(CoordinateComponentArgumentType()) {
+                                                    executes()
+                                                }
                                             }
                                         }
                                     }
                                 }
 
                                 "rot" {
-                                    "rotation"(RotationArgumentType()) { // TODO pitch を省略できてしまう
-                                        executes()
-
-                                        "entity_offset" {
+                                    "yaw"(CoordinateComponentArgumentType()) {
+                                        "pitch"(CoordinateComponentArgumentType()) {
                                             executes()
-                                        }
 
-                                        "view_offset" {
-                                            executes()
+                                            "entity_offset" {
+                                                executes()
+                                            }
+
+                                            "view_offset" {
+                                                executes()
+                                            }
                                         }
                                     }
                                 }
@@ -540,8 +544,10 @@ object Commands {
         }
 
         "rotated" {
-            "rotation"(RotationArgumentType()) {
-                redirect("execute")
+            "yaw"(CoordinateComponentArgumentType()) {
+                "pitch"(CoordinateComponentArgumentType()) {
+                    redirect("execute")
+                }
             }
 
             "as" {
@@ -1758,14 +1764,18 @@ object Commands {
             "position"(PositionArgumentType()) {
                 executes()
 
-                "rotation"(RotationArgumentType()) { // TODO pitch を省略できてしまう
+                "yaw"(CoordinateComponentArgumentType()) {
                     executes()
 
-                    "spawn_event"(EnumArgumentType.of<EntityEvent>()) { // TODO ここは無効な文字列を入力しても問題ない
+                    "pitch"(CoordinateComponentArgumentType()) {
                         executes()
 
-                        "name_tag"(StringArgumentType.isolated()) {
+                        "spawn_event"(EnumArgumentType.of<EntityEvent>()) { // TODO ここは無効な文字列を入力しても問題ない
                             executes()
+
+                            "name_tag"(StringArgumentType.isolated()) {
+                                executes()
+                            }
                         }
                     }
                 }

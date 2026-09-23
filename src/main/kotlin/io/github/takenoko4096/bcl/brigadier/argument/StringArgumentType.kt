@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
-class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string") {
+class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader): Argument<String> {
         val start = reader.getCurrentTokenStartPosition()
 

@@ -4,7 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 
-class WildcardIntegerArgumentType : ArgumentType<Int?>("wildcard_integer") {
+class WildcardIntegerArgumentType : ArgumentType<Int?>("wildcard_integer", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader): Argument<Int?> {
         val start = reader.getCurrentTokenStartPosition()
 

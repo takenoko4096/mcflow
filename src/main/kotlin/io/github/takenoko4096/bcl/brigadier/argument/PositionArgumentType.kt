@@ -4,7 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
-class PositionArgumentType : ArgumentType<Coordinate>("position") {
+class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader): Argument<Coordinate> {
         val start = reader.getCurrentTokenStartPosition()
         val x = reader.readCoordinateComponent(blockCenterCorrection = true)

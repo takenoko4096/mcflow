@@ -207,6 +207,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         )
                     )
                 )
+
+                // TODO カーソル位置はそのままにチェックのみ続行したい できるだろうか？？？
+                // 引数は例外を吐くときにその引数の終わりの位置を予測して返すべき？
                 continue
             }
 
@@ -218,9 +221,18 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         emptyList()
                     }
                     else {
+                        val efC = node.getEffectiveChildren()
+                        val additional = if (efC.isEmpty()) ""
+                        else if (efC.size == 1) {
+                            "; ${efC.values.first()} が期待されています"
+                        }
+                        else {
+                            efC.values.joinToString(prefix = "; ", separator = " | ", postfix = " のいずれかが期待されています")
+                        }
+
                         listOf(
                             BclDiagnostic(
-                                "予期しない引数です: ${candidateReader.getRemainingSourceSpan().getStringFromSourceCode(candidateReader.sourceCode)}",
+                                "予期しない引数です: '${candidateReader.getRemainingSourceSpan().getStringFromSourceCode(candidateReader.sourceCode)}'" + additional,
                                 candidateReader.sourceCode,
                                 candidateReader.getRemainingSourceSpan()
                             )

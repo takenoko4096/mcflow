@@ -30,6 +30,7 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
         val capabilities = ServerCapabilities()
         capabilities.textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
         capabilities.completionProvider = CompletionOptions()
+        capabilities.inlayHintProvider = Either.forLeft(true)
         capabilities.semanticTokensProvider = SemanticTokensWithRegistrationOptions(
             SemanticTokensLegend(
                 BclSemanticTokenType.entries.map { it.getString() },

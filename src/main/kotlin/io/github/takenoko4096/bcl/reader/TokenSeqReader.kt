@@ -66,6 +66,7 @@ open class TokenSeqReader(
     }
 
     fun testThenAdvance(predicate: (Token) -> Boolean, preAdvance: (() -> Unit)? = null, postAdvance: (() -> Unit)? = null): Boolean {
+        if (isOver()) return false
         val result = predicate(peek())
         return if (result) {
             preAdvance?.invoke()
@@ -79,6 +80,7 @@ open class TokenSeqReader(
     }
 
     fun testThenAdvanceIgnoreNewLine(predicate: (Token) -> Boolean, preAdvance: (() -> Unit)? = null, postAdvance: (() -> Unit)? = null): Boolean {
+        if (isOverIgnoreNewLine()) return false
         val result = predicate(peekIgnoreNewLine())
         return if (result) {
             preAdvance?.invoke()
@@ -99,6 +101,11 @@ open class TokenSeqReader(
 
     fun expect(symbol: Symbol) {
         val start = getCurrentTokenStartPosition()
+
+        if (isOver()) {
+            throw exception(getOverNextSourceSpan(), "'${symbol.value}' が期待されていますが、入力が不足しています")
+        }
+
         if (peek() `is` symbol) {
             next()
         }
@@ -170,6 +177,11 @@ open class TokenSeqReader(
 
     fun expectIgnoreNewLine(symbol: Symbol) {
         val start = getCurrentTokenStartPosition()
+
+        if (isOverIgnoreNewLine()) {
+            throw exception(getOverNextSourceSpan(), "'${symbol.value}' が期待されていますが、入力が不足しています")
+        }
+
         if (peekIgnoreNewLine() `is` symbol) {
             nextIgnoreNewLine()
         }
@@ -183,6 +195,11 @@ open class TokenSeqReader(
 
     fun expectIgnoreNewLine(keyword: Keyword) {
         val start = getCurrentTokenStartPosition()
+
+        if (isOverIgnoreNewLine()) {
+            throw exception(getOverNextSourceSpan(), "'${keyword.value}' が期待されていますが、入力が不足しています")
+        }
+
         if (isOverIgnoreNewLine()) {
             val end = getPreviousTokenEndPosition()
             throw exception(start..end, "トークン ${keyword.value} が期待されましたが、入力が不足しています")
@@ -205,7 +222,7 @@ open class TokenSeqReader(
         }
 
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "$types のうちいずれかのトークンが期待されましたが、入力が不足しています")
+            throw exception(peekSafely(-1).sourceSpan, "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -228,10 +245,10 @@ open class TokenSeqReader(
                 }
                 else {
                     if (current.type == TokenType.INVALID) {
-                        "${types.contentToString()} のうちいずれかのトークンが期待されましたが、無効なトークンが見つかりました: ${current.value}"
+                        "${types.joinToString(" | ")} のトークンが期待されましたが、無効なトークンが見つかりました: ${current.value}"
                     }
                     else {
-                        "${types.contentToString()} のうちいずれかのトークンが期待されましたが、 ${current.type} のトークン '${current.value}' が見つかりました"
+                        "${types.joinToString(" | ")} のトークンが期待されましたが、 ${current.type} のトークン '${current.value}' が見つかりました"
                     }
                 }
             )
@@ -240,7 +257,7 @@ open class TokenSeqReader(
 
     fun readIgnoreNewLine(vararg types: TokenType): String {
         if (isOverIgnoreNewLine()) {
-            throw exception(peekSafely(-1).sourceSpan, "${types.contentToString()} のうちいずれかのトークンが期待されましたが、入力が不足しています")
+            throw exception(peekSafely(-1).sourceSpan, "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -254,7 +271,7 @@ open class TokenSeqReader(
             val end = getPreviousTokenEndPosition()
             throw exception(
                 start..end,
-                "${types.contentToString()} のうちいずれかのトークンが期待されましたが、${if (current.type == TokenType.INVALID) "無効なトークンが見つかりました: ${current.value}" else "トークンの種類が一致しませんでした: ${current.type} ($current)"}"
+                "${types.joinToString(" | ")} のトークンが期待されましたが、${if (current.type == TokenType.INVALID) "無効なトークンが見つかりました: ${current.value}" else "トークンの種類が一致しませんでした: ${current.type} の '${current.value}' が渡されました"}"
             )
         }
     }
@@ -383,11 +400,11 @@ open class TokenSeqReader(
                 next()
                 return CoordinateComponent.Absolute(t.value.toFloat())
             }
-            TokenType.COORDINATE_RELATIVE -> {
+            TokenType.COORDINATE_COMPONENT_RELATIVE -> {
                 next()
                 return CoordinateComponent.Relative(t.value.toFloat())
             }
-            TokenType.COORDINATE_LOCAL -> {
+            TokenType.COORDINATE_COMPONENT_LOCAL -> {
                 next()
                 if (allowLocal) {
                     return CoordinateComponent.Local(t.value.toFloat())
@@ -400,14 +417,14 @@ open class TokenSeqReader(
             TokenType.INVALID -> {
                 next()
                 val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "時間の読み取りに失敗しました: 無効なトークンです: ${t.value}")
+                throw exception(start..end, "位置成分の読み取りに失敗しました: 無効なトークンです: ${t.value}")
             }
             else -> {
                 next()
                 val end = getPreviousTokenEndPosition()
                 throw exception(
                     start..end,
-                    "位置成分の読み取りに失敗しました: ${TokenType.INT}, ${TokenType.FLOAT}, ${TokenType.COORDINATE_RELATIVE}, ${TokenType.COORDINATE_LOCAL} のうちいずれかのトークンが期待されましたが、 ${t.type} のトークン '${t.value}' が渡されました"
+                    "位置成分の読み取りに失敗しました: ${TokenType.INT} | ${TokenType.FLOAT} | ${TokenType.COORDINATE_COMPONENT_RELATIVE} | ${TokenType.COORDINATE_COMPONENT_LOCAL} のトークンが期待されましたが、 ${t.type} の '${t.value}' が渡されました"
                 )
             }
         }
@@ -526,6 +543,11 @@ open class TokenSeqReader(
         val start = getCurrentTokenStartPosition()
         expect(prefix)
 
+        if (isOver()) {
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "リストの読み取りに失敗しました: リストが '${postfix.value}' で閉じられていません")
+        }
+
         if (peek() `is` postfix) {
             next()
             return list
@@ -567,6 +589,11 @@ open class TokenSeqReader(
 
         val start = getCurrentTokenStartPosition()
         expect(prefix)
+
+        if (isOver()) {
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "ペアリストの読み取りに失敗しました: ペアリストが '${postfix.value}' で閉じられていません")
+        }
 
         if (peek() `is` postfix) {
             next()
@@ -614,6 +641,11 @@ open class TokenSeqReader(
         val start = getCurrentTokenStartPosition()
         expect(prefix)
 
+        if (isOver()) {
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: マップオブジェクトが '${postfix.value}' で閉じられていません")
+        }
+
         if (peek() `is` postfix) {
             next()
             return map
@@ -660,6 +692,11 @@ open class TokenSeqReader(
 
         val start = getCurrentTokenStartPosition()
         expect(prefix)
+
+        if (isOver()) {
+            val end = getPreviousTokenEndPosition()
+            throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: マップオブジェクトが '${postfix.value}' で閉じられていません")
+        }
 
         if (peek() `is` postfix) {
             next()
@@ -809,7 +846,7 @@ open class TokenSeqReader(
 
         if (string.isEmpty()) {
             val pS = peek().sourceSpan
-            throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です debug:terminator='${sourceCode[index].code}'")
+            throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です")
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
             throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")

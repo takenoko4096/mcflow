@@ -689,6 +689,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return
         }
 
+        if (reader.isOver()) {
+            val end = reader.getPreviousTokenEndPosition()
+            throw reader.exception(start..end, "セレクタ引数リストが '${Symbol.ARRAY_END.value}' で閉じられていません")
+        }
+
         if (reader.peek() `is` Symbol.ARRAY_END) {
             reader.next()
             val end = reader.getPreviousTokenEndPosition()
@@ -707,6 +712,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             reader.expect(Symbol.ASSIGN)
 
             val parser = parsers[key]!!
+
+            if (reader.isOver()) {
+                throw reader.exception(reader.getOverNextSourceSpan(), "セレクタ引数の読み取りに失敗しました: ${Symbol.ASSIGN.value} の後に値が欠落しています")
+            }
 
             parser(reader, arguments)
 

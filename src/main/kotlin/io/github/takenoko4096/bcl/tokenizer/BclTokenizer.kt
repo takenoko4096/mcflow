@@ -395,6 +395,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
         next()
 
+        if (isOver()) {
+            val end = getSourcePositionAtBack()
+            return tokenOf(type, "0", start, end)
+        }
+
         if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             val numToken = number()
 
@@ -421,8 +426,8 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
         val noSeparator = previous != null
             && previous.type != TokenType.SYMBOL
-            && previous.type != TokenType.COORDINATE_LOCAL
-            && previous.type != TokenType.COORDINATE_RELATIVE
+            && previous.type != TokenType.COORDINATE_COMPONENT_LOCAL
+            && previous.type != TokenType.COORDINATE_COMPONENT_RELATIVE
             && !result.foundWhitespace
 
         if (result.linebreak != null) {
@@ -450,11 +455,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         }
 
         if (peek() == KeyChar.COORDINATE_RELATIVE) {
-            return coordinate(KeyChar.COORDINATE_RELATIVE, TokenType.COORDINATE_RELATIVE)
+            return coordinate(KeyChar.COORDINATE_RELATIVE, TokenType.COORDINATE_COMPONENT_RELATIVE)
         }
 
         if (peek() == KeyChar.COORDINATE_LOCAL) {
-            return coordinate(KeyChar.COORDINATE_LOCAL, TokenType.COORDINATE_LOCAL)
+            return coordinate(KeyChar.COORDINATE_LOCAL, TokenType.COORDINATE_COMPONENT_LOCAL)
         }
 
         if (testThenAdvance(Symbol.AT.value)) {

@@ -1,35 +1,35 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-enum class TokenType(private val description: String) {
-    INT_RAD2("符号付き2進整数"),
-    INT_RAD8("符号付き8進整数"),
-    INT("符号付き10進整数"),
-    INT_RAD16("符号付き16進整数"),
+enum class TokenType {
+    INT_RAD2,
+    INT_RAD8,
+    INT,
+    INT_RAD16,
 
-    UINT_RAD2("符号無し2進整数"),
-    UINT_RAD8("符号無し8進整数"),
-    UINT("符号無し10進整数"),
-    UINT_RAD16("符号無し16進整数"),
+    UINT_RAD2,
+    UINT_RAD8,
+    UINT,
+    UINT_RAD16,
 
-    FLOAT("浮動小数点数"),
+    FLOAT,
 
-    SINGLE_QUOTED("シングルクォート文字列"),
-    DOUBLE_QUOTED("ダブルクォート文字列"),
-    BACK_QUOTED("バッククォート文字列"),
-    WORD("クォート無し文字列"),
+    SINGLE_QUOTED,
+    DOUBLE_QUOTED,
+    BACK_QUOTED,
+    WORD,
 
-    SYMBOL("記号"),
+    SYMBOL,
 
-    COORDINATE_RELATIVE("相対座標成分"),
-    COORDINATE_LOCAL("ローカル座標成分"),
+    COORDINATE_COMPONENT_RELATIVE,
+    COORDINATE_COMPONENT_LOCAL,
 
-    TIME_D("日数"),
-    TIME_S("秒数"),
-    TIME_T("ティック数"),
+    TIME_D,
+    TIME_S,
+    TIME_T,
 
-    INVALID("無効なトークン");
+    INVALID;
 
     override fun toString(): String {
-        return "$name ($description)"
+        return name.lowercase()
     }
 }
