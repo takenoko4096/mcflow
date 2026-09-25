@@ -1,6 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -10,9 +12,9 @@ class BlockStateArgumentType(
     private val blockTypeArgumentType: BlockTypeArgumentType,
     private val blockPropertiesArgumentType: BlockPropertiesArgumentType
 ) : ArgumentType<BlockState>("block_state") {
-    override fun parse(reader: TokenSeqReader): Argument<BlockState> {
-        val blockTypeArg = blockTypeArgumentType.parse(reader)
-        val propertiesArg = if (!reader.isOver() && reader.peek() `is` Symbol.ARRAY_START) blockPropertiesArgumentType.parse(reader) else null
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<BlockState> {
+        val blockTypeArg = blockTypeArgumentType.parse(reader, diagnostics, semanticTokens)
+        val propertiesArg = if (!reader.isOver() && reader.peek() `is` Symbol.ARRAY_START) blockPropertiesArgumentType.parse(reader, diagnostics, semanticTokens) else null
 
         val blockType = blockTypeArg.value
         val properties = propertiesArg?.value ?: BlockProperties()

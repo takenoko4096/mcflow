@@ -1,11 +1,13 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
-    override fun parse(reader: TokenSeqReader): Argument<ItemType> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<ItemType> {
         val start = reader.getCurrentTokenStartPosition()
         val identifier = reader.readNamespacedIdentifier()
         val end = reader.getPreviousTokenEndPosition()

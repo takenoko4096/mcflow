@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityContainerSlotType
@@ -807,14 +808,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    override fun parse(reader: TokenSeqReader): ArgumentParseResult<EntitySelector> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
         val arguments = SelectorArguments()
 
         if (reader.isOver()) {
             throw reader.exception(reader.getOverNextSourceSpan(), "セレクターの読み取りに失敗しました: 入力が不足しています")
         }
 
-        val diagnostics = mutableListOf<BclDiagnostic>().apply { reader.diagnostics = this }
         val semanticTokens = mutableListOf<BclSemanticToken>()
         val start = reader.getCurrentTokenStartPosition()
 
@@ -838,7 +838,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             Argument(this, selector, start..end)
         }
         else {
-            ArgumentParseResult.Failure(this, start..end, diagnostics, semanticTokens)
+            NoValuedArgument(this, start..end)
         }
     }
 

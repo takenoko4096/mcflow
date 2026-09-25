@@ -4,14 +4,13 @@ import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.Axis
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
-    override fun parse(reader: TokenSeqReader): ArgumentParseResult<Set<Axis>> {
-        val diagnostics = mutableListOf<BclDiagnostic>()
-        val semanticTokens = mutableListOf<BclSemanticToken>()
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Set<Axis>> {
         val start = reader.getCurrentTokenStartPosition()
         val string = reader.readCommandStringAsFatal()
         val end = reader.getPreviousTokenEndPosition()
@@ -39,9 +38,9 @@ class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.AXES, sourceSpan))
 
         if (diagnostics.isNotEmpty()) {
-            return ArgumentParseResult.Failure(this, sourceSpan, diagnostics, semanticTokens)
+            return NoValuedArgument(this, sourceSpan)
         }
 
-        return Argument(this, axes, sourceSpan, semanticTokens)
+        return Argument(this, axes, sourceSpan)
     }
 }

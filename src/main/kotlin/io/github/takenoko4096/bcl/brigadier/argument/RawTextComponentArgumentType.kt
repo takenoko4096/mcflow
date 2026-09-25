@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
-import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
@@ -122,7 +122,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                     obj
                 )
             }
-            else if (selectorParseResult is ArgumentParseResult.Failure<EntitySelector>) {
+            else if (selectorParseResult is NoValuedArgument<EntitySelector>) {
                 // TODO
                 throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector の解析に失敗しました: ${selectorParseResult.diagnostics.joinToString { it.message }}")
             }

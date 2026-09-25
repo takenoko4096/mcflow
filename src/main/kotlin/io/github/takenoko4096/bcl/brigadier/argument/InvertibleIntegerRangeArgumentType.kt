@@ -1,12 +1,14 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 
 class InvertibleIntegerRangeArgumentType : ArgumentType<InvertibleIntegerRange>("integer_range") {
-    override fun parse(reader: TokenSeqReader): Argument<InvertibleIntegerRange> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<InvertibleIntegerRange> {
         val start = reader.getCurrentTokenStartPosition()
         val inv = if (reader.peek() `is` Symbol.LOGICAL_NOT) {
             reader.next()

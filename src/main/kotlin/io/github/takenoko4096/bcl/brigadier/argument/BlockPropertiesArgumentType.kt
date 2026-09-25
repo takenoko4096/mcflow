@@ -1,13 +1,15 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 
 class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_properties") {
-    override fun parse(reader: TokenSeqReader): Argument<BlockProperties> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<BlockProperties> {
         val start = reader.getCurrentTokenStartPosition()
 
         reader.expect(Symbol.ARRAY_START)

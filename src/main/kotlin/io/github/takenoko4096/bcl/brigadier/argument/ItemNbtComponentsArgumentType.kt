@@ -1,5 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
@@ -11,7 +13,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>("item_nbt_components") {
-    override fun interpret(reader: TokenSeqReader, obj: CommandJsonObject): ItemNbtComponents {
+    override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
         val keySpans = mutableMapOf<NamespacedIdentifier, SourceSpan>()
 
         if (obj.entries.isEmpty()) {

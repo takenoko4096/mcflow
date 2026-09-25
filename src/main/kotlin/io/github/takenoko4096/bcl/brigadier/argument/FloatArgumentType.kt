@@ -1,11 +1,13 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class FloatArgumentType(private val validator: (TokenSeqReader.(Float, SourceSpan) -> Unit)?) : ArgumentType<Float>("float", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader): Argument<Float> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<Float> {
         val start = reader.getCurrentTokenStartPosition()
         val f = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()

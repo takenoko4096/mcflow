@@ -1,11 +1,13 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class CoordinateComponentArgumentType : ArgumentType<CoordinateComponent.World>("coordinate_component", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader): Argument<CoordinateComponent.World> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<CoordinateComponent.World> {
         val start = reader.getCurrentTokenStartPosition()
         val component = reader.readCoordinateComponent(blockCenterCorrection = true, allowLocal = false) as CoordinateComponent.World
         val end = reader.getPreviousTokenEndPosition()

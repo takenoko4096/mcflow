@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
@@ -46,7 +47,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         return register(Command.builder(name, configurator))
     }
 
-    fun parse(reader: TokenSeqReader): CommandLineParseResult {
+    fun parse(reader: TokenSeqReader, semanticTokens: MutableList<BclSemanticToken>): CommandLineParseResult {
         val start = reader.getCurrentTokenStartPosition()
 
         val initialState = DispatcherParseState(
@@ -60,6 +61,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
         val potentials = dispatch(
             reader.sourceCode,
+            semanticTokens,
             initialState,
             root.children
         )
@@ -289,6 +291,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
     private fun dispatch(
         text: String,
+        semanticTokens: MutableList<BclSemanticToken>,
         state: DispatcherParseState,
         effectiveChildren: Map<String, CommandNode>
     ): MutableList<RoutePotential> {
@@ -308,7 +311,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 noUnfatal = true
             )
 
-            var unfatalErrors = emptyList<BclDiagnostic>()
+            val unfatalErrors = mutableListOf<BclDiagnostic>()
 
             // 非致命エラーが発生した直後の状態。
             // 発生しなければ null。
@@ -345,15 +348,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             )
                         }
 
-                        when (val argumentParseResult = node.type.parse(candidateReader)) {
-                            is Argument -> {
-                                candidateArguments.add(node to argumentParseResult)
-                            }
-                            is ArgumentParseResult.Failure -> {
-                                candidateArguments.add(node to argumentParseResult)
-                                unfatalErrors = argumentParseResult.diagnostics
-                            }
-                        }
+                        val argumentParseResult = node.type.parse(candidateReader, unfatalErrors, semanticTokens)
+                        candidateArguments.add(node to argumentParseResult)
 
                         if (unfatalErrors.isNotEmpty()) {
                             /*
@@ -476,6 +472,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                  */
                 val childPotentials = dispatch(
                     text,
+                    semanticTokens,
                     nextState,
                     childrenAndRedirectsOfCurrent
                 )
