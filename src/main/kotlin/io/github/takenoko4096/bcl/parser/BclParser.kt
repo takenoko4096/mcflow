@@ -29,7 +29,12 @@ import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 import io.github.takenoko4096.bcl.tokenizer.`is`
 
-class BclParser(text: String, tokens: List<Token>, private val dispatcher: CommandDispatcher, private val extension: Boolean) : TokenSeqReader(text, tokens, ::BclParseException) {
+class BclParser(
+    sourceCode: String,
+    tokens: List<Token>,
+    private val dispatcher: CommandDispatcher,
+    private val extension: Boolean
+) : TokenSeqReader(sourceCode, tokens, ::BclParseException) {
     private fun expression(): Expression {
         skipNewLine()
         val expr = assignment()

@@ -1,7 +1,9 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
@@ -17,7 +19,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 // TODO めんどいから JsonSchema をつくる
 class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") {
-    override fun interpret(reader: TokenSeqReader, obj: CommandJsonObject): RawText {
+    override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): RawText {
         if ("rawtext" !in obj) {
             throw reader.exception(obj.sourceSpan, "rawtext の解釈に失敗しました: ルートオブジェクトにはキー 'rawtext' が必要です")
         }
@@ -36,13 +38,13 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                 throw reader.exception(element.sourceSpan, "rawtext の解釈に失敗しました: テキストコンポーネントはオブジェクトである必要があります")
             }
 
-            components.add(toComponent(reader, element))
+            components.add(toComponent(reader, diagnostics, semanticTokens, element))
         }
 
         return RawText(components, obj, rawtextValue)
     }
 
-    private fun toComponent(reader: TokenSeqReader, obj: CommandJsonObject): AbstractTextComponent {
+    private fun toComponent(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): AbstractTextComponent {
         // To be valid, an object must contain one content tag: [String] text, [String] translate, [NBT Compound / JSON Object] score, or [String] selector. Having more than one is allowed, but only one is used.[note 4]
 
         // TODO
@@ -76,7 +78,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                     is CommandJsonObject -> {
                         TranslateComponent(
                             WithSpan(translate.value, translate.sourceSpan),
-                            interpret(reader, with),
+                            interpret(reader, diagnostics, semanticTokens, with),
                             obj
                         )
                     }
@@ -114,7 +116,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                 throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector は文字列である必要があります")
             }
 
-            val selectorParseResult = EntitySelector.parse(selectorString.value)
+            val selectorParseResult = EntitySelector.parse(selectorString.value, diagnostics, semanticTokens)
 
             if (selectorParseResult is Argument<EntitySelector>) {
                 return SelectorComponent(
@@ -124,7 +126,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
             }
             else if (selectorParseResult is NoValuedArgument<EntitySelector>) {
                 // TODO
-                throw reader.exception(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector の解析に失敗しました: ${selectorParseResult.diagnostics.joinToString { it.message }}")
+                diagnostics.add(reader.diagnostic(selectorString.sourceSpan, "rawtext の解釈に失敗しました: selector の解析に失敗しました: ${selectorParseResult.diagnostics.joinToString { it.message }}"))
             }
         }
 

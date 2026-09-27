@@ -5,7 +5,6 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<T> {

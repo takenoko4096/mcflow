@@ -12,10 +12,11 @@ class CommandContext(
     private val sourceCode: String,
     private val dispatcher: CommandDispatcher,
     private val route: List<CommandNode>,
-    private val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>
+    private val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
+    private val diagnostics: MutableList<BclDiagnostic>
 ) {
-    fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclCommandExecutionException {
-        return BclCommandExecutionException(message, sourceCode, sourceSpan, cause)
+    fun addDiagnostic(sourceSpan: SourceSpan, message: String) {
+        diagnostics.add(BclDiagnostic(message, sourceCode, sourceSpan))
     }
 
     fun getDispatcher() = dispatcher
@@ -32,6 +33,7 @@ class CommandContext(
             if (argument !is Argument<*>) {
                 throw IllegalStateException("引数 ${clazz.simpleName} $name が無効な値です (NEVER HAPPENS?)")
             }
+
             if (node.name == name && clazz.isInstance(argument.value)) {
                 result.add(argument as Argument<T>)
             }

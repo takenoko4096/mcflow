@@ -9,5 +9,7 @@ enum class Keyword(val value: String) {
     WHILE("@while"),
     DO("@do"),
     CONTINUE("@continue"),
-    BREAK("@break")
+    BREAK("@break"),
+    TRUE("true"),
+    FALSE("false")
 }

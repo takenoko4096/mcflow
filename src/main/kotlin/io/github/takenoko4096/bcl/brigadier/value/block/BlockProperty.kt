@@ -25,6 +25,14 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
      */
     abstract fun parse(token: Token): Value<T>
 
+    fun toValue(value: Any?): Value<T>? {
+        for (v in values) {
+            if (v == value) return Value(this, v)
+        }
+
+        return null
+    }
+
     @ConsistentCopyVisibility
     data class Value<T> internal constructor(val property: BlockProperty<T>, val value: T) {
         override fun toString(): String {

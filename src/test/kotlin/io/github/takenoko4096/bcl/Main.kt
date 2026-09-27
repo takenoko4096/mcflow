@@ -73,7 +73,7 @@ fun main() {
 
                         for ((property, _) in properties.value) {
                             if (property !in blockType) {
-                                throw exception(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.identifier}' に存在しません")
+                                addDiagnostic(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.identifier}' に存在しません")
                             }
                         }
                     }

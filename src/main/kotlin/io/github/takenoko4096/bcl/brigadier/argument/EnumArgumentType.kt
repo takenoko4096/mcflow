@@ -12,9 +12,8 @@ import kotlin.enums.enumEntries
 
 class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : ArgumentType<E>(name) where E : Enum<E>, E : CommandEnumerable {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<E> {
-        val diagnostics = mutableListOf<BclDiagnostic>()
         val start = reader.getCurrentTokenStartPosition()
-        val string = reader.readCommandString(allowFloat = true, diagnostics = diagnostics)
+        val string = reader.readCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in entries) {
@@ -23,13 +22,13 @@ class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : A
                     Argument(this, entry, start..end)
                 }
                 else {
-                    NoValuedArgument(this, start..end)
+                    NoValuedArgument(this, start..end, diagnostics)
                 }
             }
         }
 
         diagnostics.add(reader.diagnostic(start..end, "不明なエントリです: '$string'"))
-        return NoValuedArgument(this, start..end)
+        return NoValuedArgument(this, start..end, diagnostics)
     }
 
     companion object {

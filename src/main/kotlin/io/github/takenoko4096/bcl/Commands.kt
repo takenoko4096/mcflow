@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.argument.*
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
 import io.github.takenoko4096.bcl.brigadier.value.block.ScanMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.*
@@ -497,7 +498,7 @@ object Commands {
                         val level = levelArgument.value
 
                         if (level !in enchant.levels) {
-                            throw exception(
+                            addDiagnostic(
                                 levelArgument.sourceSpan,
                                 "エンチャント '${enchant.getString()}' はレベル $level に対応していません: 有効なレベルは $range です"
                             )
@@ -731,7 +732,7 @@ object Commands {
             }
 
             "push" {
-                "fog_id"(IdentifierArgumentType.requireNamespace("namespace_required_identifier")) {
+                "fog_id"(IdentifierArgumentType.namespaced("namespace_required_identifier")) {
                     "user_provider_id"(StringArgumentType.isolated()) {
                         executes()
                     }
@@ -766,7 +767,7 @@ object Commands {
                     val valueArg = getArgument<Int>("value")
 
                     if (valueArg.value !in gameRule.range) {
-                        throw exception(valueArg.sourceSpan, "ゲームルール '${gameRule.getString()}' は ${gameRule.range.first} ～ ${gameRule.range.last} までの値が有効ですが、 ${valueArg.value} が渡されました")
+                        addDiagnostic(valueArg.sourceSpan, "ゲームルール '${gameRule.getString()}' は ${gameRule.range.first} ～ ${gameRule.range.last} までの値が有効ですが、 ${valueArg.value} が渡されました")
                     }
                 }
             }
@@ -828,10 +829,13 @@ object Commands {
             executes {
                 val arg = getArgument<String>("command_name")
                 val command = getDispatcher().getCommand(arg.value)
-                    ?: throw exception(
-                        arg.sourceSpan,
-                        "コマンド '${arg.value}' が見つかりません"
-                    )
+                    ?: run {
+                        addDiagnostic(
+                            arg.sourceSpan,
+                            "コマンド '${arg.value}' が見つかりません"
+                        )
+                        return@executes null
+                    }
 
                 command.getTreeUsage()
             }
@@ -1519,7 +1523,7 @@ object Commands {
                                         val source = getArgument<EntitySelector>("source")
 
                                         if (target.value.isWildcard && source.value.isWildcard) {
-                                            throw exception(source.sourceSpan, "scoreboard operation ではワイルドカードは target または source のどちらか片方にのみ使用できます")
+                                            addDiagnostic(source.sourceSpan, "scoreboard operation ではワイルドカードは target または source のどちらか片方にのみ使用できます")
                                         }
                                     }
                                 }
@@ -1539,10 +1543,10 @@ object Commands {
                                     val max = getArgument<Int>("max")
 
                                     if (min.value > max.value) {
-                                        throw exception(min.sourceSpan.start..max.sourceSpan.end, "最小値が最大値を上回っています (${min.value} > ${max.value})")
+                                        addDiagnostic(min.sourceSpan.start..max.sourceSpan.end, "最小値が最大値を上回っています (${min.value} > ${max.value})")
                                     }
                                     else if (min.value == max.value) {
-                                        throw exception(min.sourceSpan.start..max.sourceSpan.end, "最小値と最大値は 1 以上離れている必要があります")
+                                        addDiagnostic(min.sourceSpan.start..max.sourceSpan.end, "最小値と最大値は 1 以上離れている必要があります")
                                     }
                                 }
                             }
@@ -1578,11 +1582,21 @@ object Commands {
     }
 
     val SCRIPTEVENT = Command.builder("scriptevent") {
-        "id"(IdentifierArgumentType.nonDefaultNamespace("script_event_id")) {
-            executes()
+        "id"(IdentifierArgumentType.namespaced("script_event_id")) {
+            executes {
+                val argument = getArgument<NamespacedIdentifier>("script_event_id")
+                if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
+                    addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
+                }
+            }
 
             "message"(StringArgumentType.greedy()) {
-                executes()
+                executes {
+                    val argument = getArgument<NamespacedIdentifier>("script_event_id")
+                    if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
+                        addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
+                    }
+                }
             }
         }
     }

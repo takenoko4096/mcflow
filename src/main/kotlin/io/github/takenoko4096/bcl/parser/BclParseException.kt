@@ -7,5 +7,6 @@ class BclParseException internal constructor(
     message: String,
     text: String,
     span: SourceSpan,
-    cause: Throwable?
-) : BclTokenSeqReadException(message, text, span, cause)
+    cause: Throwable?,
+    unfatalizable: Boolean
+) : BclTokenSeqReadException(message, text, span, cause, unfatalizable)

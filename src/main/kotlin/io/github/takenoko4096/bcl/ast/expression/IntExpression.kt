@@ -6,4 +6,4 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class IntExpression(
     val value: Int,
     sourceSpan: SourceSpan
-) : Expression(sourceSpan, BclSemanticTokenType.NUMERIC)
+) : Expression(sourceSpan, BclSemanticTokenType.NUMBER)

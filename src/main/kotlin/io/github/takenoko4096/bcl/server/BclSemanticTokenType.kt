@@ -4,7 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
 enum class BclSemanticTokenType : StringRepresentable {
     LITERAL,
-    NUMERIC,
+    NUMBER,
     STRING,
     COMMAND,
     ENTITY_SELECTOR,
@@ -13,7 +13,9 @@ enum class BclSemanticTokenType : StringRepresentable {
     PROPERTY,
     KEYWORD,
     AXES,
-    LABEL;
+    LABEL,
+
+    ERROR;
 
     override fun getString(): String {
         return name.lowercase()

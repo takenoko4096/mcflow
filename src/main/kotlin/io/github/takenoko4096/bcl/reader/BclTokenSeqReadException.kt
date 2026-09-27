@@ -7,5 +7,6 @@ abstract class BclTokenSeqReadException(
     message: String,
     sourceCode: String,
     sourceSpan: SourceSpan,
-    cause: Throwable?
+    cause: Throwable?,
+    val unfatalizable: Boolean
 ) : BclException(message, sourceCode, sourceSpan, cause)

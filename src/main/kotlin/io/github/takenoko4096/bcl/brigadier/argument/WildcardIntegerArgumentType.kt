@@ -15,7 +15,7 @@ class WildcardIntegerArgumentType : ArgumentType<Int?>("wildcard_integer", hasIn
             null
         }
         else {
-            reader.readInteger(signedDecimalOnly = true)
+            reader.readInteger(allowExtendedNotation = false)
         }
 
         val end = reader.getPreviousTokenEndPosition()

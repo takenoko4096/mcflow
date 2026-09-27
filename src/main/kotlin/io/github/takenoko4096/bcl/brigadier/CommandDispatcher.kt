@@ -47,7 +47,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         return register(Command.builder(name, configurator))
     }
 
-    fun parse(reader: TokenSeqReader, semanticTokens: MutableList<BclSemanticToken>): CommandLineParseResult {
+    fun parse(reader: TokenSeqReader): CommandLineParseResult {
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
         val start = reader.getCurrentTokenStartPosition()
 
         val initialState = DispatcherParseState(
@@ -75,28 +77,32 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             )
 
             return if (bestRoutePotential.diagnostics.isEmpty()) {
+                val diagnostics = mutableListOf<BclDiagnostic>()
+
                 val context = CommandContext(
                     reader.sourceCode,
                     this,
                     bestRoutePotential.state.route,
-                    bestRoutePotential.state.arguments
+                    bestRoutePotential.state.arguments,
+                    diagnostics
                 )
 
                 val resultValue = try {
                     bestRoutePotential.state.route.last().executor!!(context)
                 }
-                catch (error: BclCommandExecutionException) {
+                catch (error: Throwable) {
                     return CommandLineParseResult.Failure(
                         bestRoutePotential.state.route.firstOrNull() as Command?,
                         bestRoutePotential.state.route,
                         bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
-                        listOf(BclDiagnostic(
-                            error.description,
+                        diagnostics + BclDiagnostic(
+                            error.message ?: error::class.java.name,
                             reader.sourceCode,
-                            error.sourceSpan
-                        )),
-                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition()
+                            bestRoutePotential.state.reader.getEntireSourceSpan()
+                        ),
+                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                        semanticTokens
                     )
                 }
 
@@ -106,6 +112,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                    semanticTokens,
                     resultValue
                 )
             }
@@ -116,7 +123,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
                     bestRoutePotential.diagnostics,
-                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition()
+                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                    semanticTokens
                 )
             }
         }
@@ -136,7 +144,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     sourceSpan
                 )
             ),
-            sourceSpan
+            sourceSpan,
+            semanticTokens
         )
     }
 
@@ -329,7 +338,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                         val cursor = candidateReader.cursor
                         val start = candidateReader.getCurrentTokenStartPosition()
-                        val literal = candidateReader.readCommandStringAsFatal()
+                        val literal = candidateReader.readCommandString()
 
                         if (literal != name) {
                             candidateReader.cursor = cursor
@@ -375,13 +384,11 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 }
             }
             catch (error: BclTokenSeqReadException) {
-                val argumentDiagnostics = candidateReader.diagnostics
-                candidateReader.diagnostics = mutableListOf()
                 if (detailedOutput) error.printStackTrace(System.err)
 
                 potentials += RoutePotential(
                     nextState,
-                    argumentDiagnostics + listOf(
+                    unfatalErrors + listOf(
                         BclDiagnostic(
                             """
                         ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})

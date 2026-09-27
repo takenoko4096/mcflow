@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.reader
 
+import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
@@ -20,10 +21,8 @@ import io.github.takenoko4096.bcl.tokenizer.TokenType
 open class TokenSeqReader(
     val sourceCode: String,
     protected val tokens: List<Token>,
-    private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?) -> BclTokenSeqReadException
+    private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?, unfatalizable: Boolean) -> BclTokenSeqReadException
 ) {
-    var diagnostics: MutableList<BclDiagnostic> = mutableListOf()
-
     var cursor: Int = 0
 
     fun clone(): TokenSeqReader {
@@ -42,7 +41,7 @@ open class TokenSeqReader(
 
     fun peek(): Token {
         if (isOver()) {
-            throw exception(getCurrentTokenStartPosition(), "入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "入力が不足しています")
         }
 
         return tokens[cursor]
@@ -225,7 +224,7 @@ open class TokenSeqReader(
         }
 
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -236,8 +235,9 @@ open class TokenSeqReader(
         }
         else {
             next()
+            val end = getPreviousTokenEndPosition()
             throw exception(
-                start,
+                start..end,
                 if (types.size == 1) {
                     if (current.type == TokenType.INVALID) {
                         "${types.first()} のトークンが期待されましたが、無効なトークンが見つかりました: ${current.value}"
@@ -293,9 +293,9 @@ open class TokenSeqReader(
         return over..over
     }
 
-    fun readInteger(signedDecimalOnly: Boolean = true): Int {
+    fun readInteger(allowExtendedNotation: Boolean = false): Int {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "整数が期待されましたが、入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "整数が期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -318,14 +318,16 @@ open class TokenSeqReader(
             }
             else -> {
                 next()
-                throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
         }
 
         next()
+        val end = getPreviousTokenEndPosition()
 
-        if (signedDecimalOnly && u.type != TokenType.INT) {
-            throw exception(start, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+        if (!allowExtendedNotation && u.type != TokenType.INT) {
+            throw exception(start..end, "整数の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
         }
 
         return v
@@ -333,7 +335,7 @@ open class TokenSeqReader(
 
     fun readTimeDuration(): TimeDuration {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "時間が期待されましたが、入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "時間が期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -351,7 +353,8 @@ open class TokenSeqReader(
             }
             else -> {
                 next()
-                throw exception(start, "時間の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "時間の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
         }
 
@@ -362,7 +365,7 @@ open class TokenSeqReader(
 
     fun readFloat(): Float {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan.end, "浮動小数点数が期待されましたが、入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "浮動小数点数が期待されましたが、入力が不足しています")
         }
 
         return read(TokenType.FLOAT, TokenType.INT).toFloat()
@@ -378,22 +381,18 @@ open class TokenSeqReader(
 
     fun readBool(): Boolean {
         val start = getCurrentTokenStartPosition()
-        val word = readWord()
-
-        next()
+        val word = readCommandString()
+        val end = getPreviousTokenEndPosition()
         return when (word) {
             "true" -> true
             "false" -> false
-            else -> {
-                throw exception(start, "真偽値の読み取りに失敗しました: 不明なトークンです: $word")
-            }
+            else -> throw exception(start..end, "真偽値の読み取りに失敗しました: 不明なトークンです: $word")
         }
     }
 
     fun readCoordinateComponent(blockCenterCorrection: Boolean = false, allowLocal: Boolean = true): CoordinateComponent {
         val start = getCurrentTokenStartPosition()
         val t = peek()
-
         when (t.type) {
             TokenType.INT -> {
                 next()
@@ -414,7 +413,7 @@ open class TokenSeqReader(
                 }
                 else {
                     val end = getPreviousTokenEndPosition()
-                    throw exception(start..end, "位置成分の読み取りに失敗しました: ここではローカル座標系は許可されていません")
+                    throw exception(start..end, "位置成分の読み取りに失敗しました: ここではローカル座標系は許可されていません", unfatalizable = true)
                 }
             }
             TokenType.INVALID -> {
@@ -433,30 +432,26 @@ open class TokenSeqReader(
         }
     }
 
-    fun readNamespacedIdentifier(quotable: Boolean = false, defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE, strict: Boolean = true): NamespacedIdentifier {
+    fun readNamespacedIdentifier(defaultNamespace: String? = NamespacedIdentifier.DEFAULT_NAMESPACE, quotable: Boolean = false, strict: Boolean = true): NamespacedIdentifier {
         val start = getCurrentTokenStartPosition()
-        val string = if (quotable) readQuotableCommandStringAsFatal() else readCommandStringAsFatal()
+        val string = if (quotable) readQuotableCommandString() else readCommandString()
         val end = getPreviousTokenEndPosition()
 
         val identifier = try {
             NamespacedIdentifier.parse(string, defaultNamespace)
-                ?: run {
-                    if (strict) {
-                        throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)")
-                    }
-                    else if (defaultNamespace != null) {
-                        NamespacedIdentifier(defaultNamespace, string)
-                    }
-                    else {
-                        throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (非厳格モードですが、フォールバックの名前空間が指定されていません)")
-                    }
-                }
         }
         catch (error: IllegalArgumentException) {
-            throw exception(start..end, "識別子の読み取りに失敗しました: 名前空間が要求されていますが、名前空間が見つかりませんでした", error)
+            throw exception(start..end, "識別子の読み取りに失敗しました: 名前空間が要求されていますが、名前空間が見つかりませんでした", error, unfatalizable = true)
         }
 
         return identifier
+            ?: run {
+                if (strict) {
+                    throw exception(start..end, "識別子の読み取りに失敗しました: 文字列 '$string' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)", unfatalizable = true)
+                }
+
+                NamespacedIdentifier(defaultNamespace ?: NamespacedIdentifier.DEFAULT_NAMESPACE, string)
+            }
     }
 
     fun readAllRemainingAsString(): String {
@@ -466,12 +461,13 @@ open class TokenSeqReader(
         return string
     }
 
-    fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenSeqReadException {
-        return exceptionConstructor(message, sourceCode, sourceSpan, cause)
+    fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null, unfatalizable: Boolean = false): BclTokenSeqReadException {
+        return exceptionConstructor(message, sourceCode, sourceSpan, cause, unfatalizable)
     }
 
-    fun exception(start: SourcePosition, message: String, cause: Throwable? = null): BclTokenSeqReadException {
-        return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause)
+    @Deprecated(message = "Please pass a source span instead of source position to the first argument.")
+    fun exception(start: SourcePosition, message: String, cause: Throwable? = null, unfatalizable: Boolean = false): BclTokenSeqReadException {
+        return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause, unfatalizable)
     }
 
     fun diagnostic(sourceSpan: SourceSpan, message: String): BclDiagnostic {
@@ -591,7 +587,7 @@ open class TokenSeqReader(
         return list
     }
 
-    fun <K : Any, S, V> readPairList(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(K?, S) -> V?): List<Pair<K, V>> {
+    fun <K : Any, S, V> readDuplicatableMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(K?, S) -> V?): List<Pair<K, V>> {
         val list = mutableListOf<Pair<K, V>>()
 
         val start = getCurrentTokenStartPosition()
@@ -599,7 +595,7 @@ open class TokenSeqReader(
 
         if (isOver()) {
             val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "ペアリストの読み取りに失敗しました: ペアリストが '${postfix.value}' で閉じられていません")
+            throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: マップオブジェクトが '${postfix.value}' で閉じられていません")
         }
 
         if (peek() `is` postfix) {
@@ -620,7 +616,7 @@ open class TokenSeqReader(
 
             if (isOver()) {
                 val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "ペアリストの読み取りに失敗しました: '$postfix' で閉じられていません")
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: '$postfix' で閉じられていません")
             }
             else if (peek() `is` Symbol.COMMA) {
                 next()
@@ -632,64 +628,80 @@ open class TokenSeqReader(
             else if (peek().type == TokenType.INVALID) {
                 val t = peek()
                 val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "リストの読み取りに失敗しました: 無効なトークンです: ${t.value}")
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: 無効なトークンです: ${t.value}")
             }
             else {
                 val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "ペアリストの読み取りに失敗しました: 不明なトークンです: ${peek()}")
+                throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: 不明なトークンです: ${peek()}")
             }
         }
 
         return list
     }
 
-    fun <K : Any, S, V> readMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K?, valueParser: TokenSeqReader.(S) -> V): Map<K, V> {
-        val map = mutableMapOf<K, V>()
+    fun <K, V> readMap(prefix: Symbol, postfix: Symbol, keyParser: TokenSeqReader.() -> K, kvSeparatorParser: TokenSeqReader.() -> Unit, valueParser: TokenSeqReader.() -> V): Map<K, Pair<SourceSpan, WithSpan<V>>> {
+        val list = mutableListOf<Pair<WithSpan<K>, WithSpan<V>>>()
 
-        val start = getCurrentTokenStartPosition()
         expect(prefix)
 
         if (isOver()) {
-            val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "マップオブジェクトの読み取りに失敗しました: マップオブジェクトが '${postfix.value}' で閉じられていません")
+            throw exception(getOverNextSourceSpan(), "マップオブジェクトの読み取りに失敗しました: マップオブジェクトが '${postfix.value}' で閉じられていません")
         }
 
         if (peek() `is` postfix) {
             next()
-            return map
+            return mapOf()
         }
 
         while (true) {
+            val keyStart = getCurrentTokenStartPosition()
             val key = keyParser()
-
-            if (key != null) {
-                val separator = kvSeparatorParser()
-
-                val value = valueParser(separator)
-                map[key] = value
-            }
+            val keyEnd = getPreviousTokenEndPosition()
 
             if (isOver()) {
-                val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "マップの読み取りに失敗しました: '$postfix' で閉じられていません")
+                throw exception(getOverNextSourceSpan(), "マップの読み取りに失敗しました: キーと値の間には区切りが必要です")
             }
-            else if (peek() `is` Symbol.COMMA) {
+
+            kvSeparatorParser()
+
+            if (isOver()) {
+                throw exception(getOverNextSourceSpan(), "マップの読み取りに失敗しました: 区切りの直後に値が欠落しています")
+            }
+
+            val valueStart = getCurrentTokenStartPosition()
+            val value = valueParser()
+            val valueEnd = getPreviousTokenEndPosition()
+
+            list.add(WithSpan(key, keyStart..keyEnd) to WithSpan(value, valueStart..valueEnd))
+
+            if (isOver()) {
+                throw exception(getOverNextSourceSpan(), "マップの読み取りに失敗しました: '$postfix' で閉じられていません")
+            }
+
+            val t = peek()
+            if (t `is` Symbol.COMMA) {
                 next()
             }
-            else if (peek() `is` postfix) {
+            else if (t `is` postfix) {
                 next()
                 break
             }
-            else if (peek().type == TokenType.INVALID) {
-                val t = peek()
-                val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "リストの読み取りに失敗しました: 無効なトークンです: ${t.value}")
+            else if (t.type == TokenType.INVALID) {
+                throw exception(t.sourceSpan, "マップの読み取りに失敗しました: 無効なトークンです: ${t.value}")
             }
             else {
-                val t = peek()
-                val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "マップの読み取りに失敗しました: 不明なトークンです: $t")
+                throw exception(t.sourceSpan, "マップの読み取りに失敗しました: 不明なトークンです: $t")
             }
+        }
+
+        val map = mutableMapOf<K, Pair<SourceSpan, WithSpan<V>>>()
+
+        for ((key, value) in list) {
+            if (key.value in map) {
+                throw exception(key.sourceSpan, "マップの読み取りに失敗しました: キー '${key.value}' が重複しています")
+            }
+
+            map[key.value] = key.sourceSpan to value
         }
 
         return map
@@ -796,19 +808,46 @@ open class TokenSeqReader(
         return map
     }
 
-    fun readCommandStringAsFatal(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf()): String {
-        return readCommandString(allowFloat, allowSingleSignOnly, nonTerminators, null)!!
+    sealed class ReadResult<T>(val successful: Boolean, val sourceSpan: SourceSpan) {
+        class Successful<T>(val value: T, sourceSpan: SourceSpan): ReadResult<T>(successful = true, sourceSpan)
+
+        /**
+         * つまり fatal
+         */
+        class Failure<T>(sourceSpan: SourceSpan) : ReadResult<T>(successful = false, sourceSpan)
+    }
+
+    /**
+     * unfatalizable = true の exception のみを unfatal にする魔法
+     * なお unfatalizable = true を指定する場所は選ばないとバグりかねないよ
+     */
+    fun <T : Any> unfatalize(diagnostics: MutableList<BclDiagnostic>, callback: TokenSeqReader.() -> T): ReadResult<T> {
+        val start = getCurrentTokenStartPosition()
+
+        val value = try { callback() }
+        catch (error: BclTokenSeqReadException) {
+            if (error.unfatalizable) {
+                diagnostics.add(diagnostic(error.sourceSpan, error.description))
+                null
+            }
+            else {
+                throw error
+            }
+        }
+
+        val end = getPreviousTokenEndPosition()
+
+        return if (value == null) ReadResult.Failure(start..end)
+        else ReadResult.Successful(value, start..end)
     }
 
     /**
      * TODO allowFloat = false とかにしたとき非致命例外にしたいな...
      */
-    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf(), diagnostics: MutableList<BclDiagnostic>?): String? {
+    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf()): String {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "文字列の解析に失敗しました: 入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "文字列の解析に失敗しました: 入力が不足しています")
         }
-
-        var unfatalError = false
 
         val start = getCurrentTokenStartPosition()
 
@@ -819,44 +858,33 @@ open class TokenSeqReader(
 
         var index = startIndex
 
-        if (firstChar == KeyChar.COLON) {
-            next()
-            val end = getPreviousTokenEndPosition()
-            if (diagnostics == null) {
+        when (firstChar) {
+            KeyChar.COLON -> {
+                next()
+                val end = getPreviousTokenEndPosition()
                 throw exception(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません")
             }
-            else {
-                unfatalError = true
-                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 文字列は '${KeyChar.COLON}' で開始できません"))
-            }
-        }
-        else if (firstChar == KeyChar.WILDCARD) {
-            next()
-            return firstChar.toString()
-        }
-        else if (firstChar in setOf(KeyChar.PLUS, KeyChar.MINUS)) {
-            if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+            KeyChar.WILDCARD -> {
                 next()
+                return firstChar.toString()
+            }
+            in setOf(KeyChar.PLUS, KeyChar.MINUS) -> {
+                if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+                    next()
 
-                if (allowSingleSignOnly) {
-                    return firstChar.toString()
-                }
+                    if (allowSingleSignOnly) {
+                        return firstChar.toString()
+                    }
 
-                val end = getPreviousTokenEndPosition()
-
-                if (diagnostics == null) {
-                    throw exception(start..end, "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません")
-                }
-                else {
-                    diagnostics.add(diagnostic(
+                    val end = getPreviousTokenEndPosition()
+                    throw exception(
                         start..end,
                         "文字列の解析に失敗しました: 文字列は $firstChar で開始された場合直後にターミネータ文字または終端があってはなりません"
-                    ))
-                    unfatalError = true
+                    )
                 }
-            }
 
-            index++
+                index++
+            }
         }
 
         while (sourceCode[index] !in (KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators })) {
@@ -876,51 +904,40 @@ open class TokenSeqReader(
 
         if (string.isEmpty()) {
             val pS = peek().sourceSpan
-
-            if (diagnostics == null) {
-                throw exception(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です")
-            }
-            else {
-                unfatalError = true
-                diagnostics.add(diagnostic(pS.start..pS.start, "文字列の解析に失敗しました: 文字列が空です"))
-            }
+            throw exception(
+                pS.start..pS.start,
+                "文字列の解析に失敗しました: 文字列が空です",
+                unfatalizable = true
+            )
         }
         else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
-            if (diagnostics == null) {
-                throw exception(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です")
-            }
-            else {
-                unfatalError = true
-                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 数値として構成される文字列は不正です"))
-            }
+            throw exception(
+                start..end,
+                "文字列の解析に失敗しました: 数値として構成される文字列は不正です",
+                unfatalizable = true
+            )
         }
         else if (string.matches("^\\.$".toRegex()) && string.length % 2 == 0) {
-            if (diagnostics == null) {
-                throw exception(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません")
-            }
-            else {
-                unfatalError = true
-                diagnostics.add(diagnostic(start..end, "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません"))
-            }
+            throw exception(
+                start..end,
+                "文字列の解析に失敗しました: 文字列は偶数個の '${KeyChar.DOT}' に等しくあってはなりません",
+                unfatalizable = true
+            )
         }
 
-        return if (unfatalError) null else string
+        return string
     }
 
-    fun readQuotableCommandStringAsFatal(): String {
-        return readQuotableCommandString(null)!!
-    }
-
-    fun readQuotableCommandString(diagnostics: MutableList<BclDiagnostic>?): String? {
+    fun readQuotableCommandString(allowFloat: Boolean = false): String {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan, "二重引用符付き文字列または文字列の解析に失敗しました: 入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "二重引用符付き文字列または文字列の解析に失敗しました: 入力が不足しています")
         }
 
         return if (peek().type == TokenType.DOUBLE_QUOTED) {
             readQuotedString()
         }
         else {
-            readCommandString(diagnostics = diagnostics)
+            readCommandString(allowFloat)
         }
     }
 
@@ -998,7 +1015,7 @@ open class TokenSeqReader(
             list.add(element)
 
             if (isOver()) {
-                throw exception(peekSafely(-1).sourceSpan, "json の読み取りに失敗しました: 入力が不足しています")
+                throw exception(getOverNextSourceSpan(), "json の読み取りに失敗しました: 入力が不足しています")
             }
 
             val t = peek()
@@ -1044,7 +1061,7 @@ open class TokenSeqReader(
             entries.add(CommandJsonValue(key, kStart..kEnd) to value)
 
             if (isOver()) {
-                throw exception(peekSafely(-1).sourceSpan, "json の読み取りに失敗しました: 入力が不足しています")
+                throw exception(getOverNextSourceSpan(), "json の読み取りに失敗しました: 入力が不足しています")
             }
 
             val t = peek()
@@ -1063,5 +1080,16 @@ open class TokenSeqReader(
         val end = getPreviousTokenEndPosition()
 
         return CommandJsonObject(entries, start..end)
+    }
+
+    fun getEntireSourceSpan(): SourceSpan {
+        if (tokens.isEmpty()) {
+            val position = SourcePosition(1, 0, 0)
+            return position..position
+        }
+
+        val start = tokens.first().sourceSpan.start
+        val end = tokens.last().sourceSpan.end
+        return start..end
     }
 }

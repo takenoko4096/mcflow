@@ -78,7 +78,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             failure = true
         }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMERIC, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (!failure) {
             arguments.c = WithSpan(c, start..end)
@@ -146,7 +146,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val hasPermission = SelectorArguments.HasPermission()
 
         while (true) {
-            val name = reader.readCommandStringAsFatal()
+            val name = reader.readCommandString()
             val permission = SelectorArguments.HasPermission.Permission.parse(name)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -159,7 +159,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
             reader.expect(Symbol.ASSIGN)
 
-            val flag = reader.readCommandStringAsFatal()
+            val flag = reader.readCommandString()
             val state = SelectorArguments.HasPermission.PermissionState.parse(flag)
                 ?: run {
                     val end = reader.getPreviousTokenEndPosition()
@@ -204,7 +204,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         val properties = mutableListOf<InvertibleValue<NamespacedIdentifier>>()
 
-        val list = reader.readPairList(
+        val list = reader.readDuplicatableMap(
             Symbol.BRACE_START,
             Symbol.BRACE_END,
             kvSeparatorParser = {
@@ -216,14 +216,14 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             },
             keyParser = {
                 val start = getCurrentTokenStartPosition()
-                val key = readCommandStringAsFatal()
+                val key = readCommandString()
                 val end = getPreviousTokenEndPosition()
 
                 if (key == "property") {
-                    return@readPairList NamespacedIdentifier("", "property")
+                    return@readDuplicatableMap NamespacedIdentifier("", "property")
                 }
 
-                return@readPairList NamespacedIdentifier.parse(key)
+                return@readDuplicatableMap NamespacedIdentifier.parse(key)
                     ?: run {
                         diagnostics.add(diagnostic(start..end, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)"))
                         null
@@ -235,7 +235,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     val identifier = readNamespacedIdentifier()
                     val end = getPreviousTokenEndPosition()
                     properties.add(InvertibleValue(inv.value, identifier, start..end))
-                    return@readPairList null
+                    return@readDuplicatableMap null
                 }
 
                 val start = getCurrentTokenStartPosition()
@@ -271,7 +271,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             prefix = Symbol.BRACE_START,
             postfix = Symbol.BRACE_END,
             keyParser = {
-                readCommandStringAsFatal() // keyが不明 -> valueParserが不明 fatal
+                readCommandString() // keyが不明 -> valueParserが不明 fatal
             },
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
@@ -323,7 +323,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     }
 
                     val start2 = getCurrentTokenStartPosition()
-                    val locationStr = readCommandStringAsFatal()
+                    val locationStr = readCommandString()
                     val slotType = EntityContainerSlotType.parse(locationStr)
                         ?: run {
                             val end = getPreviousTokenEndPosition()
@@ -430,7 +430,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val startFromInv = reader.getCurrentTokenStartPosition()
         val inv = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
-        val s = reader.readCommandStringAsFatal(allowFloat = true)
+        val s = reader.readCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
 
         if (arguments.m != null) {
@@ -729,7 +729,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return SelectorType.PLAYER
         }
 
-        val string = reader.readCommandStringAsFatal(nonTerminators = charArrayOf('@'))
+        val string = reader.readCommandString(nonTerminators = charArrayOf('@'))
         val end = reader.getPreviousTokenEndPosition()
 
         for (type in SelectorType.entries) {
@@ -771,7 +771,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
 
-            val key = reader.readCommandStringAsFatal()
+            val key = reader.readCommandString()
             if (key !in parsers) {
                 val end2 = reader.getPreviousTokenEndPosition()
                 throw reader.exception(start2..end2, "セレクタ引数の読み取りに失敗しました: セレクタ引数 '$key' は存在しません")
@@ -838,7 +838,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             Argument(this, selector, start..end)
         }
         else {
-            NoValuedArgument(this, start..end)
+            NoValuedArgument(this, start..end, diagnostics)
         }
     }
 

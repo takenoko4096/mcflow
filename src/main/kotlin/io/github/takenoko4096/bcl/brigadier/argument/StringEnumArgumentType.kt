@@ -8,7 +8,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 class StringEnumArgumentType(name: String, private val entries: Array<String>) : ArgumentType<String>(name) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<String> {
         val start = reader.getCurrentTokenStartPosition()
-        val string = reader.readQuotableCommandStringAsFatal()
+        val string = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()
 
         for (entry in entries) {

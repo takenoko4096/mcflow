@@ -1,9 +1,12 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.parser.BclParseException
+import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
@@ -24,11 +27,11 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
-        fun parse(string: String): ArgumentParseResult<EntitySelector> {
+        fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
             val tokenizer = BclTokenizer(string, interpretComments = false)
             val tokens = tokenizer.tokenize()
             val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
-            val selector = EntitySelectorArgumentType().parse(reader)
+            val selector = EntitySelectorArgumentType().parse(reader, diagnostics, semanticTokens)
             if (!(reader.isOver())) {
                 val span = reader.getRemainingSourceSpan()
                 throw reader.exception(span, "セレクターの読み取りに失敗しました: 不明なトークン列です: ${span.getStringFromSourceCode(string)}")

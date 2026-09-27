@@ -2,17 +2,24 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
+import io.github.takenoko4096.bcl.brigadier.value.OpenableFloatRange
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
-class FloatArgumentType(private val validator: (TokenSeqReader.(Float, SourceSpan) -> Unit)?) : ArgumentType<Float>("float", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<Float> {
+class FloatArgumentType(
+    private val range: OpenableFloatRange?
+) : ArgumentType<Float>("float", hasInlayHint = true) {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Float> {
         val start = reader.getCurrentTokenStartPosition()
         val f = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
 
-        validator?.invoke(reader, f, start..end)
+        if (range != null && f !in range) {
+            diagnostics.add(reader.diagnostic(start..end, "浮動小数点数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $f が渡されました"))
+            return NoValuedArgument(this, start..end, diagnostics)
+        }
 
         return Argument(this, f, start..end)
     }
@@ -20,22 +27,10 @@ class FloatArgumentType(private val validator: (TokenSeqReader.(Float, SourceSpa
     companion object {
         fun float() = FloatArgumentType(null)
 
-        fun float(range: ClosedFloatingPointRange<Float>) = FloatArgumentType { value, sourceSpan ->
-            if (value !in range) {
-                throw exception(sourceSpan, "浮動小数点数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $value が渡されました")
-            }
-        }
+        fun float(range: ClosedFloatingPointRange<Float>) = FloatArgumentType(OpenableFloatRange.from(range))
 
-        fun positive() = FloatArgumentType { value, sourceSpan ->
-            if (value <= 0f) {
-                throw exception(sourceSpan, "浮動小数点数の読み取りに失敗しました: この引数は正の値でなければなりませんが、 $value が渡されました")
-            }
-        }
+        fun positive() = FloatArgumentType(OpenableFloatRange.openRange(0f, Float.POSITIVE_INFINITY))
 
-        fun nonnegative() = FloatArgumentType { value, sourceSpan ->
-            if (value < 0f) {
-                throw exception(sourceSpan, "浮動小数点数の読み取りに失敗しました: この引数は非負の値でなければなりませんが、 $value が渡されました")
-            }
-        }
+        fun nonnegative() = FloatArgumentType(OpenableFloatRange.openEndRange(0f, Float.POSITIVE_INFINITY))
     }
 }

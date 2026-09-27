@@ -2,12 +2,13 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.misc.ScoreComparator
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_comparator") {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<ScoreComparator> {
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<ScoreComparator> {
         val start = reader.getCurrentTokenStartPosition()
 
         for (comparator in ScoreComparator.entries) {

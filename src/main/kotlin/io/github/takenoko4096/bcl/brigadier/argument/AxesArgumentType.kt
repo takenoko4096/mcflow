@@ -12,7 +12,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Set<Axis>> {
         val start = reader.getCurrentTokenStartPosition()
-        val string = reader.readCommandStringAsFatal()
+        val string = reader.readCommandString()
         val end = reader.getPreviousTokenEndPosition()
         val sourceSpan = start..end
 
@@ -38,7 +38,7 @@ class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.AXES, sourceSpan))
 
         if (diagnostics.isNotEmpty()) {
-            return NoValuedArgument(this, sourceSpan)
+            return NoValuedArgument(this, sourceSpan, diagnostics)
         }
 
         return Argument(this, axes, sourceSpan)
