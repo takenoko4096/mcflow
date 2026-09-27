@@ -127,9 +127,16 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     private fun family(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
         val start = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
-        val string = reader.readQuotableCommandString(diagnostics) ?: return
+        val string = reader.unfatalize(diagnostics) { readQuotableCommandString() }
         val end = reader.getPreviousTokenEndPosition()
-        arguments.family.add(InvertibleValue(inverted, string, start..end))
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+
+        if (string !is TokenSeqReader.ReadResult.Successful) {
+            return
+        }
+
+        arguments.family.add(InvertibleValue(inverted, string.value, start..end))
     }
 
     private fun hasPermission(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
@@ -451,20 +458,28 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val startFromInv = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
-        val name = reader.readQuotableCommandString(diagnostics = diagnostics)
+        val name = reader.unfatalize(diagnostics) { readQuotableCommandString() }
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+
+        var failure = false
 
         if (!inverted && arguments.name.any { !it.inverted }) {
             diagnostics.add(reader.diagnostic(startFromInv..end, "セレクタ引数 'name' の読み取りに失敗しました: name は否定でない限り重複できません"))
+            failure = true
+        }
+
+        if (name is TokenSeqReader.ReadResult.Failure) {
+            failure = true
+        }
+
+        if (failure) {
             return
         }
 
-        if (name == null) {
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
-        }
-        else {
-            arguments.name.add(InvertibleValue(inverted, name, start..end))
-        }
+        name as TokenSeqReader.ReadResult.Successful
+        arguments.name.add(InvertibleValue(inverted, name.value, start..end))
     }
 
     private fun r(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
