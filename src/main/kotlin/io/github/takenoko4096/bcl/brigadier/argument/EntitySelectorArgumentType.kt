@@ -605,7 +605,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         while (true) {
             val start2 = reader.getCurrentTokenStartPosition()
-            val objective = reader.readQuotableCommandString(diagnostics = diagnostics)
+            val objective = reader.unfatalize(diagnostics) { readQuotableCommandString() }
             val end2 = reader.getPreviousTokenEndPosition()
             reader.expect(Symbol.ASSIGN)
             val start3 = reader.getCurrentTokenStartPosition()
@@ -613,11 +613,14 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             val range = reader.readIntRange()
             val end3 = reader.getPreviousTokenEndPosition()
 
-            if (objective != null) {
+            if (objective is TokenSeqReader.ReadResult.Successful) {
                 scores.add(
-                    WithSpan(objective, start2..end2),
+                    WithSpan(objective.value, start2..end2),
                     InvertibleValue(inverted, range, start3..end3)
                 )
+            }
+            else {
+                // nanimo sinai yo
             }
 
             if (reader.isOver()) {
@@ -639,17 +642,19 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         val end = reader.getPreviousTokenEndPosition()
 
+        var failure = false
+
         if (scores.isEmpty()) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: 空の条件を渡すことはできません"))
-            return
+            failure = true
         }
 
         if (arguments.scores != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'scores' の読み取りに失敗しました: scores は重複できません"))
-            return
+            failure = true
         }
 
-        arguments.scores = scores
+        if (!failure) arguments.scores = scores
     }
 
     private fun tag(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
@@ -667,9 +672,12 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return
         }
 
-        val string = reader.readQuotableCommandString(diagnostics = diagnostics) ?: return
+        val string = reader.unfatalize(diagnostics) { readQuotableCommandString() }
         val end = reader.getPreviousTokenEndPosition()
-        arguments.tag.add(InvertibleValue(inverted, string, start..end))
+
+        if (string is TokenSeqReader.ReadResult.Successful) {
+            arguments.tag.add(InvertibleValue(inverted, string.value, start..end))
+        }
     }
 
     private fun type(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
