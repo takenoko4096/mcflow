@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.BclSemanticToken
+import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
@@ -13,7 +13,7 @@ sealed class CommandLineParseResult(
     val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     sourceSpan: SourceSpan,
     val semanticTokens: List<BclSemanticToken>
-) : Node(sourceSpan, null) {
+) : Node(sourceSpan) {
     class Successful(
         val command: Command,
         route: List<CommandNode>,

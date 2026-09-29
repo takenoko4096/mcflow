@@ -7,4 +7,4 @@ class UnaryExpression(
     sourceSpan: SourceSpan,
     val operation: UnaryOperation,
     val target: Expression
-) : Expression(sourceSpan, null)
+) : Expression(sourceSpan)

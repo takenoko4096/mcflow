@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier
 
-import io.github.takenoko4096.bcl.BclSemanticToken
+import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
@@ -8,6 +8,7 @@ import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
@@ -339,14 +340,20 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         val cursor = candidateReader.cursor
                         val start = candidateReader.getCurrentTokenStartPosition()
                         val literal = candidateReader.readCommandString()
+                        val end = candidateReader.getPreviousTokenEndPosition()
+
+                        semanticTokens.add(BclSemanticToken(
+                            if (state.route.isEmpty()) BclSemanticTokenType.COMMAND else BclSemanticTokenType.KEYWORD,
+                            start..end
+                        ))
 
                         if (literal != name) {
                             candidateReader.cursor = cursor
                             continue
                         }
 
-                        val end = candidateReader.getPreviousTokenEndPosition()
                         candidateLiterals.add(node to start..end)
+
                     }
 
                     is ArgumentCommandNode<*> -> {

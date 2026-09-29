@@ -8,4 +8,4 @@ class SetStatement(
     val identifier: String,
     val parameters: List<String>,
     val block: Block
-) : Statement(sourceSpan, null)
+) : Statement(sourceSpan)

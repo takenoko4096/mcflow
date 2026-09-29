@@ -7,4 +7,4 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class BreakStatement(
     sourceSpan: SourceSpan,
     val label: Label?
-) : Statement(sourceSpan, BclSemanticTokenType.KEYWORD)
+) : Statement(sourceSpan)

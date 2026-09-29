@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.argument
 
-import io.github.takenoko4096.bcl.BclSemanticToken
+import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
@@ -35,7 +35,7 @@ class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
             axes.add(element)
         }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.AXES, sourceSpan))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, sourceSpan))
 
         if (diagnostics.isNotEmpty()) {
             return NoValuedArgument(this, sourceSpan, diagnostics)

@@ -5,6 +5,8 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
@@ -82,9 +84,53 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         return super.completion(position)
     }
 
-    /*override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
+    override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
         val semanticTokens = SemanticTokens()
 
+        val block = documents[params.textDocument.uri]!!
+
+        val tokens = block.nodes
+            .filterIsInstance<CommandLineParseResult>()
+            .flatMap { it.semanticTokens }
+            .sortedBy { it.sourceSpan.start.index }
+
+        val data = mutableListOf<Int>()
+
+        var previousLine = 0
+        var previousStart = 0
+
+        for (token in tokens) {
+            val start = token.sourceSpan.start
+            val end = token.sourceSpan.end
+
+            // SourcePositionのlineが1始まりである場合
+            val line = start.line - 1
+            val character = start.column
+
+            val deltaLine = line - previousLine
+            val deltaStart = if (deltaLine == 0) {
+                character - previousStart
+            } else {
+                character
+            }
+
+            val length = end.column - start.column
+
+            data.add(deltaLine)
+            data.add(deltaStart)
+            data.add(length)
+            data.add(token.type.ordinal)
+            data.add(0)
+
+            previousLine = line
+            previousStart = character
+        }
+
+        semanticTokens.data = data
+
+        System.err.println("semantic token count = ${tokens.size}")
+        System.err.println("semantic token data = $data")
+
         return CompletableFuture.completedFuture(semanticTokens)
-    }*/
+    }
 }

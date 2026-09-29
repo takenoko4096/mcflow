@@ -11,4 +11,4 @@ class WhileStatement(
     val label: Label?,
     val condition: Expression,
     val block: Block
-) : Statement(sourceSpan, null)
+) : Statement(sourceSpan)

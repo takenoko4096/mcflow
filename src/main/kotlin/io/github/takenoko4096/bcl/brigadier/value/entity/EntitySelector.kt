@@ -1,12 +1,10 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
-import io.github.takenoko4096.bcl.BclSemanticToken
-import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.parser.BclParseException
-import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
