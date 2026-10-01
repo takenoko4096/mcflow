@@ -393,7 +393,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 if (detailedOutput) error.printStackTrace(System.err)
 
                 // fatal err
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, error.sourceSpan.start..candidateReader.getRemainingSourceSpan().end))
+                // TODO end < start 現象が起きてる remainしてないトークンがerr色になるし なんで ?????????????????????????
+                // semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, error.sourceSpan.start..candidateReader.getRemainingSourceSpan().end))
 
                 potentials += RoutePotential(
                     nextState,
