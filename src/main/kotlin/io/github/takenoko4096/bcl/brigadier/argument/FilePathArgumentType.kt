@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
@@ -34,6 +35,8 @@ class FilePathArgumentType(private val strict: Boolean) : ArgumentType<String>("
 
         val filepath = sb.toString()
         val sourceSpan = start..end
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, sourceSpan))
 
         if (strict) {
             for (char in KeyChar.COMMAND_WORD_TERMINATORS) {

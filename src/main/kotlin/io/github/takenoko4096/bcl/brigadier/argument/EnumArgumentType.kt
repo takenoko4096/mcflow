@@ -17,6 +17,8 @@ class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : A
         val string = reader.readCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, start..end))
+
         for (entry in entries) {
             if (entry.getNames().contains(string)) {
                 return if (diagnostics.isEmpty()) {

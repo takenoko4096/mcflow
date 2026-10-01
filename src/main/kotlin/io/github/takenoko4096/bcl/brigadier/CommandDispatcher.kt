@@ -392,6 +392,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             catch (error: BclTokenSeqReadException) {
                 if (detailedOutput) error.printStackTrace(System.err)
 
+                // fatal err
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, candidateReader.getRemainingSourceSpan()))
+
                 potentials += RoutePotential(
                     nextState,
                     unfatalErrors + listOf(

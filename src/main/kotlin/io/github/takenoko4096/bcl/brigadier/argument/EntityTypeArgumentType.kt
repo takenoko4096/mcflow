@@ -7,12 +7,15 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class EntityTypeArgumentType : ArgumentType<EntityType>("entity_type") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntityType> {
         val start = reader.getCurrentTokenStartPosition()
         val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
 
         if (identifier is TokenSeqReader.ReadResult.Failure) {
             return NoValuedArgument(this, start..end, diagnostics)

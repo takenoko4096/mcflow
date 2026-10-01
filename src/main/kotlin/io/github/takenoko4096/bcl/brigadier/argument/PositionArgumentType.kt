@@ -7,6 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Coordinate> {
@@ -15,6 +16,8 @@ class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint =
         val y = reader.unfatalize(diagnostics) { readCoordinateComponent() }
         val z = reader.unfatalize(diagnostics) { readCoordinateComponent(blockCenterCorrection = true) }
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (x !is TokenSeqReader.ReadResult.Successful || y !is TokenSeqReader.ReadResult.Successful || z !is TokenSeqReader.ReadResult.Successful) {
             return NoValuedArgument(this, start..end, diagnostics)

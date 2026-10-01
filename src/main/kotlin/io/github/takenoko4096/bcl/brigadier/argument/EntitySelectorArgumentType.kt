@@ -452,6 +452,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val s = reader.readCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, start..end))
+
         if (arguments.m != null) {
             diagnostics.add(reader.diagnostic(startFromInv..end, "セレクタ引数 'm' の読み取りに失敗しました: セレクタ引数 m は \"\"否定であっても\"\" 重複できません"))
             return
@@ -687,6 +689,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val string = reader.unfatalize(diagnostics) { readQuotableCommandString() }
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+
         if (string is TokenSeqReader.ReadResult.Successful) {
             arguments.tag.add(InvertibleValue(inverted, string.value, start..end))
         }
@@ -695,16 +699,16 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     private fun type(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
         val start = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
-
         val identifier = reader.readNamespacedIdentifier()
+        val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
+
         val entityType = EntityType.get(identifier)
             ?: run {
-                val end = reader.getPreviousTokenEndPosition()
                 diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier"))
                 null
             }
-
-        val end = reader.getPreviousTokenEndPosition()
 
         if (!inverted && arguments.type.any { !it.inverted }) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 type は否定でない限り重複できません"))

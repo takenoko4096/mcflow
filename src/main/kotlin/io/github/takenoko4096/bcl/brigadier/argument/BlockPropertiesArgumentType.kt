@@ -48,7 +48,7 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
         val start = getCurrentTokenStartPosition()
         val key = readQuotedString()
         val end = getPreviousTokenEndPosition()
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start..end))
 
         return key
     }
