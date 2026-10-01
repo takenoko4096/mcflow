@@ -393,7 +393,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 if (detailedOutput) error.printStackTrace(System.err)
 
                 // fatal err
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, candidateReader.getRemainingSourceSpan()))
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, error.sourceSpan.start..candidateReader.getRemainingSourceSpan().end))
 
                 potentials += RoutePotential(
                     nextState,
