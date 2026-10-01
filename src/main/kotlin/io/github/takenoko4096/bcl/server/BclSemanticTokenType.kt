@@ -8,9 +8,10 @@ enum class BclSemanticTokenType : StringRepresentable {
     COMMAND,
     IDENTIFIER,
     BOOLEAN,
-    PROPERTY,
-    KEYWORD,
+    PARAMETER,
+    LITERAL,
     LABEL,
+    SELECTOR_TYPE,
 
     ERROR;
 

@@ -36,7 +36,7 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
                 BclSemanticTokenType.entries.map { it.getString() },
                 emptyList()
             )
-        )
+        ).apply { full = Either.forLeft(true) }
 
         return capabilities
     }

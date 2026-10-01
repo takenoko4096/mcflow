@@ -85,6 +85,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     }
 
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
+        System.err.println("semanticTokensFull")
+
         val semanticTokens = SemanticTokens()
 
         val block = documents[params.textDocument.uri]!!
@@ -114,7 +116,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                 character
             }
 
-            val length = end.column - start.column
+            val length = end.column - start.column + 1
 
             data.add(deltaLine)
             data.add(deltaStart)
@@ -127,9 +129,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         }
 
         semanticTokens.data = data
-
-        System.err.println("semantic token count = ${tokens.size}")
-        System.err.println("semantic token data = $data")
 
         return CompletableFuture.completedFuture(semanticTokens)
     }

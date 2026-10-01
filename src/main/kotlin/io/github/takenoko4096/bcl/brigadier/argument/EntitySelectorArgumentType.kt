@@ -173,7 +173,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     null
                 }
 
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PROPERTY, start1..end1))
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start1..end1))
 
             reader.expect(Symbol.ASSIGN)
 
@@ -760,7 +760,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
     }
 
-    private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>): SelectorType {
+    private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorType {
         val start = reader.getCurrentTokenStartPosition()
 
         val t = reader.peek()
@@ -768,11 +768,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             reader.next()
             val end = reader.getPreviousTokenEndPosition()
             arguments.name.add(InvertibleValue.uninverted(t.value, start..end))
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SELECTOR_TYPE, start..end))
             return SelectorType.PLAYER
         }
 
         val string = reader.readCommandString(nonTerminators = charArrayOf('@'))
         val end = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SELECTOR_TYPE, start..end))
 
         for (type in SelectorType.entries) {
             if (type.getString() == t.value) {
@@ -815,7 +817,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             val key = reader.readCommandString()
             val end2 = reader.getPreviousTokenEndPosition()
 
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PROPERTY, start2..end2))
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start2..end2))
 
             val parser = parsers[key] ?: run {
                 diagnostics.add(reader.diagnostic(start2..end2, "セレクタ引数の読み取りに失敗しました: セレクタ引数 '$key' は存在しません"))
@@ -857,10 +859,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             throw reader.exception(reader.getOverNextSourceSpan(), "セレクターの読み取りに失敗しました: 入力が不足しています")
         }
 
-        val semanticTokens = mutableListOf<BclSemanticToken>()
         val start = reader.getCurrentTokenStartPosition()
 
-        val type = parseSelectorType(reader, arguments, diagnostics)
+        val type = parseSelectorType(reader, arguments, diagnostics, semanticTokens)
 
         if (type == SelectorType.PLAYER) {
             val end = reader.getPreviousTokenEndPosition()

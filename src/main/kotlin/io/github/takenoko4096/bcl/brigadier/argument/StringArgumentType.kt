@@ -6,6 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<String> {
@@ -16,6 +17,7 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
             Mode.QUOTABLE -> {
                 val result = reader.unfatalize(diagnostics) { readQuotableCommandString() }
                 if (result !is TokenSeqReader.ReadResult.Successful) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
                     return NoValuedArgument(this, result.sourceSpan, diagnostics)
                 }
                 result.value
@@ -23,6 +25,7 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
             Mode.WORD -> {
                 val result = reader.unfatalize(diagnostics) { readCommandString() }
                 if (result !is TokenSeqReader.ReadResult.Successful) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
                     return NoValuedArgument(this, result.sourceSpan, diagnostics)
                 }
                 result.value
@@ -31,6 +34,8 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
         }
 
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
 
         return Argument(this, string, start..end)
     }

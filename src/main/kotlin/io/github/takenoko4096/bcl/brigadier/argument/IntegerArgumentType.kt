@@ -6,6 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class IntegerArgumentType(
     private val allowExtendedNotation: Boolean,
@@ -15,6 +16,8 @@ class IntegerArgumentType(
         val start = reader.getCurrentTokenStartPosition()
         val i = reader.readInteger(allowExtendedNotation)
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (range != null && i !in range) {
             reader.diagnostic(start..end, "整数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $i が渡されました")

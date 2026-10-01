@@ -7,6 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.OpenableFloatRange
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class FloatArgumentType(
     private val range: OpenableFloatRange?
@@ -15,6 +16,8 @@ class FloatArgumentType(
         val start = reader.getCurrentTokenStartPosition()
         val f = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (range != null && f !in range) {
             diagnostics.add(reader.diagnostic(start..end, "浮動小数点数の読み取りに失敗しました: この引数は $range の範囲内でなければなりませんが、 $f が渡されました"))

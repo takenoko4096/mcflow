@@ -7,6 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import kotlin.enums.EnumEntries
 import kotlin.enums.enumEntries
 

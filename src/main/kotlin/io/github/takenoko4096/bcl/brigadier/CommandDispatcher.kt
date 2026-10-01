@@ -343,7 +343,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         val end = candidateReader.getPreviousTokenEndPosition()
 
                         semanticTokens.add(BclSemanticToken(
-                            if (state.route.isEmpty()) BclSemanticTokenType.COMMAND else BclSemanticTokenType.KEYWORD,
+                            if (node is Command) BclSemanticTokenType.COMMAND else BclSemanticTokenType.LITERAL,
                             start..end
                         ))
 
@@ -353,7 +353,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         }
 
                         candidateLiterals.add(node to start..end)
-
                     }
 
                     is ArgumentCommandNode<*> -> {

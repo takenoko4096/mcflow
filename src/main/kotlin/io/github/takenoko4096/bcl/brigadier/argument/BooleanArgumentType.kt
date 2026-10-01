@@ -6,12 +6,15 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class BooleanArgumentType : ArgumentType<Boolean>("boolean", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Boolean> {
         val start = reader.getCurrentTokenStartPosition()
         val bool = reader.unfatalize(diagnostics) { readBool() }
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start..end))
 
         if (bool is TokenSeqReader.ReadResult.Failure) {
             return NoValuedArgument(this, start..end, diagnostics)
