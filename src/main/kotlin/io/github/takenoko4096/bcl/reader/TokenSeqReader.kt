@@ -496,7 +496,7 @@ open class TokenSeqReader(
             tokens.add(current)
         }
 
-        return TokenSeqReader(sourceCode, tokens,::BclParseException)
+        return TokenSeqReader(sourceCode, tokens, ::BclParseException)
     }
 
     fun readIntRange(): IntRange {

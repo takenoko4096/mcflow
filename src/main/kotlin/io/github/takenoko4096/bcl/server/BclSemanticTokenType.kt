@@ -12,6 +12,7 @@ enum class BclSemanticTokenType : StringRepresentable {
     LITERAL,
     LABEL,
     SELECTOR_TYPE,
+    SYMBOL,
 
     ERROR;
 
