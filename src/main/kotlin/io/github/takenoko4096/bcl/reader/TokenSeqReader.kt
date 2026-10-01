@@ -858,6 +858,7 @@ open class TokenSeqReader(
         val startIndex = peek().sourceSpan.start.index
 
         val firstChar = sourceCode.getOrNull(startIndex)
+
         val secondChar = sourceCode.getOrNull(startIndex + 1)
 
         var index = startIndex
@@ -910,7 +911,7 @@ open class TokenSeqReader(
             val pS = peek().sourceSpan
             throw exception(
                 pS.start..pS.start,
-                "文字列の解析に失敗しました: 文字列が空です",
+                "文字列の解析に失敗しました: 文字列を文字 '$firstChar' で開始することはできません",
                 unfatalizable = true
             )
         }

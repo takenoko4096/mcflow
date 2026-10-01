@@ -118,6 +118,11 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 )
             }
             else {
+                semanticTokens.add(BclSemanticToken(
+                    BclSemanticTokenType.ERROR,
+                    bestRoutePotential.state.reader.getRemainingSourceSpan()
+                ))
+
                 CommandLineParseResult.Failure(
                     bestRoutePotential.state.route.firstOrNull() as Command?,
                     bestRoutePotential.state.route,
@@ -391,10 +396,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             }
             catch (error: BclTokenSeqReadException) {
                 if (detailedOutput) error.printStackTrace(System.err)
-
-                // fatal err
-                // TODO end < start 現象が起きてる remainしてないトークンがerr色になるし なんで ?????????????????????????
-                // semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, error.sourceSpan.start..candidateReader.getRemainingSourceSpan().end))
 
                 potentials += RoutePotential(
                     nextState,
