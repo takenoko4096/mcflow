@@ -835,7 +835,11 @@ open class TokenSeqReader(
             }
         }
 
-        val end = getPreviousTokenEndPosition()
+        var end = getPreviousTokenEndPosition()
+
+        if (start.index > end.index) {
+            end = start
+        }
 
         return if (value == null) ReadResult.Failure(start..end)
         else ReadResult.Successful(value, start..end)
