@@ -1513,10 +1513,10 @@ object Commands {
             }
 
             "operation" {
-                "targets"(EntitySelectorArgumentType()) {
+                "target"(EntitySelectorArgumentType()) {
                     "target_objective"(StringArgumentType.isolated()) {
                         "operation"(ScoreOperatorArgumentType()) {
-                            "sources"(EntitySelectorArgumentType()) {
+                            "source"(EntitySelectorArgumentType()) {
                                 "source_objective"(StringArgumentType.isolated()) {
                                     executes {
                                         val target = getArgument<EntitySelector>("target")

@@ -118,10 +118,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 )
             }
             else {
-                semanticTokens.add(BclSemanticToken(
-                    BclSemanticTokenType.ERROR,
-                    bestRoutePotential.state.reader.getRemainingSourceSpan()
-                ))
+                bestRoutePotential.state.reader.getRemainingSourceSpansSplitByLine().forEach {
+                    semanticTokens.add(BclSemanticToken(
+                        BclSemanticTokenType.ERROR,
+                        it
+                    ))
+                }
 
                 CommandLineParseResult.Failure(
                     bestRoutePotential.state.route.firstOrNull() as Command?,

@@ -37,6 +37,26 @@ open class TokenSeqReader(
         return getCurrentTokenStartPosition()..tokens.last().sourceSpan.end
     }
 
+    fun getRemainingSourceSpansSplitByLine(): List<SourceSpan> {
+        if (isOver()) return emptyList()
+
+        val rem = getRemainingSourceSpan()
+
+        return tokens
+            .filter {
+                it.sourceSpan.start.index >= rem.start.index &&
+                    it.sourceSpan.end.index <= rem.end.index
+            }
+            .groupBy { it.sourceSpan.start.line }
+            .values
+            .map { line ->
+                SourceSpan(
+                    line.first().sourceSpan.start,
+                    line.last().sourceSpan.end
+                )
+            }
+    }
+
     fun isOver(): Boolean {
         return cursor >= tokens.size
     }

@@ -30,9 +30,16 @@ class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
                     result = false
                 }
 
-                // TODO diagnostics -> dummyDiagnostics
-                if (keySchema.schemas.none { it.validate(child, sourceCode, diagnostics) }) {
-                    diagnostics.add(BclDiagnostic("キー '$name' には不適な値です", sourceCode, child.sourceSpan))
+                var keyResult = false
+                val dummyDiagnostics = mutableListOf<BclDiagnostic>()
+                for (schema in keySchema.schemas) {
+                    if (schema.validate(child, sourceCode, dummyDiagnostics)) {
+                        keyResult = true
+                    }
+                }
+
+                if (!keyResult) {
+                    diagnostics.addAll(dummyDiagnostics)
                     result = false
                 }
             }
