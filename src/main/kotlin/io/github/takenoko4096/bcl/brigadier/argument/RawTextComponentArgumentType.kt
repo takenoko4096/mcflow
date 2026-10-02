@@ -45,6 +45,8 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
         }
 
         property("score") {
+            optional = true
+            duplicatable = true
             `object` {
                 property("name") {
                     optional = true
@@ -105,11 +107,11 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                     else null
                 }
 
+                val objective = objectives.firstOrNull()
                 val pair = selectors.firstOrNull()
 
-                if (pair == null) null
+                if (pair == null || objective == null) null
                 else {
-                    val objective = objectives.first()
                     ScoreComponent(
                         WithSpan(pair.second, pair.first.sourceSpan),
                         WithSpan(objective.value, objective.sourceSpan),
