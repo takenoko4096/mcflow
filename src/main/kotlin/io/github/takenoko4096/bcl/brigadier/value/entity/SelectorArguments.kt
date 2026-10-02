@@ -113,19 +113,19 @@ data class SelectorArguments(
     }
 
     data class HasItem(
-        val item: WithSpan<ItemType>,
-        val location: WithSpan<EntityContainerSlotType>?,
+        val item: ItemType,
+        val location: EntityContainerSlotType?,
         val slot: InvertibleValue<IntRange>?,
         val quantity: InvertibleValue<IntRange>?,
-        val data: WithSpan<Int>?,
+        val data: Int?,
         override val sourceSpan: SourceSpan
     ) : SpanHolder {
         override fun toString(): String {
-            var string = "item=${item.value.identifier}"
-            if (location != null) string += ", location=${location.value.getString()}"
+            var string = "item=${item.identifier}"
+            if (location != null) string += ", location=${location.getString()}"
             if (slot != null) string += ", slot=$slot"
             if (quantity != null) string += ", quantity=$quantity"
-            if (data != null) string += ", data=${data.value}"
+            if (data != null) string += ", data=${data}"
             return "{$string}"
         }
     }

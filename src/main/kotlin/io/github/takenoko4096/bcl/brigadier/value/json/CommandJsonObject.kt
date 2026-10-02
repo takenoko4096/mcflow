@@ -6,10 +6,6 @@ class CommandJsonObject(
     val entries: List<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>,
     sourceSpan: SourceSpan
 ) : CommandJsonValue<List<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>>(entries, sourceSpan) {
-    fun isDuplicating(key: String): Boolean {
-        return entries.count { (string, _) -> string.value == key } > 1
-    }
-
     operator fun contains(key: String): Boolean {
         return entries.any { it.first.value == key }
     }

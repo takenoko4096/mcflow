@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 
 class WildcardIntegerArgumentType : ArgumentType<Int?>("wildcard_integer", hasInlayHint = true) {
@@ -19,6 +20,8 @@ class WildcardIntegerArgumentType : ArgumentType<Int?>("wildcard_integer", hasIn
         }
 
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         return Argument(this, i, start..end)
     }

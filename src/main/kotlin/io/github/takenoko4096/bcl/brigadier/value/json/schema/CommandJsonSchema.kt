@@ -1,9 +1,15 @@
 package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.BclDsl
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticToken
 import kotlin.collections.set
 
 sealed class CommandJsonSchema {
+    abstract fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean
+
     @BclDsl
     class Builder private constructor(callback: Builder.() -> Unit) {
         private val keys = mutableMapOf<String, KeySchema>()
@@ -27,7 +33,7 @@ sealed class CommandJsonSchema {
 
         var nullable: Boolean = false
 
-        var duplication: KeyDuplicationRule = KeyDuplicationRule.NEVER
+        var duplicatable: Boolean = false
 
         private val schemas = mutableSetOf<CommandJsonSchema>()
 
@@ -70,43 +76,11 @@ sealed class CommandJsonSchema {
                 throw IllegalStateException("json スキーマのキー '$name' の値の制約が設定されていません")
             }
 
-            keys[name] = KeySchema(optional, nullable, duplication, schemas)
+            keys[name] = KeySchema(optional, nullable, duplicatable, schemas)
         }
 
         companion object {
             fun set(keys: MutableMap<String, KeySchema>, name: String, callback: PropertyBuilder.() -> Unit) = PropertyBuilder(name, callback).set(keys)
         }
-    }
-
-    companion object {
-        val rawtext = Builder.build {
-            property("text") {
-                string()
-            }
-
-            property("translate") {
-                string()
-            }
-
-            property("with") {
-                array(string)
-            }
-
-            property("selector") {
-                string()
-            }
-
-            property("score") {
-                `object` {
-                    property("name") {
-                        string()
-                    }
-
-                    property("objective") {
-                        string()
-                    }
-                }
-            }
-        }.apply { (keys["with"]!!.schemas as MutableSet<CommandJsonSchema>).add(this) }
     }
 }

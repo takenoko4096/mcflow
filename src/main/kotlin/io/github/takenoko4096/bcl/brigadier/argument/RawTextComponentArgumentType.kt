@@ -9,6 +9,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.text.AbstractTextComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.RawText
 import io.github.takenoko4096.bcl.brigadier.value.text.ScoreComponent
@@ -19,7 +20,60 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 
 // TODO めんどいから JsonSchema をつくる
 class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") {
+    val rawtext = CommandJsonSchema.Builder.build {
+        property("text") {
+            optional = true
+            duplicatable = true
+            string()
+        }
+
+        property("translate") {
+            optional = true
+            duplicatable = true
+            string()
+        }
+
+        property("with") {
+            optional = true
+            duplicatable = true
+            array(string)
+        }
+
+        property("selector") {
+            optional = true
+            duplicatable = true
+            string()
+        }
+
+        property("score") {
+            `object` {
+                property("name") {
+                    optional = true
+                    duplicatable = true
+                    string()
+                }
+
+                property("objective") {
+                    optional = true
+                    duplicatable = true
+                    string()
+                }
+            }
+        }
+    }.apply { (keys["with"]!!.schemas as MutableSet<CommandJsonSchema>).add(this) }
+
+    val root = CommandJsonSchema.Builder.build {
+        property("rawtext") {
+            optional = false
+            duplicatable = true
+
+            array(rawtext)
+        }
+    }
+
     override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): RawText {
+        // root.validate(obj, reader.sourceCode, diagnostics)
+
         if ("rawtext" !in obj) {
             throw reader.exception(obj.sourceSpan, "rawtext の解釈に失敗しました: ルートオブジェクトにはキー 'rawtext' が必要です")
         }

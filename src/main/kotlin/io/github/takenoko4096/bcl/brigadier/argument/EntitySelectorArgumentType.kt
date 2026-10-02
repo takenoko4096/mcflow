@@ -163,26 +163,30 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             val start1 = reader.getCurrentTokenStartPosition()
             val name = reader.readCommandString()
             val end1 = reader.getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, start1..end1))
+
             val permission = SelectorArguments.HasPermission.Permission.parse(name)
                 ?: run {
-                    val end = reader.getPreviousTokenEndPosition()
                     diagnostics.add(reader.diagnostic(
-                        start..end,
+                        start1..end1,
                         "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なパーミッション名です: $name"
                     ))
                     null
                 }
 
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start1..end1))
-
             reader.expect(Symbol.ASSIGN)
 
+            val start2 = reader.getCurrentTokenStartPosition()
             val flag = reader.readCommandString()
+            val end2 = reader.getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start2..end2))
+
             val state = SelectorArguments.HasPermission.PermissionState.parse(flag)
                 ?: run {
-                    val end = reader.getPreviousTokenEndPosition()
                     diagnostics.add(reader.diagnostic(
-                        start..end,
+                        start2..end2,
                         "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なパーミッションステートです: '$flag'; ${
                             SelectorArguments.HasPermission.PermissionState.entries.joinToString(" | ") { it.getString() }
                         } が期待されています"
@@ -191,7 +195,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
             if (permission != null && state != null) hasPermission.set(permission, state)
 
-            val start2 = reader.getCurrentTokenStartPosition()
+            val start3 = reader.getCurrentTokenStartPosition()
             if (reader.isOver()) {
                 throw reader.exception(reader.getOverNextSourceSpan(), "セレクタ引数 'haspermission' の読み取りに失敗しました: 引数が '${Symbol.BRACE_END.value}' で閉じられていません")
             }
@@ -204,8 +208,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             }
             else {
                 reader.next()
-                val end2 = reader.getPreviousTokenEndPosition()
-                throw reader.exception(start2..end2, "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
+                val end3 = reader.getPreviousTokenEndPosition()
+                throw reader.exception(start3..end3, "セレクタ引数 'haspermission' の読み取りに失敗しました: 不明なトークンです: ${reader.peek()}")
             }
         }
 
@@ -228,39 +232,44 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             Symbol.BRACE_END,
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
-                val start = getCurrentTokenStartPosition()
+                val start2 = getCurrentTokenStartPosition()
                 val inv = readIsInverted()
-                val end = getPreviousTokenEndPosition()
-                WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
+                val end2 = getPreviousTokenEndPosition()
+                WithSpan(inv, if (inv) start2..end2 else SourceSpan.NULL)
             },
             keyParser = {
-                val start = getCurrentTokenStartPosition()
+                val start2 = getCurrentTokenStartPosition()
                 val key = readCommandString()
-                val end = getPreviousTokenEndPosition()
+                val end2 = getPreviousTokenEndPosition()
 
                 if (key == "property") {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start2..end2))
                     return@readDuplicatableMap NamespacedIdentifier("", "property")
                 }
 
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
+
                 return@readDuplicatableMap NamespacedIdentifier.parse(key)
                     ?: run {
-                        diagnostics.add(diagnostic(start..end, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)"))
+                        diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)"))
                         null
                     }
             },
             valueParser = { key, inv ->
                 if (key == NamespacedIdentifier("", "property")) {
-                    val start = getCurrentTokenStartPosition()
+                    val start2 = getCurrentTokenStartPosition()
                     val identifier = readNamespacedIdentifier()
-                    val end = getPreviousTokenEndPosition()
-                    properties.add(InvertibleValue(inv.value, identifier, start..end))
+                    val end2 = getPreviousTokenEndPosition()
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
+                    properties.add(InvertibleValue(inv.value, identifier, start2..end2))
                     return@readDuplicatableMap null
                 }
 
-                val start = getCurrentTokenStartPosition()
+                val start2 = getCurrentTokenStartPosition()
                 val flag = readBool()
-                val end = getPreviousTokenEndPosition()
-                InvertibleValue(inv.value, flag, start..end)
+                val end2 = getPreviousTokenEndPosition()
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start2..end2))
+                InvertibleValue(inv.value, flag, start2..end2)
             }
         )
 
@@ -278,19 +287,23 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun itemPredicateObject(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorArguments.HasItem? {
-        val startG = reader.getCurrentTokenStartPosition()
-
-        var item: WithSpan<ItemType>? = null
-        var location: WithSpan<EntityContainerSlotType>? = null
+        var item: ItemType? = null
+        var location: EntityContainerSlotType? = null
         var slot: InvertibleValue<IntRange>? = null
         var quantity: InvertibleValue<IntRange>? = null
-        var data: WithSpan<Int>? = null
+        var data: Int? = null
 
-        val map = reader.readTypedMap(
+        val startG = reader.getCurrentTokenStartPosition()
+
+        reader.readTypedMap(
             prefix = Symbol.BRACE_START,
             postfix = Symbol.BRACE_END,
             keyParser = {
-                readCommandString() // keyが不明 -> valueParserが不明 fatal
+                val start2 = getCurrentTokenStartPosition()
+                val s = readCommandString()
+                val end2 = getPreviousTokenEndPosition()
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start2..end2))
+                s
             },
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
@@ -298,6 +311,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 val inv = readIsInverted()
                 val end = getPreviousTokenEndPosition()
                 WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
+            },
+            fallbackValueParser = { key, _ ->
+                diagnostics.add(diagnostic(key.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: 不明なキーです: '${key.value}'"))
             },
             valueParsers = mapOf(
                 "item" to { inv ->
@@ -307,34 +323,32 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
                     val start2 = getCurrentTokenStartPosition()
                     val id = readNamespacedIdentifier()
-                    val type = ItemType.get(id)
-                    val end = getPreviousTokenEndPosition()
+                    val end2 = getPreviousTokenEndPosition()
 
-                    if (type == null) {
-                        diagnostics.add(diagnostic(start2..end, "セレクタ引数 'hasitem' の読み取りに失敗しました:  アイテムタイプ '$id' は存在しません"))
-                        item = WithSpan(ItemType.AIR, start2..end)
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
+
+                    item = ItemType.get(id) ?: run {
+                        diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'hasitem' の読み取りに失敗しました:  アイテムタイプ '$id' は存在しません"))
                         return@to
-                    }
-
-                    WithSpan(type, start2..end).apply {
-                        item = this
                     }
                 },
                 "slot" to { inv ->
                     val start = getCurrentTokenStartPosition()
                     val v = readIntRange()
                     val end = getPreviousTokenEndPosition()
-                    InvertibleValue(inv.value, v, start..end).apply {
-                        slot = this
-                    }
+
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
+                    slot = InvertibleValue(inv.value, v, start..end)
                 },
                 "quantity" to { inv ->
                     val start = getCurrentTokenStartPosition()
                     val v = readIntRange()
                     val end = getPreviousTokenEndPosition()
-                    InvertibleValue(inv.value, v, start..end).apply {
-                        quantity = this
-                    }
+
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
+                    quantity = InvertibleValue(inv.value, v, start..end)
                 },
                 "location" to { inv ->
                     if (inv.value) {
@@ -342,33 +356,33 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     }
 
                     val start2 = getCurrentTokenStartPosition()
-                    val locationStr = readCommandString()
-                    val slotType = EntityContainerSlotType.parse(locationStr)
+                    val string = readCommandString()
+                    val end2 = getPreviousTokenEndPosition()
+
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, start2..end2))
+
+                    location = EntityContainerSlotType.parse(string)
                         ?: run {
-                            val end = getPreviousTokenEndPosition()
-                            diagnostics.add(diagnostic(start2..end, "セレクタ引数 'hasitem' の読み取りに失敗しました:  location '$locationStr' は存在しません"))
+                            diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'hasitem' の読み取りに失敗しました:  location '$string' は存在しません"))
                             return@to
                         }
-
-                    val end = getPreviousTokenEndPosition()
-                    WithSpan(slotType, start2..end).apply {
-                        location = this
-                    }
                 },
                 "data" to { inv ->
                     if (inv.value) {
                         diagnostics.add(diagnostic(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は反転できません"))
                     }
 
-                    val start = getCurrentTokenStartPosition()
+                    val start2 = getCurrentTokenStartPosition()
                     val v = readInteger()
-                    val end = getPreviousTokenEndPosition()
-                    WithSpan(v, start..end).apply {
-                        data = this
-                    }
+                    val end2 = getPreviousTokenEndPosition()
+
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start2..end2))
+
+                    data = v
                 }
             )
         )
+
         val endG = reader.getPreviousTokenEndPosition()
 
         if (item == null) {
@@ -376,7 +390,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return null
         }
 
-        return SelectorArguments.HasItem(item!!, location, slot, quantity, data, startG..endG)
+        return SelectorArguments.HasItem(item, location, slot, quantity, data, startG..endG)
     }
 
     private fun hasItem(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
@@ -414,6 +428,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val l = reader.readInteger()
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.l != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'l' の読み取りに失敗しました: セレクタ引数 l は重複できません"))
             return
@@ -431,6 +447,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val start = reader.getCurrentTokenStartPosition()
         val lm = reader.readInteger()
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (arguments.lm != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'lm' の読み取りに失敗しました: セレクタ引数 lm は重複できません"))
@@ -501,6 +519,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val r = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.r != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'r' の読み取りに失敗しました: セレクタ引数 r は重複できません"))
             return
@@ -518,6 +538,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val start = reader.getCurrentTokenStartPosition()
         val rm = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (arguments.rm != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'rm' の読み取りに失敗しました: セレクタ引数 rm は重複できません"))
@@ -537,6 +559,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val rx = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.rx != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'rx' の読み取りに失敗しました: セレクタ引数 rx は重複できません"))
             return
@@ -554,6 +578,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val start = reader.getCurrentTokenStartPosition()
         val rxm = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (arguments.rxm != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'rxm' の読み取りに失敗しました: セレクタ引数 rxm は重複できません"))
@@ -591,6 +617,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val rym = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.rym != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'rym' の読み取りに失敗しました: セレクタ引数 rym は重複できません"))
             return
@@ -621,11 +649,17 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             val start2 = reader.getCurrentTokenStartPosition()
             val objective = reader.unfatalize(diagnostics) { readQuotableCommandString() }
             val end2 = reader.getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+
             reader.expect(Symbol.ASSIGN)
-            val start3 = reader.getCurrentTokenStartPosition()
             val inverted = reader.readIsInverted()
+
+            val start3 = reader.getCurrentTokenStartPosition()
             val range = reader.readIntRange()
             val end3 = reader.getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start3..end3))
 
             if (objective is TokenSeqReader.ReadResult.Successful) {
                 scores.add(
@@ -723,6 +757,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val x = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.x != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'x' の読み取りに失敗しました: セレクタ引数 x は重複できません"))
             return
@@ -736,6 +772,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val y = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
         if (arguments.y != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'y' の読み取りに失敗しました: セレクタ引数 y は重複できません"))
             return
@@ -748,6 +786,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val start = reader.getCurrentTokenStartPosition()
         val z = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (arguments.z != null) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'z' の読み取りに失敗しました: セレクタ引数 z は重複できません"))
