@@ -42,6 +42,8 @@ open class TokenSeqReader(
 
         val rem = getRemainingSourceSpan()
 
+        // tokens.find { it.sourceSpan.start.index >= rem.start.index && it `is` Symbol.NEWLINE }
+
         return tokens
             .filter {
                 it.sourceSpan.start.index >= rem.start.index &&
@@ -915,7 +917,7 @@ open class TokenSeqReader(
             }
         }
 
-        while (sourceCode[index] !in (KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators })) {
+        if (index < sourceCode.length) while (sourceCode[index] !in (KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators })) {
             index++
             if (index >= sourceCode.length) break
         }
@@ -969,7 +971,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readJsonValue(semanticTokens: MutableList<BclSemanticToken>): CommandJsonValue<*> {
+    fun readJsonValue(): CommandJsonValue<*> {
         val vStart = getCurrentTokenStartPosition()
         val t = peek()
         return when (t.type) {
@@ -978,15 +980,12 @@ open class TokenSeqReader(
                 val vEnd = getPreviousTokenEndPosition()
                 when (t.value) {
                     "true" -> {
-                        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, vStart..vEnd))
                         CommandJsonValue(true, vStart..vEnd)
                     }
                     "false" -> {
-                        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, vStart..vEnd))
                         CommandJsonValue(false, vStart..vEnd)
                     }
                     "null" -> {
-                        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.LITERAL, vStart..vEnd))
                         CommandJsonValue(null, vStart..vEnd)
                     }
                     else -> throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
@@ -995,27 +994,24 @@ open class TokenSeqReader(
             TokenType.INT -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, vStart..vEnd))
                 CommandJsonValue(t.value.toInt(), vStart..vEnd)
             }
             TokenType.FLOAT -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, vStart..vEnd))
                 CommandJsonValue(t.value.toFloat(), vStart..vEnd)
             }
             TokenType.DOUBLE_QUOTED -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, vStart..vEnd))
                 CommandJsonValue(t.value, vStart..vEnd)
             }
             TokenType.SYMBOL -> {
                 if (t `is` Symbol.BRACE_START) {
-                    readJsonObject(semanticTokens)
+                    readJsonObject()
                 }
                 else if (t `is` Symbol.ARRAY_START) {
-                    readJsonArray(semanticTokens)
+                    readJsonArray()
                 }
                 else {
                     next()
@@ -1036,7 +1032,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun readJsonArray(semanticTokens: MutableList<BclSemanticToken>): CommandJsonArray {
+    fun readJsonArray(): CommandJsonArray {
         val list = mutableListOf<CommandJsonValue<*>>()
 
         val start = getCurrentTokenStartPosition()
@@ -1050,7 +1046,7 @@ open class TokenSeqReader(
         }
 
         while (true) {
-            val element = readJsonValue(semanticTokens)
+            val element = readJsonValue()
 
             list.add(element)
 
@@ -1077,7 +1073,7 @@ open class TokenSeqReader(
         return CommandJsonArray(list, start..end)
     }
 
-    fun readJsonObject(semanticTokens: MutableList<BclSemanticToken>): CommandJsonObject {
+    fun readJsonObject(): CommandJsonObject {
         val entries = mutableListOf<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>()
 
         val start = getCurrentTokenStartPosition()
@@ -1094,10 +1090,9 @@ open class TokenSeqReader(
             val kStart = getCurrentTokenStartPosition()
             val key = readQuotedString()
             val kEnd = getPreviousTokenEndPosition()
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, kStart..kEnd))
             expect(Symbol.COLON)
 
-            val value = readJsonValue(semanticTokens)
+            val value = readJsonValue()
 
             entries.add(CommandJsonValue(key, kStart..kEnd) to value)
 

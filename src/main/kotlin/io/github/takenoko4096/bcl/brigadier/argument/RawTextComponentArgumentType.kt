@@ -8,7 +8,6 @@ import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.text.AbstractTextComponent
 import io.github.takenoko4096.bcl.brigadier.value.text.RawText
@@ -100,7 +99,27 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                 val objectives = it.getStrings("objective")
 
                 val selectors = names.mapNotNull { name ->
-                    val result = EntitySelector.parse(name.value, diagnostics, semanticTokens)
+                    val dummyDiagnostics = mutableListOf<BclDiagnostic>()
+                    val dummySemanticTokens = mutableListOf<BclSemanticToken>()
+                    val offset = name.sourceSpan.trimEdge().start
+                    val result = EntitySelector.parse(name.value, dummyDiagnostics, dummySemanticTokens)
+                    diagnostics.addAll(
+                        dummyDiagnostics.map { diag ->
+                            BclDiagnostic(
+                                diag.message,
+                                diag.sourceCode,
+                                (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset)
+                            )
+                        }
+                    )
+                    semanticTokens.addAll(
+                        dummySemanticTokens.map { semc ->
+                            BclSemanticToken(
+                                semc.type,
+                                (semc.sourceSpan.start + offset)..(semc.sourceSpan.end + offset)
+                            )
+                        }
+                    )
                     if (result is Argument) {
                         name to result.value
                     }
@@ -129,7 +148,10 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
             val selectors = obj.getStrings("selector")
 
             val selectorComponents = selectors.mapNotNull { string ->
-                when (val selectorParseResult = EntitySelector.parse(string.value, diagnostics, semanticTokens)) {
+                val dummyDiagnostics = mutableListOf<BclDiagnostic>()
+                val dummySemanticTokens = mutableListOf<BclSemanticToken>()
+                val offset = string.sourceSpan.trimEdge().start
+                val v = when (val selectorParseResult = EntitySelector.parse(string.value, dummyDiagnostics, dummySemanticTokens)) {
                     is Argument<EntitySelector> -> {
                         SelectorComponent(
                             WithSpan(selectorParseResult.value, string.sourceSpan),
@@ -146,6 +168,26 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                         null
                     }
                 }
+
+                diagnostics.addAll(
+                    dummyDiagnostics.map { diag ->
+                        BclDiagnostic(
+                            diag.message,
+                            diag.sourceCode,
+                            (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset)
+                        )
+                    }
+                )
+                semanticTokens.addAll(
+                    dummySemanticTokens.map { semc ->
+                        BclSemanticToken(
+                            semc.type,
+                            (semc.sourceSpan.start + offset)..(semc.sourceSpan.end + offset)
+                        )
+                    }
+                )
+
+                v
             }
 
             selectorComponents.firstOrNull()?.run {

@@ -95,7 +95,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
     }
 
     private fun getCurrentSourcePosition(): SourcePosition {
-        return SourcePosition(line, cursor - lastLineStartCursor, cursor)
+        return SourcePosition(
+            line,
+            (cursor - lastLineStartCursor),
+            cursor
+        )
     }
 
     private fun getSourcePositionAtBack(): SourcePosition {

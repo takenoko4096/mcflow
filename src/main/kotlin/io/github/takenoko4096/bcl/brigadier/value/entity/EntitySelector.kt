@@ -8,6 +8,8 @@ import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
@@ -30,7 +32,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             val tokens = tokenizer.tokenize()
             val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
             val selector = EntitySelectorArgumentType().parse(reader, diagnostics, semanticTokens)
-            if (!(reader.isOver())) {
+            if (!reader.isOver()) {
                 val span = reader.getRemainingSourceSpan()
                 throw reader.exception(span, "セレクターの読み取りに失敗しました: 不明なトークン列です: ${span.getStringFromSourceCode(string)}")
             }

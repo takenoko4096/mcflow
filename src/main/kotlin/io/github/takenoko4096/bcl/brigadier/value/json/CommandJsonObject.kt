@@ -12,14 +12,6 @@ class CommandJsonObject(
         return entries.any { it.first.value == key }
     }
 
-    fun getFirst(key: String): Pair<CommandJsonValue<String>, CommandJsonValue<*>>? {
-        return entries.find { it.first.value == key }
-    }
-
-    fun getLast(key: String): Pair<CommandJsonValue<String>, CommandJsonValue<*>>? {
-        return entries.findLast { it.first.value == key }
-    }
-
     fun <T : CommandJsonValue<*>> getWrappers(key: String, clazz: KClass<T>): List<T> {
         return entries.filter { it.first.value == key }.map { clazz.cast(it.second) }
     }

@@ -2,12 +2,26 @@ package io.github.takenoko4096.bcl.tokenizer
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import java.util.Objects
 
 data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     init {
         if (end.index < start.index) {
             throw IllegalArgumentException("end ($end) < start ($start)")
         }
+    }
+
+    fun trimEdge(): SourceSpan {
+        return SourcePosition(start.line, start.column + 1, start.index + 1)..SourcePosition(end.line, end.column - 1, end.index - 1)
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(start, end)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return if (other !is SourceSpan) false
+        else start == other.start && end == other.end
     }
 
     override fun toString(): String {

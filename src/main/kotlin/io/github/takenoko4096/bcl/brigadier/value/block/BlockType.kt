@@ -1477,5 +1477,9 @@ enum class BlockType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE,
 
     companion object {
         val properties: Set<BlockProperty<*>> = entries.flatMap { it.properties }.toSet()
+
+        fun get(identifier: NamespacedIdentifier): BlockType? {
+            return entries.find { it.identifier == identifier }
+        }
     }
 }

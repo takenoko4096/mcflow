@@ -35,6 +35,8 @@ sealed class CommandJsonSchema {
 
         var duplicatable: Boolean = false
 
+        val aliases = mutableSetOf<String>()
+
         private val schemas = mutableSetOf<CommandJsonSchema>()
 
         val string = StringSchema
@@ -76,7 +78,7 @@ sealed class CommandJsonSchema {
                 throw IllegalStateException("json スキーマのキー '$name' の値の制約が設定されていません")
             }
 
-            keys[name] = KeySchema(optional, nullable, duplicatable, schemas)
+            keys[name] = KeySchema(optional, nullable, duplicatable, aliases, schemas)
         }
 
         companion object {

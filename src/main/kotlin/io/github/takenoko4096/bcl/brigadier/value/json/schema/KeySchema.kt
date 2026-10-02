@@ -4,5 +4,6 @@ data class KeySchema(
     val isOptional: Boolean,
     val isNullable: Boolean,
     val duplicatable: Boolean,
+    val aliases: Set<String>,
     val schemas: Set<CommandJsonSchema>
 )

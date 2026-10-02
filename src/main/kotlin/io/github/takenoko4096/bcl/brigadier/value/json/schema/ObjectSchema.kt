@@ -14,18 +14,20 @@ class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
         var result = true
 
         for ((name, keySchema) in keys) {
-            if (name !in value && !keySchema.isOptional) {
+            val names = keySchema.aliases + name
+
+            if (names.none { it in value } && !keySchema.isOptional) {
                 diagnostics.add(BclDiagnostic("キー '$name' は必須です", sourceCode, value.sourceSpan))
                 result = false
             }
 
-            for ((key, child) in value.entries.filter { it.first.value == name }) {
+            for ((key, child) in value.entries.filter { it.first.value in names }) {
                 if (!keySchema.isNullable && child.value == null) {
-                    diagnostics.add(BclDiagnostic("キー '$name' は null を受け入れません", sourceCode, child.sourceSpan))
+                    diagnostics.add(BclDiagnostic("キー '${key.value}' は null を受け入れません", sourceCode, child.sourceSpan))
                     result = false
                 }
 
-                if (!keySchema.duplicatable && value.entries.count { it.first.value == key.value } > 1) {
+                if (!keySchema.duplicatable && value.entries.count { it.first.value in names } > 1) {
                     diagnostics.add(BclDiagnostic("キー '${key.value}' が重複しています", sourceCode, key.sourceSpan))
                     result = false
                 }

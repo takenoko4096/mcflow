@@ -8,28 +8,27 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class ItemNbtComponent(
     val identifier: NamespacedIdentifier,
-    val keySpan: SourceSpan,
     val rawValue: CommandJsonObject
 ) {
-    class CanPlaceOn(val blocks: List<BlockType>, keySpan: SourceSpan, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.CAN_PLACE_ON, keySpan, raw) {
+    class CanPlaceOn(val blocks: List<BlockType>, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.CAN_PLACE_ON, raw) {
         override fun toString(): String {
             return "{blocks: $blocks}"
         }
     }
 
-    class CanDestroy(val blocks: List<BlockType>, keySpan: SourceSpan, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.CAN_DESTROY, keySpan, raw) {
+    class CanDestroy(val blocks: List<BlockType>, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.CAN_DESTROY, raw) {
         override fun toString(): String {
             return "{blocks: $blocks}"
         }
     }
 
-    class ItemLock(val mode: ItemLockMode, keySpan: SourceSpan, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.ITEM_LOCK, keySpan, raw) {
+    class ItemLock(val mode: ItemLockMode, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.ITEM_LOCK, raw) {
         override fun toString(): String {
             return "{mode: $mode}"
         }
     }
 
-    class KeepOnDeath(keySpan: SourceSpan, raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.KEEP_ON_DEATH, keySpan, raw) {
+    class KeepOnDeath(raw: CommandJsonObject) : ItemNbtComponent(ItemNbtComponents.KEEP_ON_DEATH, raw) {
         override fun toString(): String {
             return "{}"
         }

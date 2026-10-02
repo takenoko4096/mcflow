@@ -70,11 +70,69 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         )
 
         if (potentials.isNotEmpty()) {
-            val bestRoutePotential = potentials.maxWith(
-                compareBy<RoutePotential> { it.state.reader.isOver() }
+            /*val bestRoutePotential = potentials.maxWith(
+                /*compareBy<RoutePotential> { it.state.reader.isOver() }
                     .thenBy { it.diagnostics.isEmpty() }
                     .thenBy { it.state.reader.cursor }
-                    .thenBy { it.state.literalCount }
+                    .thenBy { it.state.literalCount }*/
+                Comparator { a, b ->
+                    // まず診断なしを優先
+                    val diagnosticComparison =
+                        a.diagnostics.isEmpty().compareTo(b.diagnostics.isEmpty())
+
+                    if (diagnosticComparison != 0) {
+                        return@Comparator diagnosticComparison
+                    }
+
+                    if (a.diagnostics.isEmpty()) {
+                        // 診断なし同士：従来のルール
+                        compareValuesBy(
+                            a,
+                            b,
+                            { it.state.reader.isOver() },
+                            { it.state.reader.cursor },
+                            { it.state.literalCount }
+                        )
+                    } else {
+                        // 診断あり同士：cursor を最優先
+                        compareValuesBy(
+                            a,
+                            b,
+                            { it.state.reader.cursor },
+                            { it.state.reader.isOver() },
+                            { it.state.literalCount }
+                        )
+                    }
+                }
+            )*/
+            val bestRoutePotential = potentials.maxWith(
+                Comparator { a, b ->
+                    val aNoDiagnostics = a.diagnostics.isEmpty()
+                    val bNoDiagnostics = b.diagnostics.isEmpty()
+
+                    when {
+                        aNoDiagnostics != bNoDiagnostics ->
+                            aNoDiagnostics.compareTo(bNoDiagnostics)
+
+                        aNoDiagnostics ->
+                            compareValuesBy(
+                                a,
+                                b,
+                                { it.state.reader.isOver() },
+                                { it.state.reader.cursor },
+                                { it.state.literalCount }
+                            )
+
+                        else ->
+                            compareValuesBy(
+                                a,
+                                b,
+                                { it.furthestCursor },
+                                { it.state.reader.isOver() },
+                                { it.state.literalCount }
+                            )
+                    }
+                }
             )
 
             return if (bestRoutePotential.diagnostics.isEmpty()) {
@@ -118,6 +176,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 )
             }
             else {
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, bestRoutePotential.state.reader.peekSafely(-1).sourceSpan))
+
                 bestRoutePotential.state.reader.getRemainingSourceSpansSplitByLine().forEach {
                     semanticTokens.add(BclSemanticToken(
                         BclSemanticTokenType.ERROR,
@@ -514,9 +574,14 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                          * を判定するためだけに利用する。
                          */
                         potentials += childPotentials.map { potential ->
-                            potential.copy(
+                            /*potential.copy(
                                 state = unfatalState,
                                 diagnostics = unfatalErrors + potential.diagnostics
+                            )*/
+                            potential.copy(
+                                state = unfatalState,
+                                diagnostics = unfatalErrors + potential.diagnostics,
+                                furthestCursor = potential.furthestCursor
                             )
                         }
                     }

@@ -15,6 +15,8 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
         val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
         val end = reader.getPreviousTokenEndPosition()
 
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
+
         if (identifier !is TokenSeqReader.ReadResult.Successful) {
             return NoValuedArgument(this, start..end, diagnostics)
         }
@@ -25,9 +27,7 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
             }
         }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
-
-        diagnostics.add(reader.diagnostic(start..end, "不明なブロックタイプです: $identifier"))
+        diagnostics.add(reader.diagnostic(start..end, "不明なブロックタイプです: ${identifier.value}"))
         return NoValuedArgument(this, start..end, diagnostics)
     }
 }

@@ -8,104 +8,142 @@ import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>("item_nbt_components") {
+    val components = CommandJsonSchema.Builder.build {
+        property("minecraft:can_place_on") {
+            aliases.add("can_place_on")
+            optional = true
+            duplicatable = false
+
+            `object` {
+                property("blocks") {
+                    duplicatable = true
+                    array(string)
+                }
+            }
+        }
+
+        property("minecraft:can_destroy") {
+            aliases.add("can_destroy")
+            optional = true
+            duplicatable = false
+
+            `object` {
+                property("blocks") {
+                    duplicatable = true
+                    array(string)
+                }
+            }
+        }
+
+        property("minecraft:item_lock") {
+            aliases.add("item_lock")
+            optional = true
+            duplicatable = true
+
+            `object` {
+                property("mode") {
+                    duplicatable = true
+                    string()
+                }
+            }
+        }
+
+        property("minecraft:keep_on_death") {
+            aliases.add("keep_on_death")
+            optional = true
+            duplicatable = true
+            `object` {}
+        }
+    }
+
     override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
-        val keySpans = mutableMapOf<NamespacedIdentifier, SourceSpan>()
+        val result = components.validate(obj, reader.sourceCode, diagnostics)
 
-        if (obj.entries.isEmpty()) {
-            throw reader.exception(obj.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 空のNBTコンポーネントは無効です")
+        if (!result) {
+            return ItemNbtComponents(emptyMap())
         }
 
-        // TODO
-        val components = obj.entries
-            .reversed()
-            .distinctBy { it.first.value }
-            .associate { (key, value) ->
-                val identifier = NamespacedIdentifier.parse(key.value)
-                    ?: throw reader.exception(key.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: キーが識別子として不正です")
-                keySpans[identifier] = key.sourceSpan
-                identifier to value
-            }
-            .mapValues { (key, value) ->
-                if (value !is CommandJsonObject) {
-                    throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: コンポーネントには常にオブジェクトを渡す必要があります")
-                }
+        val map = mutableMapOf<NamespacedIdentifier, ItemNbtComponent>()
 
-                when (key) {
-                    ItemNbtComponents.CAN_PLACE_ON -> {
-                        val blockTypes = getBlockTypes(reader, key, value)
-                        ItemNbtComponent.CanPlaceOn(blockTypes, keySpans[key]!!, value)
-                    }
-                    ItemNbtComponents.CAN_DESTROY -> {
-                        val blockTypes = getBlockTypes(reader, key, value)
-                        ItemNbtComponent.CanPlaceOn(blockTypes, keySpans[key]!!, value)
-                    }
-                    ItemNbtComponents.ITEM_LOCK -> {
-                        val itemLockMode = getMode(reader, key, value)
-                        ItemNbtComponent.ItemLock(itemLockMode, keySpans[key]!!, value)
-                    }
-                    ItemNbtComponents.KEEP_ON_DEATH -> {
-                        if (value.entries.isNotEmpty()) {
-                            throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$key' の読み取りに失敗しました: オブジェクトは空である必要があります")
+        val canPlaceOnObjects = obj.getWrappers("minecraft:can_place_on", CommandJsonObject::class) + obj.getWrappers("can_place_on", CommandJsonObject::class)
+        getBlockTypes(reader, diagnostics, semanticTokens, canPlaceOnObjects)?.run {
+            map[ItemNbtComponents.CAN_PLACE_ON] = ItemNbtComponent.CanPlaceOn(second, first)
+        }
+
+        val canDestroyObjects = obj.getWrappers("minecraft:can_destroy", CommandJsonObject::class) + obj.getWrappers("can_destroy", CommandJsonObject::class)
+        getBlockTypes(reader, diagnostics, semanticTokens, canDestroyObjects)?.run {
+            map[ItemNbtComponents.CAN_DESTROY] = ItemNbtComponent.CanDestroy(second, first)
+        }
+
+        val itemLockObjects = obj.getWrappers("minecraft:item_lock", CommandJsonObject::class) + obj.getWrappers("item_lock", CommandJsonObject::class)
+        getItemLockMode(reader, diagnostics, semanticTokens, itemLockObjects)?.run {
+            map[ItemNbtComponents.ITEM_LOCK] = ItemNbtComponent.ItemLock(second, first)
+        }
+
+        val keepOnDeathObjects = obj.getWrappers("minecraft:keep_on_death", CommandJsonObject::class) + obj.getWrappers("keep_on_death", CommandJsonObject::class)
+        keepOnDeathObjects.firstOrNull()?.run {
+            map[ItemNbtComponents.KEEP_ON_DEATH] = ItemNbtComponent.KeepOnDeath(this)
+        }
+
+        return ItemNbtComponents(map)
+    }
+
+    private fun getBlockTypes(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, List<BlockType>>? {
+        return objects
+            .mapNotNull {
+                val blockTypes = it.getWrappers("blocks", CommandJsonArray::class)
+                    .map { blocks ->
+                        blocks.list.mapNotNull { element ->
+                            val string = element.value as String
+
+                            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, element.sourceSpan))
+
+                            val id = NamespacedIdentifier.parse(string) ?: run {
+                                diagnostics.add(reader.diagnostic(element.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 識別子として無効な値です: '$string'"))
+                                return@mapNotNull null
+                            }
+
+                            BlockType.get(id) ?: run {
+                                diagnostics.add(reader.diagnostic(element.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 不明なブロックタイプです: '$string'"))
+                                return@mapNotNull null
+                            }
                         }
+                    }
+                    .firstOrNull()
 
-                        ItemNbtComponent.KeepOnDeath(keySpans[key]!!, value)
-                    }
-                    else -> {
-                        throw reader.exception(keySpans[key]!!, "アイテムNBTコンポーネントの読み取りに失敗しました: 不明なコンポーネント名です: $key")
-                    }
+                if (blockTypes == null) {
+                    null
+                }
+                else {
+                    it to blockTypes
                 }
             }
-
-        return ItemNbtComponents(components)
+            .firstOrNull()
     }
 
-    private fun getBlockTypes(reader: TokenSeqReader, name: NamespacedIdentifier, value: CommandJsonObject): List<BlockType> {
-        for ((key, _) in value.entries) {
-            if (key.value != "blocks") {
-                throw reader.exception(key.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 不明なキーです: '${key.value}'")
+    private fun getItemLockMode(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, ItemLockMode>? {
+        return objects
+            .firstNotNullOfOrNull {
+                val mode = it.getStrings("mode").firstNotNullOfOrNull { string ->
+                    val mode = ItemLockMode.entries.find { entry -> entry.getString() == string.value }
+
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, string.sourceSpan))
+
+                    if (mode == null) {
+                        diagnostics.add(reader.diagnostic(string.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 無効なアイテムロックモードです: '${string.value}'"))
+                        return@firstNotNullOfOrNull null
+                    }
+
+                    return@firstNotNullOfOrNull mode
+                }
+
+                if (mode == null) null else it to mode
             }
-        }
-
-        val (_, blocks) = value.getFirst("blocks")
-            ?: throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: キー 'blocks' が見つかりません")
-
-        if (blocks !is CommandJsonArray) {
-            throw reader.exception(blocks.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 'blocks' の値は配列である必要があります")
-        }
-
-        return blocks.value.map {
-            if (it.value !is String) {
-                throw reader.exception(blocks.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 'blocks' の要素は文字列である必要があります")
-            }
-
-            val identifier = NamespacedIdentifier.parse(it.value)
-                ?: throw reader.exception(it.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: '${it.value}' は識別子として不正です")
-
-            BlockType.entries.find { blockType -> blockType.identifier == identifier }
-                ?: throw reader.exception(it.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: ブロックタイプ '$identifier' が見つかりません")
-        }
-    }
-
-    private fun getMode(reader: TokenSeqReader, name: NamespacedIdentifier, value: CommandJsonObject): ItemLockMode {
-        for ((key, _) in value.entries) {
-            if (key.value != "mode") {
-                throw reader.exception(key.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 不明なキーです: '${key.value}'")
-            }
-        }
-
-        val (_, mode) = value.getFirst("mode")
-            ?: throw reader.exception(value.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: キー 'mode' が見つかりません")
-
-        if (mode.value !is String) {
-            throw reader.exception(mode.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: 'mode' は文字列である必要があります")
-        }
-
-        return ItemLockMode.entries.find { it.getString() == mode.value }
-            ?: throw reader.exception(mode.sourceSpan, "アイテムNBTコンポーネント '$name' の読み取りに失敗しました: モード '${mode.value}' は存在しません")
     }
 }

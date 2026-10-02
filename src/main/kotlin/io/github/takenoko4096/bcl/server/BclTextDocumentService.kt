@@ -95,6 +95,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             .filterIsInstance<CommandLineParseResult>()
             .flatMap { it.semanticTokens }
             .sortedBy { it.sourceSpan.start.index }
+            .toList()
 
         val data = mutableListOf<Int>()
 
