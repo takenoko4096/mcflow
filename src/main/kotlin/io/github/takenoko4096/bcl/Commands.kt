@@ -1980,6 +1980,36 @@ object Commands {
         }
     }
 
+    val TESTFOR = Command.builder("testfor") {
+        "victim"(EntitySelectorArgumentType()) {
+            executes()
+        }
+    }
+
+    val TESTFORBLOCK = Command.builder("testforblock") {
+        "position"(PositionArgumentType()) {
+            "block_state"(BlockStateArgumentType.blockState()) {
+                executes()
+            }
+        }
+    }
+
+    val TESTFORBLOCKS = Command.builder("testforblocks") {
+        "begin"(PositionArgumentType()) {
+            "end"(PositionArgumentType()) {
+                "destination"(PositionArgumentType()) {
+                    "scan_mode"(EnumArgumentType.of<ScanMode>()) {
+                        executes()
+                    }
+
+                    executes()
+                }
+            }
+        }
+    }
+
+    // TODO: tickingarea, time, title, titleraw, toggledownfall, weather, xp
+
     fun getAllVanillaCommandBuilders() = listOf(
         AIMASSIST,
         CAMERA,
@@ -2040,6 +2070,9 @@ object Commands {
         SUMMON,
         TELEPORT,
         TELL,
-        TELLRAW
+        TELLRAW,
+        TESTFOR,
+        TESTFORBLOCK,
+        TESTFORBLOCKS
     )
 }
