@@ -29,6 +29,35 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         return if (start == end) start.toString() else "$start to $end"
     }
 
+    operator fun contains(other: SourceSpan): Boolean {
+        val range = start.index..end.index
+        return other.start.index in range && other.end.index in range
+    }
+
+    fun exclude(exclusions: List<SourceSpan>): List<SourceSpan> {
+        var remaining = listOf(this)
+
+        for (exclusion in exclusions) {
+            remaining = remaining.flatMap { span ->
+                if (exclusion.end.index < span.start.index || span.end.index < exclusion.start.index) {
+                    listOf(span)
+                }
+                else {
+                    buildList {
+                        if (span.start.index < exclusion.start.index) {
+                            add(SourceSpan(span.start, exclusion.start - SourcePosition.ONE_COLUMN))
+                        }
+                        if (exclusion.end.index < span.end.index) {
+                            add(SourceSpan(exclusion.end + SourcePosition.ONE_COLUMN, span.end))
+                        }
+                    }
+                }
+            }
+        }
+
+        return remaining
+    }
+
     fun toLsp4jRange(): Range? {
         val startPosition = start.toLsp4jPosition()
         val endPositionInclusive = end.toLsp4jPosition()

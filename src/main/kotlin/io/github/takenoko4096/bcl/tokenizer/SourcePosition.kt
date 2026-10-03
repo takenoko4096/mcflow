@@ -12,6 +12,10 @@ data class SourcePosition(val line: Int, val column: Int, val index: Int) {
         return SourcePosition(line + other.line - 1, column + other.column, index + other.index)
     }
 
+    operator fun minus(other: SourcePosition): SourcePosition {
+        return SourcePosition(line - other.line - 1, column - other.column, index - other.index)
+    }
+
     override fun hashCode(): Int {
         return index
     }
@@ -33,5 +37,7 @@ data class SourcePosition(val line: Int, val column: Int, val index: Int) {
 
     companion object {
         val NULL = SourcePosition(0, 0, -1)
+
+        val ONE_COLUMN = SourcePosition(1, 1, 1)
     }
 }

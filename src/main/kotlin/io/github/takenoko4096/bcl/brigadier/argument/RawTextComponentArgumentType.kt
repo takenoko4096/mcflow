@@ -72,19 +72,21 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
     }
 
     override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): RawText {
-        root.validate(obj, reader.sourceCode, diagnostics)
+        if (!root.validate(obj, reader.sourceCode, diagnostics)) {
+            return RawText(emptyList(), obj)
+        }
 
         val rawtexts = obj.getWrappers("rawtext", CommandJsonArray::class)
             .map { array ->
-                array to array.list.map { element ->
+                array.list.map { element ->
                     element as CommandJsonObject
                     toComponent(reader, diagnostics, semanticTokens, element)
                 }
             }
 
-        val (array, components) = rawtexts.first()
+        val components = rawtexts.first()
 
-        return RawText(components, obj, array)
+        return RawText(components, obj)
     }
 
     private fun toComponent(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): AbstractTextComponent {
@@ -159,12 +161,6 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                         )
                     }
                     is NoValuedArgument<EntitySelector> -> {
-                        diagnostics.add(
-                            reader.diagnostic(
-                                string.sourceSpan,
-                                "rawtext の解釈に失敗しました: selector の解析に失敗しました: ${selectorParseResult.diagnostics.joinToString { it.message }}"
-                            )
-                        )
                         null
                     }
                 }
@@ -219,7 +215,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                     }
                 }
 
-                withs.filterIsInstance<CommandJsonObject>().forEach {
+                val withRawTexts = withs.filterIsInstance<CommandJsonObject>().map {
                     interpret(reader, diagnostics, semanticTokens, it)
                 }
 
@@ -235,11 +231,17 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                     is CommandJsonObject -> {
                         TranslateComponent(
                             WithSpan(translate.value, translate.sourceSpan),
-                            interpret(reader, diagnostics, semanticTokens, with),
+                            withRawTexts.first(),
                             obj
                         )
                     }
-                    else -> throw IllegalStateException("NEVER HAPPENS")
+                    else -> {
+                        TranslateComponent(
+                            WithSpan(translate.value, translate.sourceSpan),
+                            null,
+                            obj
+                        )
+                    }
                 }
             }
             else {

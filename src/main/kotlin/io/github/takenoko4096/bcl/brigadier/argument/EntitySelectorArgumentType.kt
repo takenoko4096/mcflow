@@ -801,7 +801,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val start = reader.getCurrentTokenStartPosition()
         reader.readQuotableCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, start..end))
     }
 
     private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorType {

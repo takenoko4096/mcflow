@@ -3,9 +3,12 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.parser.BclParseException
+import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
@@ -30,14 +33,32 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
         fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
             val tokenizer = BclTokenizer(string, interpretComments = false)
             val tokens = tokenizer.tokenize()
+
             val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
-            val selector = EntitySelectorArgumentType().parse(reader, diagnostics, semanticTokens)
-            if (!reader.isOver()) {
+            val type = EntitySelectorArgumentType()
+
+            val start = reader.getCurrentTokenStartPosition()
+
+            val selector = try {
+                type.parse(reader, diagnostics, semanticTokens)
+            }
+            catch (error: BclTokenSeqReadException) {
+                diagnostics.add(reader.diagnostic(error.sourceSpan, error.description))
                 val span = reader.getRemainingSourceSpan()
-                throw reader.exception(span, "セレクターの読み取りに失敗しました: 不明なトークン列です: ${span.getStringFromSourceCode(string)}")
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.peekSafely(-1).sourceSpan))
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, span))
+                null
             }
 
-            return selector
+            val end = reader.getPreviousTokenEndPosition()
+
+            if (!reader.isOver() && selector != null) {
+                // 解析成功、 but 余計なのがあったとき
+                diagnostics.add(reader.diagnostic(reader.getRemainingSourceSpan(), "セレクターの終了後に無効な文字列があります"))
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.getRemainingSourceSpan()))
+            }
+
+            return selector ?: NoValuedArgument(type, start..end, diagnostics)
         }
     }
 }
