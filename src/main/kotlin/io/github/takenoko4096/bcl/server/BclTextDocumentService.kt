@@ -85,8 +85,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     }
 
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
-        System.err.println("semanticTokensFull")
-
         val semanticTokens = SemanticTokens()
 
         val block = documents[params.textDocument.uri]!!

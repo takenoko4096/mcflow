@@ -1739,24 +1739,26 @@ object Commands {
         }
 
         "save" {
-            "from"(PositionArgumentType()) {
-                "to"(PositionArgumentType()) {
-                    executes()
-
-                    "include_entities"(BooleanArgumentType()) {
+            "name"(IdentifierArgumentType.unstrict("structure_id", "mystructure")) {
+                "from"(PositionArgumentType()) {
+                    "to"(PositionArgumentType()) {
                         executes()
+
+                        "include_entities"(BooleanArgumentType()) {
+                            executes()
+
+                            "save_mode"(EnumArgumentType.of<StructureSaveMode>()) {
+                                executes()
+
+                                "include_blocks"(BooleanArgumentType()) {
+                                    executes()
+                                }
+                            }
+                        }
 
                         "save_mode"(EnumArgumentType.of<StructureSaveMode>()) {
                             executes()
-
-                            "include_blocks"(BooleanArgumentType()) {
-                                executes()
-                            }
                         }
-                    }
-
-                    "save_mode"(EnumArgumentType.of<StructureSaveMode>()) {
-                        executes()
                     }
                 }
             }

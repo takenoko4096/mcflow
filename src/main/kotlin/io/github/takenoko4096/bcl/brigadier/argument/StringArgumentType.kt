@@ -35,6 +35,7 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
 
         val end = reader.getPreviousTokenEndPosition()
 
+        // TODO isMultiLines() -> splitByLine().forEach {}
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
 
         return Argument(this, string, start..end)
