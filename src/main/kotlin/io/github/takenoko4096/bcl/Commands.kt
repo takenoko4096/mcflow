@@ -11,7 +11,6 @@ import io.github.takenoko4096.bcl.brigadier.value.item.ItemReplaceMode
 import io.github.takenoko4096.bcl.brigadier.value.location.Biome
 import io.github.takenoko4096.bcl.brigadier.value.misc.*
 
-// gametest, script は一旦飛ばしてる
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
         description = "エイムアシストを有効にします。"
@@ -785,6 +784,74 @@ object Commands {
             "value"(EnumArgumentType.of<PlayerWaypointsValues>()) {
                 executes()
             }
+        }
+    }
+
+    val GAMETEST = Command.builder("gametest") {
+        "clearall" {
+            executes()
+        }
+
+        "create" {
+            "test_name"(StringArgumentType.isolated()) {
+                executes()
+
+                "width"(IntegerArgumentType.integer()) {
+                    executes()
+
+                    "height"(IntegerArgumentType.integer()) {
+                        executes()
+
+                        "depth"(IntegerArgumentType.integer()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "pos" {
+            executes()
+        }
+
+        "run" {
+            "test_name"(StringArgumentType.isolated()) {
+                "stop_on_failure"(BooleanArgumentType()) {
+                    "repeat_count"(IntegerArgumentType.positive()) {
+                        executes()
+
+                        "rotation_steps"(IntegerArgumentType.integer()) {
+                            executes()
+                        }
+                    }
+                }
+
+                "rotation_steps"(IntegerArgumentType.integer()) {
+                    executes()
+                }
+
+                executes()
+            }
+        }
+
+        inline("runset", "runsetuntilfail") {
+            executes()
+
+            "tag"(StringArgumentType.isolated()) {
+                executes()
+
+                "rotation_steps"(IntegerArgumentType.integer()) {
+                    executes()
+                }
+            }
+        }
+
+        inline("runthese", "runthis") {
+            executes()
+        }
+
+        "stopall" {
+            executes()
         }
     }
 
@@ -1581,6 +1648,44 @@ object Commands {
         }
     }
 
+    val SCRIPT = Command.builder("script") {
+        "debugger" {
+            "close" {
+                executes()
+            }
+
+            "connect" {
+                executes()
+
+                "host"(StringArgumentType.isolated()) {
+                    executes()
+
+                    "port"(IntegerArgumentType.integer()) {
+                        executes()
+                    }
+                }
+            }
+
+            "listen" {
+                "port"(IntegerArgumentType.integer()) {
+                    executes()
+                }
+            }
+        }
+
+        "diagnostics" {
+            inline("startcapture", "stopcapture") {
+                executes()
+            }
+        }
+
+        "profiler" {
+            inline("start", "stop") {
+                executes()
+            }
+        }
+    }
+
     val SCRIPTEVENT = Command.builder("scriptevent") {
         "id"(IdentifierArgumentType.namespaced("script_event_id")) {
             executes {
@@ -2008,8 +2113,170 @@ object Commands {
         }
     }
 
-    // TODO: tickingarea, time, title, titleraw, toggledownfall, weather, xp
+    val TICKINGAREA = Command.builder("tickingarea") {
+        "add" {
+            "from"(PositionArgumentType()) {
+                "to"(PositionArgumentType()) {
+                    executes()
 
+                    "name"(StringArgumentType.isolated()) {
+                        executes()
+
+                        "preload"(BooleanArgumentType()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+
+        "list" {
+            "all-dimensions" {
+                executes()
+            }
+
+            executes()
+        }
+
+        "preload" {
+            "name"(StringArgumentType.isolated()) {
+                executes()
+
+                "preload"(BooleanArgumentType()) {
+                    executes()
+                }
+            }
+
+            "position"(PositionArgumentType()) {
+                executes()
+
+                "preload"(BooleanArgumentType()) {
+                    executes()
+                }
+
+            }
+        }
+
+        "remove" {
+            "name"(StringArgumentType.isolated()) {
+                executes()
+            }
+
+            "position"(PositionArgumentType()) {
+                executes()
+            }
+        }
+
+        "remove_all" {
+            executes()
+        }
+    }
+
+    val TIME = Command.builder("time") {
+        "add" {
+            "amount"(IntegerArgumentType.integer()) {
+                executes()
+            }
+        }
+
+        "query" {
+            "time_query"(EnumArgumentType.of<TimeQuery>()) {
+                executes()
+            }
+        }
+
+        "set" {
+            "amount"(IntegerArgumentType.integer()) {
+                executes()
+            }
+
+            "time_spec"(EnumArgumentType.of<TimeSpec>()) {
+                executes()
+            }
+        }
+    }
+
+    val TITLE = Command.builder("title") {
+        "players"(EntitySelectorArgumentType.players()) {
+            "title_location"(EnumArgumentType.of<TitleLocation>()) {
+                "title_text"(StringArgumentType.greedy()) {
+                    executes()
+                }
+            }
+
+            "clear" {
+                executes()
+            }
+
+            "reset" {
+                executes()
+            }
+
+            "times" {
+                "fade_in"(IntegerArgumentType.nonnegative()) {
+                    "stay"(IntegerArgumentType.nonnegative()) {
+                        "fade_out"(IntegerArgumentType.nonnegative()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val TITLERAW = Command.builder("titleraw") {
+        "players"(EntitySelectorArgumentType.players()) {
+            "title_location"(EnumArgumentType.of<TitleLocation>()) {
+                "raw_json_title_text"(RawTextComponentArgumentType()) {
+                    executes()
+                }
+            }
+
+            "clear" {
+                executes()
+            }
+
+            "reset" {
+                executes()
+            }
+
+            "times" {
+                "fade_in"(IntegerArgumentType.nonnegative()) {
+                    "stay"(IntegerArgumentType.nonnegative()) {
+                        "fade_out"(IntegerArgumentType.nonnegative()) {
+                            executes()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val TOGGLEDOWNFALL = Command.builder("toggledownfall") {
+        executes()
+    }
+
+    val WEATHER = Command.builder("weather") {
+        "weather_type"(EnumArgumentType.of<WeatherType>()) {
+            executes()
+
+            "duration"(IntegerArgumentType.nonnegative()) {
+                executes()
+            }
+        }
+    }
+
+    val XP = Command.builder("xp") {
+        "amount"(ExperienceAmountArgumentType()) {
+            executes()
+
+            "players"(EntitySelectorArgumentType.players()) {
+                executes()
+            }
+        }
+    }
+
+    // TODO: requires { ... }, CommandPermissionLevel, Education, BDS
     fun getAllVanillaCommandBuilders() = listOf(
         AIMASSIST,
         CAMERA,
@@ -2033,6 +2300,7 @@ object Commands {
         FUNCTION,
         GAMEMODE,
         GAMERULE,
+        GAMETEST,
         GAMETIPS,
         GIVE,
         HELP,
@@ -2059,6 +2327,7 @@ object Commands {
         SAY,
         SCHEDULE,
         SCOREBOARD,
+        SCRIPT,
         SCRIPTEVENT,
         SETBLOCK,
         SETMAXPLAYERS,
@@ -2073,6 +2342,12 @@ object Commands {
         TELLRAW,
         TESTFOR,
         TESTFORBLOCK,
-        TESTFORBLOCKS
+        TESTFORBLOCKS,
+        TICKINGAREA,
+        TITLE,
+        TITLERAW,
+        TOGGLEDOWNFALL,
+        WEATHER,
+        XP
     )
 }

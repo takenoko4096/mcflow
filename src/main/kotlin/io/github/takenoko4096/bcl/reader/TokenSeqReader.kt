@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
+import io.github.takenoko4096.bcl.brigadier.value.entity.ExperienceAmount
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
@@ -37,7 +38,7 @@ open class TokenSeqReader(
         return getCurrentTokenStartPosition()..tokens.last().sourceSpan.end
     }
 
-    fun getRemainingSourceSpansSplitByLine(): List<SourceSpan> {
+    fun getSourceSpansOfRemainingLines(): List<SourceSpan> {
         if (isOver()) return emptyList()
 
         val rem = getRemainingSourceSpan()
@@ -367,9 +368,15 @@ open class TokenSeqReader(
         val u = peek()
 
         val v = when (u.type) {
-            TokenType.TIME_D -> TimeDuration(u.value.toInt(), TimeUnit.DAY)
-            TokenType.TIME_S -> TimeDuration(u.value.toInt(), TimeUnit.SECOND)
-            TokenType.TIME_T, TokenType.INT -> TimeDuration(u.value.toInt(), TimeUnit.TICK)
+            TokenType.TIME_D -> {
+                TimeDuration(u.value.toInt(), TimeUnit.DAY)
+            }
+            TokenType.TIME_S -> {
+                TimeDuration(u.value.toInt(), TimeUnit.SECOND)
+            }
+            TokenType.TIME_T, TokenType.INT -> {
+                TimeDuration(u.value.toInt(), TimeUnit.TICK)
+            }
             TokenType.INVALID -> {
                 next()
                 val end = getPreviousTokenEndPosition()
@@ -379,6 +386,35 @@ open class TokenSeqReader(
                 next()
                 val end = getPreviousTokenEndPosition()
                 throw exception(start..end, "時間の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+            }
+        }
+
+        next()
+
+        return v
+    }
+
+    fun readExperienceAmount(): ExperienceAmount {
+        if (isOver()) {
+            throw exception(getOverNextSourceSpan(), "経験値量が期待されましたが、入力が不足しています")
+        }
+
+        val start = getCurrentTokenStartPosition()
+
+        val u = peek()
+
+        val v = when (u.type) {
+            TokenType.LEVEL -> ExperienceAmount(u.value.toInt(), true)
+            TokenType.INT -> ExperienceAmount(u.value.toInt(), false)
+            TokenType.INVALID -> {
+                next()
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "経験値量の読み取りに失敗しました: 無効なトークンです: ${u.value}")
+            }
+            else -> {
+                next()
+                val end = getPreviousTokenEndPosition()
+                throw exception(start..end, "経験値量の読み取りに失敗しました: 不明なトークンです: '${u.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
         }
 

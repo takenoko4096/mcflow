@@ -10,35 +10,45 @@ import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<String> {
-        val start = reader.getCurrentTokenStartPosition()
-
-        val string = when (mode) {
-            Mode.QUOTED -> reader.readQuotedString()
+        return when (mode) {
+            Mode.QUOTED -> {
+                val start = reader.getCurrentTokenStartPosition()
+                val string = reader.readQuotedString()
+                val end = reader.getPreviousTokenEndPosition()
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
+                Argument(this, string, start..end)
+            }
             Mode.QUOTABLE -> {
                 val result = reader.unfatalize(diagnostics) { readQuotableCommandString() }
-                if (result !is TokenSeqReader.ReadResult.Successful) {
-                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
-                    return NoValuedArgument(this, result.sourceSpan, diagnostics)
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+                if (result is TokenSeqReader.ReadResult.Successful) {
+                    Argument(this, result.value, result.sourceSpan)
                 }
-                result.value
+                else {
+                    NoValuedArgument(this, result.sourceSpan, diagnostics)
+                }
             }
             Mode.WORD -> {
                 val result = reader.unfatalize(diagnostics) { readCommandString() }
-                if (result !is TokenSeqReader.ReadResult.Successful) {
-                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
-                    return NoValuedArgument(this, result.sourceSpan, diagnostics)
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+                if (result is TokenSeqReader.ReadResult.Successful) {
+                    Argument(this, result.value, result.sourceSpan)
                 }
-                result.value
+                else {
+                    NoValuedArgument(this, result.sourceSpan, diagnostics)
+                }
             }
-            Mode.GREEDY -> reader.readAllRemainingAsString()
+            Mode.GREEDY -> {
+                val sourceSpans = reader.getSourceSpansOfRemainingLines()
+                val start = reader.getCurrentTokenStartPosition()
+                val string = reader.readAllRemainingAsString()
+                val end = reader.getPreviousTokenEndPosition()
+                sourceSpans.forEach {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING,  it))
+                }
+                Argument(this, string, start..end)
+            }
         }
-
-        val end = reader.getPreviousTokenEndPosition()
-
-        // TODO isMultiLines() -> splitByLine().forEach {}
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
-
-        return Argument(this, string, start..end)
     }
 
     enum class Mode {

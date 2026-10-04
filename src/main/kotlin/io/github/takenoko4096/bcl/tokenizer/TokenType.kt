@@ -26,6 +26,7 @@ enum class TokenType {
     TIME_D,
     TIME_S,
     TIME_T,
+    LEVEL,
 
     INVALID;
 

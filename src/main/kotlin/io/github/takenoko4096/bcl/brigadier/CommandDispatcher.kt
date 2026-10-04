@@ -123,6 +123,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         diagnostics + BclDiagnostic(
                             error.message ?: error::class.java.name,
                             reader.sourceCode,
+                            // TODO linebreak 対策
                             bestRoutePotential.state.reader.getEntireSourceSpan()
                         ),
                         start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
@@ -143,7 +144,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             else {
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, bestRoutePotential.state.reader.peekSafely(-1).sourceSpan))
 
-                bestRoutePotential.state.reader.getRemainingSourceSpansSplitByLine().forEach {
+                bestRoutePotential.state.reader.getSourceSpansOfRemainingLines().forEach {
                     semanticTokens.add(BclSemanticToken(
                         BclSemanticTokenType.ERROR,
                         it
