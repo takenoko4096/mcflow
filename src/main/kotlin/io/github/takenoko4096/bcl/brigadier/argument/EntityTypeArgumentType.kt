@@ -23,19 +23,17 @@ class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType
 
         identifier as TokenSeqReader.ReadResult.Successful
 
-        for (entry in EntityType.entries) {
-            if (identifier.value == entry.identifier) {
-                if (summonableOnly && !entry.summonable) {
-                    diagnostics.add(reader.diagnostic(start..end, "召喚不可能なエンティティタイプです: $identifier"))
-                    return NoValuedArgument(this, start..end, diagnostics)
-                }
-
-                return Argument(this, entry, start..end)
-            }
+        val entityType = EntityType.get(identifier.value) ?: run {
+            diagnostics.add(reader.diagnostic(start..end, "不明なエンティティタイプです: ${identifier.value}"))
+            return NoValuedArgument(this, start..end, diagnostics)
         }
 
-        diagnostics.add(reader.diagnostic(start..end, "不明なエンティティタイプです: $identifier"))
-        return NoValuedArgument(this, start..end, diagnostics)
+        if (summonableOnly && !entityType.summonable) {
+            diagnostics.add(reader.diagnostic(start..end, "召喚不可能なエンティティタイプです: ${identifier.value}"))
+            return NoValuedArgument(this, start..end, diagnostics)
+        }
+
+        return Argument(this, entityType, start..end)
     }
 
     companion object {

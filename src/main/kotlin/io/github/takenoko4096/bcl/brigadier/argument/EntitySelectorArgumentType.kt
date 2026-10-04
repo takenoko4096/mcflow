@@ -829,7 +829,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return SelectorType.PLAYER
         }
 
-        diagnostics.add(reader.diagnostic(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです: '$string'"))
+        if ('@' in string) {
+            diagnostics.add(reader.diagnostic(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです: '$string'"))
+        }
 
         return SelectorType.PLAYER // これでいいんかなあ
     }
