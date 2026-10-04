@@ -1,7 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
 import org.eclipse.lsp4j.Position
-import java.util.Objects
 
 data class SourcePosition(val line: Int, val column: Int, val index: Int) {
     operator fun rangeTo(end: SourcePosition): SourceSpan {
@@ -38,6 +37,6 @@ data class SourcePosition(val line: Int, val column: Int, val index: Int) {
     companion object {
         val NULL = SourcePosition(0, 0, -1)
 
-        val ONE_COLUMN = SourcePosition(1, 1, 1)
+        val OFFSET_NEXT_COLUMN = SourcePosition(1, 1, 1)
     }
 }

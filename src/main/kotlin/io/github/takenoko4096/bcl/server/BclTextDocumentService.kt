@@ -2,11 +2,13 @@ package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
+import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
@@ -14,7 +16,9 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import java.util.concurrent.CompletableFuture
 
 class BclTextDocumentService(private val server: BedrockCommandLanguageServer) : TextDocumentService {
-    private val documents = mutableMapOf<String, Block>()
+    private val documents = mutableMapOf<String, String>()
+
+    private val blocks = mutableMapOf<String, Block>()
 
     private val client: LanguageClient
         get() = server.client
@@ -24,7 +28,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val tokens = tokenizer.tokenize()
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
         val block = parser.parse()
-        documents[uri] = block
+        blocks[uri] = block
+        documents[uri] = tokenizer.sourceCode
         return block
     }
 
@@ -42,7 +47,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     override fun didOpen(params: DidOpenTextDocumentParams) {
         val document = params.textDocument
         val block = parse(document.uri, document.text)
-        documents[document.uri] = block
+        blocks[document.uri] = block
         publishDiagnostics(document.uri, block)
     }
 
@@ -59,7 +64,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     override fun inlayHint(params: InlayHintParams): CompletableFuture<List<InlayHint>> {
         val document = params.textDocument
-        val block = documents[document.uri]!!
+        val block = blocks[document.uri]!!
 
         val hints = mutableListOf<InlayHint>()
 
@@ -80,14 +85,76 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         return CompletableFuture.completedFuture(hints)
     }
 
-    override fun completion(position: CompletionParams): CompletableFuture<Either<MutableList<CompletionItem>, CompletionList>> {
-        return super.completion(position)
+    override fun completion(params: CompletionParams): CompletableFuture<Either<List<CompletionItem>, CompletionList>> {
+        val uri = params.textDocument.uri
+        val position = params.position
+        val empty = CompletableFuture.completedFuture(Either.forLeft<List<CompletionItem>, CompletionList>(emptyList()))
+
+        val sourceCode = documents[uri] ?: return empty
+
+        var cursor = 0
+        var currentChar: Char
+        var line = 0
+        var lastLineStartCursor = 0
+
+        while (!(line == position.line && (cursor - lastLineStartCursor) == position.character) && cursor < sourceCode.length) {
+            currentChar = sourceCode[cursor]
+            cursor++
+
+            if (currentChar == KeyChar.LINEBREAK) {
+                line++
+                lastLineStartCursor = cursor
+            }
+        }
+
+        val tokenizer = BclTokenizer(sourceCode.substring(0, cursor), interpretComments = false)
+        val tokens = tokenizer.tokenize()
+        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
+        val block = parser.parse()
+        val result = block.nodes.lastOrNull() ?: return empty
+
+        // always passes
+        result as CommandLineParseResult
+
+        val items = mutableListOf<CompletionItem>()
+
+        for (candidate in result.completionCandidates) {
+            val item = CompletionItem(candidate.node.name)
+
+            when (candidate.node) {
+                is LiteralCommandNode -> {
+                    item.kind = if (candidate.node is Command) {
+                        CompletionItemKind.Function
+                    }
+                    else {
+                        CompletionItemKind.Keyword
+                    }
+
+                    if (candidate.inputSourceSpan != null) {
+                        item.textEdit = Either.forLeft(TextEdit(
+                            candidate.inputSourceSpan.toLsp4jRange(),
+                            candidate.node.name
+                        ))
+                    }
+                }
+                is ArgumentCommandNode<*> -> {
+                    /*candidate.node.type.complete(candidate.inputSourceSpan)
+                    candidate.inputSourceSpan*/
+                    continue
+                }
+                else -> throw IllegalStateException("NEVER HAPPENS")
+            }
+
+            items.add(item)
+        }
+
+        return CompletableFuture.completedFuture(Either.forLeft(items))
     }
 
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
         val semanticTokens = SemanticTokens()
 
-        val block = documents[params.textDocument.uri]!!
+        val block = blocks[params.textDocument.uri]!!
 
         val tokens = block.nodes
             .filterIsInstance<CommandLineParseResult>()

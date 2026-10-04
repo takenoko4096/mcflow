@@ -34,6 +34,25 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         return other.start.index in range && other.end.index in range
     }
 
+    fun lineRange(): IntRange {
+        return start.line..end.line
+    }
+
+    operator fun contains(position: Position): Boolean {
+        return if ((position.line + 1) == start.line) {
+            position.character >= start.column
+        }
+        else if ((position.line + 1) == end.line) {
+            position.character <= end.column
+        }
+        else if (start.line < (position.line + 1) && (position.line + 1) < end.line) {
+            true
+        }
+        else {
+            false
+        }
+    }
+
     fun exclude(exclusions: List<SourceSpan>): List<SourceSpan> {
         var remaining = listOf(this)
 
@@ -45,10 +64,10 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
                 else {
                     buildList {
                         if (span.start.index < exclusion.start.index) {
-                            add(SourceSpan(span.start, exclusion.start - SourcePosition.ONE_COLUMN))
+                            add(SourceSpan(span.start, exclusion.start - SourcePosition.OFFSET_NEXT_COLUMN))
                         }
                         if (exclusion.end.index < span.end.index) {
-                            add(SourceSpan(exclusion.end + SourcePosition.ONE_COLUMN, span.end))
+                            add(SourceSpan(exclusion.end + SourcePosition.OFFSET_NEXT_COLUMN, span.end))
                         }
                     }
                 }

@@ -544,7 +544,7 @@ open class TokenSeqReader(
             current = peek()
             next()
 
-            if (current `is` Symbol.ESCAPE && peek() `is` Symbol.NEWLINE) {
+            if (current `is` Symbol.ESCAPE && !isOver() && peek() `is` Symbol.NEWLINE) {
                 next()
                 continue
             }

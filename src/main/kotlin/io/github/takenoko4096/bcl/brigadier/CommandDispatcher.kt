@@ -9,7 +9,9 @@ import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import io.github.takenoko4096.bcl.server.CompletionCandidate
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
     private val root = RootCommandNode(name, mutableMapOf())
@@ -62,10 +64,13 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             noUnfatal = true
         )
 
+        val completionCandidates = mutableListOf<CompletionCandidate>()
+
         val potentials = dispatch(
             reader.sourceCode,
             semanticTokens,
             initialState,
+            completionCandidates,
             root.children
         )
 
@@ -120,6 +125,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         bestRoutePotential.state.route,
                         bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
+                        completionCandidates,
                         diagnostics + BclDiagnostic(
                             error.message ?: error::class.java.name,
                             reader.sourceCode,
@@ -136,6 +142,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.route,
                     bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
+                    completionCandidates,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                     semanticTokens,
                     resultValue
@@ -156,6 +163,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.route,
                     bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
+                    completionCandidates,
                     bestRoutePotential.diagnostics,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                     semanticTokens
@@ -171,6 +179,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             route = listOf(),
             emptyList(),
             emptyList(),
+            completionCandidates,
             listOf(
                 BclDiagnostic(
                     "不明なコマンド名です: '${sourceSpan.getStringFromSourceCode(reader.sourceCode)}'",
@@ -187,6 +196,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         text: String,
         semanticTokens: MutableList<BclSemanticToken>,
         state: DispatcherParseState,
+        completionCandidates: MutableList<CompletionCandidate>,
         effectiveChildren: Map<String, CommandNode>
     ): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
@@ -215,6 +225,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 when (node) {
                     is LiteralCommandNode -> {
                         if (candidateReader.isOver()) {
+                            completionCandidates.add(CompletionCandidate(node, null))
+
                             throw candidateReader.exception(
                                 candidateReader.getOverNextSourceSpan(),
                                 "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
@@ -232,6 +244,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         ))
 
                         if (literal != name) {
+                            completionCandidates.add(CompletionCandidate(node, start..end))
                             candidateReader.cursor = cursor
                             continue
                         }
@@ -241,13 +254,23 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
+                            completionCandidates.add(CompletionCandidate(node, null))
+
                             throw candidateReader.exception(
                                 candidateReader.getOverNextSourceSpan(),
                                 "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
                             )
                         }
 
-                        val argumentParseResult = node.type.parse(candidateReader, unfatalErrors, semanticTokens)
+                        val start = candidateReader.getCurrentTokenStartPosition()
+                        val argumentParseResult = try {
+                            node.type.parse(candidateReader, unfatalErrors, semanticTokens)
+                        }
+                        catch (error: BclTokenSeqReadException) {
+                            val end = candidateReader.getPreviousTokenEndPosition()
+                            completionCandidates.add(CompletionCandidate(node, start..end))
+                            throw error
+                        }
                         candidateArguments.add(node to argumentParseResult)
 
                         if (unfatalErrors.isNotEmpty()) {
@@ -371,6 +394,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     text,
                     semanticTokens,
                     nextState,
+                    completionCandidates,
                     childrenAndRedirectsOfCurrent
                 )
 

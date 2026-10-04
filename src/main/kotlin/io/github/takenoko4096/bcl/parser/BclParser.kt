@@ -24,6 +24,8 @@ import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.`!is`
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
@@ -653,11 +655,11 @@ class BclParser(
     }
 
     private fun block(requireBraces: Boolean): Block {
-        val start = getCurrentTokenStartPosition()
-
         if (isOverIgnoreNewLine()) {
-            throw exception(start, "ブロックが期待されましたが、トークンが不足しています")
+            throw exception(getOverNextSourceSpan(), "ブロックが期待されましたが、入力が不足しています")
         }
+
+        val start = getCurrentTokenStartPosition()
 
         if (requireBraces) expectIgnoreNewLine(Symbol.BRACE_START)
 
@@ -675,12 +677,14 @@ class BclParser(
             nodes.add(node())
         }
 
-        return Block(start..getPreviousTokenEndPosition(), nodes)
+        val end = getPreviousTokenEndPosition()
+
+        return Block(start..end, nodes)
     }
 
     private fun node(): Node {
         if (isOver()) {
-            throw exception(peekSafely(-1).sourceSpan.start, "命令のパースに失敗しました: コード外に到達しました")
+            throw exception(getOverNextSourceSpan(), "命令のパースに失敗しました: 入力が不足しています")
         }
 
         val node = if (extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
@@ -702,6 +706,10 @@ class BclParser(
     }
 
     fun parse(): Block {
+        if (isOverIgnoreNewLine()) {
+            return Block(SourceSpan.NULL, emptyList())
+        }
+
         try {
             return block(false)
         }

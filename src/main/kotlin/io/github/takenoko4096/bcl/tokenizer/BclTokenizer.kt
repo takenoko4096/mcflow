@@ -177,8 +177,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
         sb.append(intPart)
 
-        // (0 == 小数点 or 指数指定 'e') and 10進 and (1 <: 10進)
-        // 小数とか型付きのときとか
+        // ([0] == 小数点 or 指数指定 'e') and 10進 and ([1] <: 基数)
         if (!isOver()
             && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL)
             && radix.value == 10
@@ -189,7 +188,15 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
             sb.append(digits(10))
 
             val end = getSourcePositionAtBack()
-            return tokenOf(TokenType.FLOAT, sb.toString(), start, end)
+
+            val tokenType = if (peek().lowercaseChar() == KeyChar.EXPONENTIAL) {
+                TokenType.FLOAT_WITH_EXPONENT
+            }
+            else {
+                TokenType.FLOAT
+            }
+
+            return tokenOf(tokenType, sb.toString(), start, end)
         }
 
         var end = getSourcePositionAtBack()

@@ -12,6 +12,7 @@ enum class TokenType {
     UINT_RAD16,
 
     FLOAT,
+    FLOAT_WITH_EXPONENT,
 
     SINGLE_QUOTED,
     DOUBLE_QUOTED,
