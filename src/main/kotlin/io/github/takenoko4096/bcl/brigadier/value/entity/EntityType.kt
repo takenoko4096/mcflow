@@ -143,6 +143,15 @@ enum class EntityType(
     val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 
     companion object {
+        val IDENTIFIERS = entries.flatMap {
+            if (it.identifier.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
+                listOf(it.identifier.toString(), it.identifier.value)
+            }
+            else {
+                listOf(it.identifier.toString())
+            }
+        }
+
         fun get(identifier: NamespacedIdentifier): EntityType? {
             return entries.find { it.identifier == identifier }
         }

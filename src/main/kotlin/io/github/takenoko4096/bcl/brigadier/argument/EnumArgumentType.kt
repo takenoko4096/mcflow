@@ -8,6 +8,11 @@ import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import kotlin.enums.EnumEntries
 import kotlin.enums.enumEntries
 
@@ -32,6 +37,20 @@ class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : A
 
         diagnostics.add(reader.diagnostic(start..end, "不明なエントリです: '$string'"))
         return NoValuedArgument(this, start..end, diagnostics)
+    }
+
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader): List<CompletionItem> {
+        return entries
+            .flatMap { it.getNames() }
+            .filter { it.startsWith(string) }
+            .map {
+                CompletionItem(it).apply {
+                    textEdit = sourceSpan?.run {
+                        Either.forLeft(TextEdit(sourceSpan.toLsp4jRange(), it))
+                    }
+                    kind = CompletionItemKind.EnumMember
+                }
+            }
     }
 
     companion object {

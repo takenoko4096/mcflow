@@ -8,6 +8,11 @@ import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType<EntityType>("entity_type") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntityType> {
@@ -34,6 +39,19 @@ class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType
         }
 
         return Argument(this, entityType, start..end)
+    }
+
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader): List<CompletionItem> {
+        return EntityType.IDENTIFIERS
+            .filter { it.startsWith(string) }
+            .map {
+                CompletionItem(it).apply {
+                    textEdit = sourceSpan?.run {
+                        Either.forLeft(TextEdit(sourceSpan.toLsp4jRange(), it))
+                    }
+                    kind = CompletionItemKind.EnumMember
+                }
+            }
     }
 
     companion object {

@@ -6,7 +6,10 @@ import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
+import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.BclParser
+import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
+import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.*
@@ -119,33 +122,42 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val items = mutableListOf<CompletionItem>()
 
         for (candidate in result.completionCandidates) {
-            val item = CompletionItem(candidate.node.name)
-
             when (candidate.node) {
                 is LiteralCommandNode -> {
-                    item.kind = if (candidate.node is Command) {
-                        CompletionItemKind.Function
-                    }
-                    else {
-                        CompletionItemKind.Keyword
-                    }
+                    val item = CompletionItem(candidate.node.name)
+                    item.kind = CompletionItemKind.Function
 
-                    if (candidate.inputSourceSpan != null) {
+                    candidate.inputSourceSpan?.run {
                         item.textEdit = Either.forLeft(TextEdit(
-                            candidate.inputSourceSpan.toLsp4jRange(),
+                            toLsp4jRange(),
                             candidate.node.name
                         ))
                     }
+
+                    items.add(item)
                 }
                 is ArgumentCommandNode<*> -> {
-                    /*candidate.node.type.complete(candidate.inputSourceSpan)
-                    candidate.inputSourceSpan*/
-                    continue
+                    val string = candidate.inputSourceSpan
+                        ?.run {
+                            getStringFromSourceCode(tokenizer.sourceCode)
+                        }
+                        ?: ""
+
+                    val argumentTokenizer = BclTokenizer(string, interpretComments = false)
+                    val tokens = argumentTokenizer.tokenize()
+                    val reader = TokenSeqReader(argumentTokenizer.sourceCode, tokens, ::BclParseException)
+
+                    val completionItems = try {
+                        candidate.node.type.complete(candidate.inputSourceSpan, string, reader)
+                    }
+                    catch (_: BclTokenSeqReadException) {
+                        continue
+                    }
+
+                    items.addAll(completionItems)
                 }
                 else -> throw IllegalStateException("NEVER HAPPENS")
             }
-
-            items.add(item)
         }
 
         return CompletableFuture.completedFuture(Either.forLeft(items))

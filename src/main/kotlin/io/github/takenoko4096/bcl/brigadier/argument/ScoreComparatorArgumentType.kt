@@ -6,6 +6,11 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.misc.ScoreComparator
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_comparator") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<ScoreComparator> {
@@ -23,5 +28,21 @@ class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_compara
         reader.next()
         val end = reader.getPreviousTokenEndPosition()
         throw reader.exception(start..end, "スコア比較演算子の解析に失敗しました: 無効なトークンです: ${reader.peekSafely(-1)}")
+    }
+
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader): List<CompletionItem> {
+        return ScoreComparator.entries
+            .filter { it.symbol.value.startsWith(string) }
+            .map {
+                CompletionItem(it.symbol.value).apply {
+                    textEdit = sourceSpan?.run {
+                        Either.forLeft(TextEdit(
+                            toLsp4jRange(),
+                            it.symbol.value
+                        ))
+                    }
+                    kind = CompletionItemKind.Operator
+                }
+            }
     }
 }

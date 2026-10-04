@@ -225,7 +225,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 when (node) {
                     is LiteralCommandNode -> {
                         if (candidateReader.isOver()) {
-                            completionCandidates.add(CompletionCandidate(node, null))
+                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
+                                completionCandidates.add(CompletionCandidate(node, null))
+                            }
 
                             throw candidateReader.exception(
                                 candidateReader.getOverNextSourceSpan(),
@@ -254,7 +256,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
-                            completionCandidates.add(CompletionCandidate(node, null))
+                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
+                                completionCandidates.add(CompletionCandidate(node, null))
+                            }
 
                             throw candidateReader.exception(
                                 candidateReader.getOverNextSourceSpan(),
@@ -270,6 +274,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             val end = candidateReader.getPreviousTokenEndPosition()
                             completionCandidates.add(CompletionCandidate(node, start..end))
                             throw error
+                        }
+                        if (argumentParseResult is NoValuedArgument) {
+                            val end = candidateReader.getPreviousTokenEndPosition()
+                            completionCandidates.add(CompletionCandidate(node, start..end))
                         }
                         candidateArguments.add(node to argumentParseResult)
 

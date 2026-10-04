@@ -1634,5 +1634,14 @@ enum class ItemType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, 
         fun get(identifier: NamespacedIdentifier): ItemType? {
             return entries.find { it.identifier == identifier }
         }
+
+        val IDENTIFIERS = entries.flatMap {
+            if (it.identifier.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
+                listOf(it.identifier.toString(), it.identifier.value)
+            }
+            else {
+                listOf(it.identifier.toString())
+            }
+        }
     }
 }
