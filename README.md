@@ -12,7 +12,11 @@
   - completion
   - `ArgumentNodeBuilder::complete()` の提供
   - 残りのコマンドの実装
+  - Education をオンにした際のみに利用可能な `EntityType`, `BlockType`, `ItemType`
+  - `requires {}`, BDS, Education Commands
 
 ## 既知のバグ
-- 文字列内で `\` を使用して改行すると semantic highlighting がおかしくなる
-- `StringArgumentType.greedy()` の改行時の semantic highlighting バグ
+- コマンドノードの実行時に致命例外が投げられた場合コマンドラインの全範囲を選択する処理が走るが、semantic token 追加時に改行を含んでいても自動分割が行われない
+- クォートに囲まれた文字列内で `\` を使用して改行すると semantic highlighting がおかしくなる
+- スポーンイベント引数が有効なスポーンイベントであることを要求する
+- 大文字・小文字が区別されてしまう
