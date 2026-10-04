@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -41,7 +42,7 @@ class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType
         return Argument(this, entityType, start..end)
     }
 
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader): List<CompletionItem> {
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
         return EntityType.IDENTIFIERS
             .filter { it.startsWith(string) }
             .map {

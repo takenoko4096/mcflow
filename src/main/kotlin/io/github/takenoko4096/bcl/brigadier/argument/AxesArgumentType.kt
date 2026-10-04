@@ -4,10 +4,16 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.Axis
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Set<Axis>> {
@@ -42,5 +48,21 @@ class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
         }
 
         return Argument(this, axes, sourceSpan)
+    }
+
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
+        return listOf("x", "y", "z", "xy", "xz", "yx", "yz", "zx", "zy", "xyz", "xzy", "yxz", "yzx", "zxy", "zyx")
+            .filter { it.startsWith(string) }
+            .map {
+                CompletionItem(it).apply {
+                    textEdit = sourceSpan?.run {
+                        Either.forLeft(TextEdit(
+                            toLsp4jRange(),
+                            it
+                        ))
+                    }
+                    kind = CompletionItemKind.Text
+                }
+            }
     }
 }

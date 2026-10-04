@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -28,8 +29,8 @@ class BooleanArgumentType : ArgumentType<Boolean>("boolean", hasInlayHint = true
         return Argument(this, (bool as TokenSeqReader.ReadResult.Successful).value, start..end)
     }
 
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader): List<CompletionItem> {
-        return setOf("true", "false")
+    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
+        return listOf("true", "false")
             .filter { it.startsWith(string) }
             .map {
                 CompletionItem(it).apply {

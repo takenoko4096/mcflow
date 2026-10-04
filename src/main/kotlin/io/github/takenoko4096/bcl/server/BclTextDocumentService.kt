@@ -148,7 +148,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     val reader = TokenSeqReader(argumentTokenizer.sourceCode, tokens, ::BclParseException)
 
                     val completionItems = try {
-                        candidate.node.type.complete(candidate.inputSourceSpan, string, reader)
+                        candidate.node.type.complete(candidate.inputSourceSpan, string, reader, result)
                     }
                     catch (_: BclTokenSeqReadException) {
                         continue

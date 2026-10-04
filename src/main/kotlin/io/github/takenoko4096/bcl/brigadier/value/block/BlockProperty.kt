@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.value.block
 
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
@@ -27,7 +28,10 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
 
     fun toValue(value: Any?): Value<T>? {
         for (v in values) {
-            if (v == value) return Value(this, v)
+            if (v is StringRepresentable) {
+                if (v.getString() == value) return Value(this, v)
+            }
+            else if (v == value) return Value(this, v)
         }
 
         return null

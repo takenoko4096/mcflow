@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.value.block
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
-enum class BlockType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null, private val properties: Set<BlockProperty<*>> = setOf()) {
+enum class BlockType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null, val properties: Set<BlockProperty<*>> = setOf()) {
     ACACIA_BUTTON(BlockProperties.BUTTON_PRESSED_BIT, BlockProperties.FACING_DIRECTION),
     ACACIA_DOOR(BlockProperties.DOOR_HINGE_BIT, BlockProperties.MINECRAFT_CARDINAL_DIRECTION, BlockProperties.OPEN_BIT, BlockProperties.UPPER_BLOCK_BIT),
     ACACIA_DOUBLE_SLAB(BlockProperties.MINECRAFT_VERTICAL_HALF),

@@ -183,13 +183,15 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
             && radix.value == 10
             && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)
         ) {
+            val isExp = peek().lowercaseChar() == KeyChar.EXPONENTIAL
+
             sb.append(peek())
             next()
             sb.append(digits(10))
 
             val end = getSourcePositionAtBack()
 
-            val tokenType = if (peek().lowercaseChar() == KeyChar.EXPONENTIAL) {
+            val tokenType = if (isExp) {
                 TokenType.FLOAT_WITH_EXPONENT
             }
             else {
