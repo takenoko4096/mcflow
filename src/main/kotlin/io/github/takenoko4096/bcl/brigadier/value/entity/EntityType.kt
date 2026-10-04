@@ -2,9 +2,13 @@ package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 
-// TODO summonable
-enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE, value: String? = null, private val summonable: Boolean = true) {
+enum class EntityType(
+    namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE,
+    value: String? = null,
+    val summonable: Boolean = true
+) {
     ALLAY,
+    AREA_EFFECT_CLOUD(summonable = false),
     ARMADILLO,
     ARMOR_STAND,
     ARROW,
@@ -15,6 +19,7 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     BOAT,
     BOGGED,
     BREEZE,
+    BREEZE_WIND_CHARGE_PROJECTILE(summonable = false),
     CAMEL,
     CAMEL_HUSK,
     CAT,
@@ -31,12 +36,13 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     CUSHION,
     DOLPHIN,
     DONKEY,
+    DRAGON_FIREBALL(summonable = false),
     DROWNED,
-    `EDITOR:LOCATION_POINTER_IDLE`("editor", "location_pointer_idle"),
+    /*`EDITOR:LOCATION_POINTER_IDLE`("editor", "location_pointer_idle"),
     `EDITOR:LOCATION_POINTER_SELECTED`("editor", "location_pointer_selected"),
     `EDITOR:MAP_MARKER`("editor", "map_marker"),
     `EDITOR:RULER_IDLE`("editor", "ruler_idle"),
-    `EDITOR:RULER_POINTER_SELECTED`("editor", "ruler_pointer_selected"),
+    `EDITOR:RULER_POINTER_SELECTED`("editor", "ruler_pointer_selected"),*/
     EGG,
     ELDER_GUARDIAN,
     ELDER_GUARDIAN_GHOST,
@@ -46,7 +52,11 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     ENDERMITE,
     EVOCATION_FANG,
     EVOCATION_ILLAGER,
+    EYE_OF_ENDER_SIGNAL(summonable = false),
+    FALLING_BLOCK(summonable = false),
+    FIREBALL(summonable = false),
     FIREWORKS_ROCKET,
+    FISHING_HOOK(summonable = false),
     FOX,
     FROG,
     GHAST,
@@ -59,9 +69,12 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     HORSE,
     HUSK,
     IRON_GOLEM,
+    ITEM(summonable = false),
     LEASH_KNOT,
     LIGHTNING_BOLT,
+    LINGERING_POTION(summonable = false),
     LLAMA,
+    LLAMA_SPIT(summonable = false),
     MAGMA_CUBE,
     MINECART,
     MOOSHROOM,
@@ -77,6 +90,7 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     PIGLIN,
     PIGLIN_BRUTE,
     PILLAGER,
+    PLAYER(summonable = false),
     POLAR_BEAR,
     PUFFERFISH,
     RABBIT,
@@ -84,10 +98,12 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     SALMON,
     SHEEP,
     SHULKER,
+    SHULKER_BULLET(summonable = false),
     SILVERFISH,
     SKELETON,
     SKELETON_HORSE,
     SLIME,
+    SMALL_FIREBALL(summonable = false),
     SNIFFER,
     SNOW_GOLEM,
     SNOWBALL,
@@ -112,6 +128,8 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     WITCH,
     WITHER,
     WITHER_SKELETON,
+    WITHER_SKULL(summonable = false),
+    WITHER_SKULL_DANGEROUS(summonable = false),
     WOLF,
     XP_BOTTLE,
     XP_ORB,
@@ -120,8 +138,7 @@ enum class EntityType(namespace: String = NamespacedIdentifier.DEFAULT_NAMESPACE
     ZOMBIE_HORSE,
     ZOMBIE_NAUTILUS,
     ZOMBIE_PIGMAN,
-    ZOMBIE_VILLAGER,
-    PLAYER(summonable = false);
+    ZOMBIE_VILLAGER;
 
     val identifier = NamespacedIdentifier(namespace, value ?: name.lowercase())
 

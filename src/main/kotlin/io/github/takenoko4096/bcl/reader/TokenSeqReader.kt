@@ -906,9 +906,6 @@ open class TokenSeqReader(
         else ReadResult.Successful(value, start..end)
     }
 
-    /**
-     * TODO allowFloat = false とかにしたとき非致命例外にしたいな...
-     */
     fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf()): String {
         if (isOver()) {
             throw exception(getOverNextSourceSpan(), "文字列の解析に失敗しました: 入力が不足しています")

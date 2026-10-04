@@ -738,17 +738,16 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
 
-        val entityType = EntityType.get(identifier)
-            ?: run {
-                diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier"))
-                null
-            }
-
         if (!inverted && arguments.type.any { !it.inverted }) {
             diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 type は否定でない限り重複できません"))
         }
 
-        if (entityType == null) return
+        val entityType = EntityType.get(identifier)
+            ?: run {
+                diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier"))
+                return
+            }
+
         arguments.type.add(InvertibleValue(inverted, entityType, start..end))
     }
 

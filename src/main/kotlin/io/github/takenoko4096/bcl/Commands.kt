@@ -1396,7 +1396,7 @@ object Commands {
             }
 
             "summon_ride" {
-                "entity_type"(EntityTypeArgumentType()) {
+                "entity_type"(EntityTypeArgumentType.summonableOnly()) {
                     executes()
 
                     "ride_rule"(EnumArgumentType.of<RideRule>()) {
@@ -1420,7 +1420,7 @@ object Commands {
             }
 
             "summon_rider" {
-                "entity_type"(EntityTypeArgumentType()) {
+                "entity_type"(EntityTypeArgumentType.summonableOnly()) {
                     executes()
 
                     "spawn_event"(EnumArgumentType.of<EntityEvent>()) {
@@ -1871,7 +1871,7 @@ object Commands {
     }
 
     val SUMMON = Command.builder("summon") {
-        "entity_type"(EntityTypeArgumentType()) {
+        "entity_type"(EntityTypeArgumentType.summonableOnly()) {
             executes()
 
             "name_tag"(StringArgumentType.isolated()) {
