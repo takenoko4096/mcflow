@@ -26,12 +26,16 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
      */
     abstract fun parse(token: Token): Value<T>
 
+    abstract val strings: Map<T, String>
+
     fun toValue(value: Any?): Value<T>? {
-        for (v in values) {
-            if (v is StringRepresentable) {
-                if (v.getString() == value) return Value(this, v)
+        for ((entry, string) in strings) {
+            val s = if (string.startsWith('"') && string.endsWith('"')) {
+                string.slice(1..<string.lastIndex)
             }
-            else if (v == value) return Value(this, v)
+            else string
+
+            if (s == value) return Value(this, entry)
         }
 
         return null
@@ -59,6 +63,8 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     }
 
     class BooleanProperty(name: String) : BlockProperty<Boolean>(name, listOf(true, false)) {
+        override val strings: Map<Boolean, String> = values.associateWith { it.toString() }
+
         override fun parse(token: Token): Value<Boolean> {
             if (token.type != TokenType.WORD) {
                 throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は真偽値です")
@@ -75,6 +81,8 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     }
 
     class IntegerProperty(name: String, range: IntRange) : BlockProperty<Int>(name, range.toList()) {
+        override val strings: Map<Int, String> = values.associateWith { it.toString() }
+
         override fun parse(token: Token): Value<Int> {
             if (token.type != TokenType.INT) {
                 throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は整数です")
@@ -91,6 +99,8 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     }
 
     class EnumProperty<E>(name: String, entries: EnumEntries<E>) : BlockProperty<E>(name, entries) where E : Enum<E>, E : StringRepresentable {
+        override val strings: Map<E, String> = values.associateWith { "\"${it.getString()}\"" }
+
         override fun parse(token: Token): Value<E> {
             if (token.type != TokenType.DOUBLE_QUOTED) {
                 throw IllegalArgumentException("プロパティ $name に渡された型 ${token.type} が正しくありません: 期待される型は文字列です")

@@ -3,11 +3,14 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.value.misc.ScoreComparator
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import io.github.takenoko4096.bcl.tokenizer.TokenType
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.TextEdit
@@ -21,6 +24,7 @@ class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_compara
             if (reader.peek() `is` comparator.symbol) {
                 reader.next()
                 val end = reader.getPreviousTokenEndPosition()
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
 
                 return Argument(this, comparator, start..end)
             }
@@ -28,15 +32,16 @@ class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_compara
 
         reader.next()
         val end = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
         throw reader.exception(start..end, "スコア比較演算子の解析に失敗しました: 無効なトークンです: ${reader.peekSafely(-1)}")
     }
 
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
         return ScoreComparator.entries
-            .filter { it.symbol.value.startsWith(string) }
+            .filter { it.symbol.value.startsWith(context.string) }
             .map {
                 CompletionItem(it.symbol.value).apply {
-                    textEdit = sourceSpan?.run {
+                    textEdit = context.sourceSpan?.run {
                         Either.forLeft(TextEdit(
                             toLsp4jRange(),
                             it.symbol.value

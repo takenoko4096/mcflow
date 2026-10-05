@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
+import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
@@ -143,12 +144,13 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                         }
                         ?: ""
 
-                    val argumentTokenizer = BclTokenizer(string, interpretComments = false)
-                    val tokens = argumentTokenizer.tokenize()
-                    val reader = TokenSeqReader(argumentTokenizer.sourceCode, tokens, ::BclParseException)
+                    val context = BclCompletionContext(
+                        string,
+                        candidate.inputSourceSpan
+                    )
 
                     val completionItems = try {
-                        candidate.node.type.complete(candidate.inputSourceSpan, string, reader, result)
+                        candidate.node.type.complete(context)
                     }
                     catch (_: BclTokenSeqReadException) {
                         continue

@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
@@ -37,13 +38,13 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
         return NoValuedArgument(this, start..end, diagnostics)
     }
 
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
         return BlockType.IDENTIFIERS
-            .filter { it.startsWith(string) }
+            .filter { it.startsWith(context.string) }
             .map {
                 CompletionItem(it).apply {
-                    textEdit = sourceSpan?.run {
-                        Either.forLeft(TextEdit(sourceSpan.toLsp4jRange(), it))
+                    textEdit = context.sourceSpan?.run {
+                        Either.forLeft(TextEdit(toLsp4jRange(), it))
                     }
                     kind = CompletionItemKind.EnumMember
                 }

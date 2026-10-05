@@ -88,8 +88,4 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
             }
         }
     }
-
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
-        return emptyList()
-    }
 }

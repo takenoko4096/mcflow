@@ -3,10 +3,12 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.value.misc.ScoreOperator
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
@@ -22,6 +24,7 @@ class ScoreOperatorArgumentType : ArgumentType<ScoreOperator>("score_operator") 
             if (reader.peek() `is` operator.symbol) {
                 reader.next()
                 val end = reader.getPreviousTokenEndPosition()
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
 
                 return Argument(this, operator, start..end)
             }
@@ -29,15 +32,16 @@ class ScoreOperatorArgumentType : ArgumentType<ScoreOperator>("score_operator") 
 
         reader.next()
         val end = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
         throw reader.exception(start..end, "スコア演算子の解析に失敗しました: 無効なトークンです: ${reader.peekSafely(-1)}")
     }
 
-    override fun complete(sourceSpan: SourceSpan?, string: String, reader: TokenSeqReader, result: CommandLineParseResult): List<CompletionItem> {
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
         return ScoreOperator.entries
-            .filter { it.symbol.value.startsWith(string) }
+            .filter { it.symbol.value.startsWith(context.string) }
             .map {
                 CompletionItem(it.symbol.value).apply {
-                    textEdit = sourceSpan?.run {
+                    textEdit = context.sourceSpan?.run {
                         Either.forLeft(TextEdit(
                             toLsp4jRange(),
                             it.symbol.value
