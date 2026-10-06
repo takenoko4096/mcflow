@@ -1,16 +1,14 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
-import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
+import io.github.takenoko4096.bcl.complete.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
-import io.github.takenoko4096.bcl.parser.BclParseException
+import io.github.takenoko4096.bcl.complete.BclArgumentCompletionException
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
-import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.*
@@ -152,7 +150,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     val completionItems = try {
                         candidate.node.type.complete(context)
                     }
-                    catch (_: BclTokenSeqReadException) {
+                    catch (_: BclArgumentCompletionException) {
                         continue
                     }
 

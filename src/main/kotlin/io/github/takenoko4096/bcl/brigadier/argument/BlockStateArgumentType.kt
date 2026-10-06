@@ -3,22 +3,17 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
-import io.github.takenoko4096.bcl.brigadier.BclCompletionContext
+import io.github.takenoko4096.bcl.complete.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
-import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.complete.ArgumentCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
-import io.github.takenoko4096.bcl.tokenizer.TokenType
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class BlockStateArgumentType(
     private val blockTypeArgumentType: BlockTypeArgumentType,
@@ -59,6 +54,20 @@ class BlockStateArgumentType(
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = ArgumentCompleter(context)
+
+        val blockTypeCompleteResult = completer.completeUnquotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
+        if (blockTypeCompleteResult is ArgumentCompleter.ShouldComplete) {
+            return blockTypeCompleteResult.items
+        }
+        blockTypeCompleteResult as ArgumentCompleter.ShouldContinue
+
+        (completer.completeChar('[', CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+            return items
+        }
+
+
+
         return super.complete(context)
     }
 
