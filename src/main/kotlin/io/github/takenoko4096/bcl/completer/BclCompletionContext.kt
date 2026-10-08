@@ -1,4 +1,4 @@
-package io.github.takenoko4096.bcl.complete
+package io.github.takenoko4096.bcl.completer
 
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 

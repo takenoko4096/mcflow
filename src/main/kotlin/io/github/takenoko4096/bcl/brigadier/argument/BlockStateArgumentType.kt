@@ -3,13 +3,14 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
-import io.github.takenoko4096.bcl.complete.BclCompletionContext
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
-import io.github.takenoko4096.bcl.complete.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import org.eclipse.lsp4j.CompletionItem
@@ -66,7 +67,24 @@ class BlockStateArgumentType(
             return items
         }
 
+        val blockType = BlockType.get(NamespacedIdentifier.parse(blockTypeCompleteResult.input)!!)!!
+        val properties = blockType.properties
 
+        while (true) {
+            val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
+            if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
+                return propertyNameCompletionResult.items
+            }
+            propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
+
+            val property = BlockProperties.getProperty(propertyNameCompletionResult.input)!!
+
+            (completer.completeChar('=', CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+                return items
+            }
+
+            val propertyValueCompletionResult = completer
+        }
 
         return super.complete(context)
     }

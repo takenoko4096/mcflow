@@ -9,9 +9,8 @@ import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
-import io.github.takenoko4096.bcl.server.CompletionCandidate
+import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
     private val root = RootCommandNode(name, mutableMapOf())

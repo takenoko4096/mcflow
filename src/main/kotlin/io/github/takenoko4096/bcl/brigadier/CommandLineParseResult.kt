@@ -5,7 +5,7 @@ import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
-import io.github.takenoko4096.bcl.server.CompletionCandidate
+import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class CommandLineParseResult(
