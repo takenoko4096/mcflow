@@ -8,6 +8,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.completer.ArgumentCompleter
@@ -89,8 +90,13 @@ class BlockStateArgumentType(
                 return items
             }
 
-            val propertyValueCompletionResult =
-                completer.completeQuotableString(property.strings.values.toList(), CompletionItemKind.Value)
+            val propertyValueCompletionResult = if (property is BlockProperty.EnumProperty<*>) {
+                completer.completeQuotedString(property.values.map { it.getString() }, CompletionItemKind.Value)
+            }
+            else {
+                completer.completeUnquotedString(property.strings.values.toList(), CompletionItemKind.Value)
+            }
+
             if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
                 return propertyValueCompletionResult.items
             }

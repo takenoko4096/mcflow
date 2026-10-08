@@ -148,6 +148,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
                     val context = BclCompletionContext(
                         string,
+                        candidate.startPosition,
                         candidate.inputSourceSpan
                     )
 

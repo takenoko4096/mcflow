@@ -7,7 +7,7 @@ import java.util.Objects
 data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     init {
         if (end.index < start.index) {
-            throw IllegalArgumentException("end ($end) < start ($start)")
+            throw IllegalArgumentException("end ${end.index} ($end) < start ${start.index} ($start)")
         }
     }
 

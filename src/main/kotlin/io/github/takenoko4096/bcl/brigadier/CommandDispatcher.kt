@@ -225,7 +225,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     is LiteralCommandNode -> {
                         if (candidateReader.isOver()) {
                             if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
-                                completionCandidates.add(CompletionCandidate(node, null))
+                                completionCandidates.add(CompletionCandidate(node, candidateReader.getOverNextSourceSpan().start, null))
                             }
 
                             throw candidateReader.exception(
@@ -245,7 +245,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         ))
 
                         if (literal != name) {
-                            completionCandidates.add(CompletionCandidate(node, start..end))
+                            completionCandidates.add(CompletionCandidate(node, start, start..end))
                             candidateReader.cursor = cursor
                             continue
                         }
@@ -256,7 +256,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
                             if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
-                                completionCandidates.add(CompletionCandidate(node, null))
+                                completionCandidates.add(CompletionCandidate(node, candidateReader.getOverNextSourceSpan().start, null))
                             }
 
                             throw candidateReader.exception(
@@ -271,12 +271,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         }
                         catch (error: BclTokenSeqReadException) {
                             val end = candidateReader.getPreviousTokenEndPosition()
-                            completionCandidates.add(CompletionCandidate(node, start..end))
+                            completionCandidates.add(CompletionCandidate(node, start, start..end))
                             throw error
                         }
                         val end = candidateReader.getPreviousTokenEndPosition()
                         if (argumentParseResult is NoValuedArgument) {
-                            completionCandidates.add(CompletionCandidate(node, start..end))
+                            completionCandidates.add(CompletionCandidate(node, start, start..end))
                         }
                         candidateArguments.add(node to argumentParseResult)
 

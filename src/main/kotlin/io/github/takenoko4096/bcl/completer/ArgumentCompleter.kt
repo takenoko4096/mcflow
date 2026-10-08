@@ -1,6 +1,8 @@
 package io.github.takenoko4096.bcl.completer
 
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.TextEdit
@@ -9,6 +11,10 @@ import kotlin.collections.contains
 
 class ArgumentCompleter(private val context: BclCompletionContext) {
     private var cursor: Int = 0
+
+    private var line: Int = 0
+
+    private var lastLineStartCursor: Int = 0
 
     private val remaining: String
         get() = context.string.substring(cursor)
@@ -24,34 +30,67 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun next() {
-        if (!isOver()) {
-            cursor++
+        val current = peek()
+        cursor++
+
+        if (current == KeyChar.LINEBREAK) {
+            line++
+            lastLineStartCursor = cursor
         }
     }
 
+    private fun getCurrentSourcePosition(): SourcePosition {
+        return SourcePosition(
+            line + context.offset.line,
+            (cursor - lastLineStartCursor) + context.offset.column,
+            cursor + context.offset.index
+        )
+    }
+
+    private fun getRemainingSourceSpan(): SourceSpan? {
+        return context.sourceSpan?.run {
+            getCurrentSourcePosition()..end
+        }
+    }
+
+    private fun getRemainingSourceSpanOrNull(): SourceSpan? {
+        return context.sourceSpan?.run {
+            val start = getCurrentSourcePosition()
+            if (end.index < start.index) null else start..end
+        }
+    }
+
+    fun readChar(): Char? {
+        if (isOver()) {
+            return null
+        }
+
+        val char = peek()
+        next()
+        return char
+    }
+
     fun completeChar(chars: List<Char>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val input = readChar()
+
         val items = chars.map {
             CompletionItem(it.toString()).apply {
                 this.kind = kind
-                context.sourceSpan?.run {
+                span?.run {
                     this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it.toString()))
                 }
             }
         }
 
-        System.err.println(items.map { it.label })
-
-        if (isOver()) {
-            return ShouldComplete(items)
+        return if (input in chars) {
+            ShouldContinue(input.toString())
         }
-
-        val char = peek()
-        if (char in chars) {
-            next()
-            return ShouldContinue(char.toString())
+        else if (isOver()) {
+            ShouldComplete(items)
         }
         else {
-            return ShouldComplete(emptyList())
+            ShouldComplete(emptyList())
         }
     }
 
@@ -93,12 +132,13 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     class QuotedString(
         value: String,
+        val opened: Boolean,
         val closed: Boolean
     ) : QuotableString(value)
 
     fun readQuotedString(): QuotedString {
         if (isOver()) {
-            return QuotedString("", closed = false)
+            return QuotedString("", opened = false, closed = false)
         }
 
         val sb = StringBuilder()
@@ -106,19 +146,19 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         val quote = peek()
 
         if (quote != KeyChar.STRING_QUOTE) {
-            return QuotedString("", closed = false)
+            return QuotedString("", opened = false, closed = false)
         }
 
         next()
 
         while (true) {
             if (isOver()) {
-                return QuotedString(sb.toString(), closed = false)
+                return QuotedString(sb.toString(), opened = true, closed = false)
             }
 
             if (peek() == quote) {
                 next()
-                return QuotedString(sb.toString(), closed = true)
+                return QuotedString(sb.toString(), opened = true, closed = true)
             }
             else if (peek() == KeyChar.ESCAPE) {
                 next()
@@ -159,6 +199,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
         val input = readString()
 
         val items = candidates
@@ -166,8 +207,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             .map {
                 CompletionItem(it).apply {
                     this.kind = kind
-                    // 補完時は常に context.sourceSpan を使うべき
-                    context.sourceSpan?.run {
+                    span?.run {
                         this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
                     }
                 }
@@ -182,6 +222,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeQuotedString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
         val input = readQuotedString()
 
         val items = candidates
@@ -189,9 +230,12 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             .map {
                 CompletionItem("\"$it\"").apply {
                     this.kind = kind
-                    // 補完時は常に context.sourceSpan を使うべき
-                    context.sourceSpan?.run {
-                        this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
+                    span?.run {
+                        var s = '"' + it
+                        if (!input.opened) {
+                            s += '"'
+                        }
+                        this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), s))
                     }
                 }
             }
@@ -202,42 +246,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         else {
             ShouldComplete(items)
         }
-    }
-
-    fun completeQuotableString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
-        val input = readQuotableString()
-
-        val items = candidates
-            .filter { it.startsWith(input.value) }
-
-        return if (input is QuotedString) {
-            if (input.closed) {
-                ShouldContinue(input.value)
-            }
-            else {
-                ShouldComplete(items.map {
-                    CompletionItem("\"$it\"").apply {
-                        this.kind = kind
-                        // 補完時は常に context.sourceSpan を使うべき
-                        context.sourceSpan?.run {
-                            this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
-                        }
-                    }
-                })
-            }
-        }
-        else if (isOver()) {
-            ShouldComplete(items.map {
-                CompletionItem(it).apply {
-                    this.kind = kind
-                    // 補完時は常に context.sourceSpan を使うべき
-                    context.sourceSpan?.run {
-                        this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
-                    }
-                }
-            })
-        }
-        else ShouldContinue(input.value)
     }
 
     sealed class ValueCompletionResult
