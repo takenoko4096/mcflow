@@ -137,7 +137,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                 is ArgumentCommandNode<*> -> {
                     val string = candidate.inputSourceSpan
                         ?.run {
-                            getStringFromSourceCode(tokenizer.sourceCode)
+                            try {
+                                getStringFromSourceCode(tokenizer.sourceCode)
+                            }
+                            catch (_: Throwable) {
+                                ""
+                            }
                         }
                         ?: ""
 
@@ -158,6 +163,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                 else -> throw IllegalStateException("NEVER HAPPENS")
             }
         }
+
+        System.err.println("compl:"+items.size)
 
         return CompletableFuture.completedFuture(Either.forLeft(items))
     }

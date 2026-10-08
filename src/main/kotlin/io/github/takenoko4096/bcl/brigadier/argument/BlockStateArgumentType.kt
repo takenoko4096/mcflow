@@ -57,28 +57,30 @@ class BlockStateArgumentType(
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
         val completer = ArgumentCompleter(context)
 
+        System.err.println(context.string)
+
         val blockTypeCompleteResult = completer.completeUnquotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
         if (blockTypeCompleteResult is ArgumentCompleter.ShouldComplete) {
             return blockTypeCompleteResult.items
         }
         blockTypeCompleteResult as ArgumentCompleter.ShouldContinue
 
-        (completer.completeChar(listOf('['), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
-            return items
+        val openResult = completer.completeChar(listOf('['), CompletionItemKind.Keyword)
+        if (openResult is ArgumentCompleter.ShouldComplete) {
+            return openResult.items
         }
 
-        val blockType = BlockType.get(NamespacedIdentifier.parse(blockTypeCompleteResult.input)!!)!!
-        val properties = blockType.properties
+        val blockType = NamespacedIdentifier.parse(blockTypeCompleteResult.input)?. run(BlockType::get)
+        val properties = blockType?.properties ?: emptySet()
 
         while (true) {
-            val propertyNameCompletionResult =
-                completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
+            val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
             if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
                 return propertyNameCompletionResult.items
             }
             propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
 
-            val property = BlockProperties.getProperty(propertyNameCompletionResult.input)!!
+            val property = BlockProperties.getProperty(propertyNameCompletionResult.input) ?: return emptyList()
 
             (completer.completeChar(
                 listOf('='),

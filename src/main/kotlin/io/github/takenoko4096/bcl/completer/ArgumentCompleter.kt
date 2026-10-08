@@ -20,7 +20,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             throw BclArgumentCompletionException()
         }
 
-        return remaining[cursor]
+        return context.string[cursor]
     }
 
     fun next() {
@@ -38,6 +38,8 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 }
             }
         }
+
+        System.err.println(items.map { it.label })
 
         if (isOver()) {
             return ShouldComplete(items)

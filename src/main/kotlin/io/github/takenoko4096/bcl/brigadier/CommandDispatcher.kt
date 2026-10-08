@@ -274,8 +274,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             completionCandidates.add(CompletionCandidate(node, start..end))
                             throw error
                         }
+                        val end = candidateReader.getPreviousTokenEndPosition()
                         if (argumentParseResult is NoValuedArgument) {
-                            val end = candidateReader.getPreviousTokenEndPosition()
                             completionCandidates.add(CompletionCandidate(node, start..end))
                         }
                         candidateArguments.add(node to argumentParseResult)
