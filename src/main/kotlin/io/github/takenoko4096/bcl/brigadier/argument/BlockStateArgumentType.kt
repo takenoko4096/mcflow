@@ -63,7 +63,7 @@ class BlockStateArgumentType(
         }
         blockTypeCompleteResult as ArgumentCompleter.ShouldContinue
 
-        (completer.completeChar('[', CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+        (completer.completeChar(listOf('['), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
             return items
         }
 
@@ -71,7 +71,8 @@ class BlockStateArgumentType(
         val properties = blockType.properties
 
         while (true) {
-            val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
+            val propertyNameCompletionResult =
+                completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
             if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
                 return propertyNameCompletionResult.items
             }
@@ -79,14 +80,31 @@ class BlockStateArgumentType(
 
             val property = BlockProperties.getProperty(propertyNameCompletionResult.input)!!
 
-            (completer.completeChar('=', CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+            (completer.completeChar(
+                listOf('='),
+                CompletionItemKind.Keyword
+            ) as? ArgumentCompleter.ShouldComplete)?.run {
                 return items
             }
 
-            val propertyValueCompletionResult = completer
+            val propertyValueCompletionResult =
+                completer.completeQuotableString(property.strings.values.toList(), CompletionItemKind.Value)
+            if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
+                return propertyValueCompletionResult.items
+            }
+
+            val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
+            if (lastResult is ArgumentCompleter.ShouldComplete) {
+                return lastResult.items
+            }
+            lastResult as ArgumentCompleter.ShouldContinue
+
+            if (lastResult.input == ']'.toString()) {
+                break
+            }
         }
 
-        return super.complete(context)
+        return emptyList()
     }
 
     companion object {

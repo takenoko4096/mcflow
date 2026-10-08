@@ -29,17 +29,22 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun completeChar(char: Char, kind: CompletionItemKind): ValueCompletionResult {
-        if (isOver()) {
-            return ShouldComplete(listOf(CompletionItem(char.toString()).apply {
+    fun completeChar(chars: List<Char>, kind: CompletionItemKind): ValueCompletionResult {
+        val items = chars.map {
+            CompletionItem(it.toString()).apply {
                 this.kind = kind
                 context.sourceSpan?.run {
-                    this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), char.toString()))
+                    this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it.toString()))
                 }
-            }))
+            }
         }
 
-        if (peek() == char) {
+        if (isOver()) {
+            return ShouldComplete(items)
+        }
+
+        val char = peek()
+        if (char in chars) {
             next()
             return ShouldContinue(char.toString())
         }
@@ -219,20 +224,18 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 })
             }
         }
-        else {
-            if (isOver()) {
-                ShouldComplete(items.map {
-                    CompletionItem(it).apply {
-                        this.kind = kind
-                        // 補完時は常に context.sourceSpan を使うべき
-                        context.sourceSpan?.run {
-                            this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
-                        }
+        else if (isOver()) {
+            ShouldComplete(items.map {
+                CompletionItem(it).apply {
+                    this.kind = kind
+                    // 補完時は常に context.sourceSpan を使うべき
+                    context.sourceSpan?.run {
+                        this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
                     }
-                })
-            }
-            else ShouldContinue(input.value)
+                }
+            })
         }
+        else ShouldContinue(input.value)
     }
 
     sealed class ValueCompletionResult
