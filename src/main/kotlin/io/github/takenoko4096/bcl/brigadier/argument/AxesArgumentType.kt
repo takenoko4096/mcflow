@@ -50,7 +50,7 @@ class AxesArgumentType : ArgumentType<Set<Axis>>("axes") {
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        return listOf("x", "y", "z", "xy", "xz", "yx", "yz", "zx", "zy", "xyz", "xzy", "yxz", "yzx", "zxy", "zyx")
+        return listOf("x", "y", "z", "xy", "xz", "yz", "xyz")
             .filter { it.startsWith(context.string) }
             .map {
                 CompletionItem(it).apply {

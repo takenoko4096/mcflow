@@ -63,46 +63,20 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             noUnfatal = true
         )
 
-        val completionCandidates = mutableListOf<CompletionCandidate>()
-
         val potentials = dispatch(
             reader.sourceCode,
             semanticTokens,
             initialState,
-            completionCandidates,
             root.children
         )
 
         if (potentials.isNotEmpty()) {
-            val bestRoutePotential = potentials.maxWith(
-                Comparator { a, b ->
-                    val aNoDiagnostics = a.diagnostics.isEmpty()
-                    val bNoDiagnostics = b.diagnostics.isEmpty()
+            val bestRoutePotential = potentials.maxWith(::compare)
 
-                    when {
-                        aNoDiagnostics != bNoDiagnostics ->
-                            aNoDiagnostics.compareTo(bNoDiagnostics)
-
-                        aNoDiagnostics ->
-                            compareValuesBy(
-                                a,
-                                b,
-                                { it.state.reader.isOver() },
-                                { it.state.reader.cursor },
-                                { it.state.literalCount }
-                            )
-
-                        else ->
-                            compareValuesBy(
-                                a,
-                                b,
-                                { it.furthestCursor },
-                                { it.state.reader.isOver() },
-                                { it.state.literalCount }
-                            )
-                    }
-                }
-            )
+            val completionCandidates = potentials
+                .filter { compare(it, bestRoutePotential) == 0 }
+                .flatMap { it.completionCandidates }
+                .distinct()
 
             return if (bestRoutePotential.diagnostics.isEmpty()) {
                 val diagnostics = mutableListOf<BclDiagnostic>()
@@ -178,7 +152,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             route = listOf(),
             emptyList(),
             emptyList(),
-            completionCandidates,
+            emptyList(),
             listOf(
                 BclDiagnostic(
                     "不明なコマンド名です: '${sourceSpan.getStringFromSourceCode(reader.sourceCode)}'",
@@ -191,11 +165,38 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         )
     }
 
+    private fun compare(a: RoutePotential, b: RoutePotential): Int {
+        val aNoDiagnostics = a.diagnostics.isEmpty()
+        val bNoDiagnostics = b.diagnostics.isEmpty()
+
+        return when {
+            aNoDiagnostics != bNoDiagnostics ->
+                aNoDiagnostics.compareTo(bNoDiagnostics)
+
+            aNoDiagnostics ->
+                compareValuesBy(
+                    a,
+                    b,
+                    { it.state.reader.isOver() },
+                    { it.state.reader.cursor },
+                    { it.state.literalCount }
+                )
+
+            else ->
+                compareValuesBy(
+                    a,
+                    b,
+                    { it.furthestCursor },
+                    { it.state.reader.isOver() },
+                    { it.state.literalCount }
+                )
+        }
+    }
+
     private fun dispatch(
         text: String,
         semanticTokens: MutableList<BclSemanticToken>,
         state: DispatcherParseState,
-        completionCandidates: MutableList<CompletionCandidate>,
         effectiveChildren: Map<String, CommandNode>
     ): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
@@ -219,6 +220,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             // 非致命エラーが発生した直後の状態。
             // 発生しなければ null。
             var unfatalState: DispatcherParseState? = null
+
+            val completionCandidates = mutableListOf<CompletionCandidate>()
 
             try {
                 when (node) {
@@ -247,6 +250,25 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         if (literal != name) {
                             completionCandidates.add(CompletionCandidate(node, start, start..end))
                             candidateReader.cursor = cursor
+                            potentials += RoutePotential(
+                                state = nextState,
+                                diagnostics = unfatalErrors + listOf(
+                                    BclDiagnostic(
+                                        """
+                                        ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
+                                        ${if (effectiveChildren.size == 1) {
+                                            effectiveChildren.values.first().toString() + " が期待されています"
+                                        } else {
+                                            effectiveChildren.values.joinToString(" | ", postfix = " のいずれかが期待されています")
+                                        }
+                                        }
+                                        """.trimIndent(),
+                                        text,
+                                        start..end
+                                    )
+                                ),
+                                completionCandidates = completionCandidates.toList()
+                            )
                             continue
                         }
 
@@ -328,7 +350,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             text,
                             error.sourceSpan
                         )
-                    )
+                    ),
+                    completionCandidates = completionCandidates.toList()
                 )
 
                 continue
@@ -383,7 +406,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             candidateReader.sourceCode,
                             candidateReader.getRemainingSourceSpan()
                         )
-                    }
+                    },
+                    completionCandidates = completionCandidates.toList()
                 )
             }
 
@@ -401,37 +425,23 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     text,
                     semanticTokens,
                     nextState,
-                    completionCandidates,
                     childrenAndRedirectsOfCurrent
                 )
 
                 if (childPotentials.isNotEmpty()) {
-                    if (unfatalState == null) {
-                        potentials += childPotentials
-                    }
-                    else {
-                        /*
-                         * 子の解析結果は「解析を最後まで進めた結果」だが、
-                         * このルートでは既に非致命エラーが発生している。
-                         *
-                         * したがって、
-                         *   - diagnostics は非致命エラーを先頭に追加
-                         *   - state はエラー発生時点の state に戻す
-                         *
-                         * 子を解析したこと自体は「この先に構文上何があるか」
-                         * を判定するためだけに利用する。
-                         */
-                        potentials += childPotentials.map { potential ->
-                            /*potential.copy(
-                                state = unfatalState,
-                                diagnostics = unfatalErrors + potential.diagnostics
-                            )*/
-                            potential.copy(
-                                state = unfatalState,
-                                diagnostics = unfatalErrors + potential.diagnostics,
-                                furthestCursor = potential.furthestCursor
-                            )
-                        }
+                    potentials += childPotentials.map { potential ->
+                        potential.copy(
+                            state = unfatalState ?: potential.state,
+                            diagnostics =
+                                if (unfatalState != null) {
+                                    unfatalErrors + potential.diagnostics
+                                } else {
+                                    potential.diagnostics
+                                },
+                            furthestCursor = potential.furthestCursor,
+                            completionCandidates =
+                                completionCandidates + potential.completionCandidates
+                        )
                     }
                 }
                 else {
@@ -458,7 +468,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             },
                             text,
                             candidateReader.peek().sourceSpan
-                        )
+                        ),
+                        completionCandidates = completionCandidates.toList()
                     )
                 }
             }

@@ -15,12 +15,16 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorType
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
 
 class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntitySelector, SourceSpan, MutableList<BclDiagnostic>) -> Unit)? = null) : ArgumentType<EntitySelector>("entity_selector") {
     private val parsers: Map<String, TokenSeqReader.(SelectorArguments, MutableList<BclDiagnostic>, MutableList<BclSemanticToken>) -> Unit> = mapOf(
@@ -48,6 +52,22 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         "x" to ::x,
         "y" to ::y,
         "z" to ::z
+    )
+
+    private val completers: Map<String, (ArgumentCompleter) -> List<CompletionItem>?> = mapOf(
+        "c" to ::completeOne,
+        "dx" to ::completeZero,
+        "dy" to ::completeZero,
+        "dz" to ::completeZero,
+        "family" to ::completeFamily,
+        "haspermission" to ::completeHasPermission,
+        "has_property" to ::completeHasProperty,
+        "hasitem" to ::completeHasItem,
+        "m" to ::completeGameMode,
+        "rm" to ::completeZero,
+        "scores" to ::completeScores,
+        "tag" to ::completeQuotableString,
+        "type" to ::completeType
     )
 
     private fun TokenSeqReader.readIsInverted(): Boolean {
@@ -928,6 +948,117 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         else {
             NoValuedArgument(this, start..end, diagnostics)
         }
+    }
+
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = ArgumentCompleter(context)
+
+        val typeResult = completer.completeUnquotedString(
+            candidates = listOf("@s", "@p", "@a", "@r", "@e", "@n", "@initiator"),
+            CompletionItemKind.Variable,
+            nonTerminators = charArrayOf('@')
+        )
+        if (typeResult is ArgumentCompleter.ShouldComplete) {
+            return typeResult.items
+        }
+
+        val openResult = completer.completeChar(listOf('['), kind = CompletionItemKind.Keyword)
+        if (openResult is ArgumentCompleter.ShouldComplete) {
+            return openResult.items
+        }
+
+        while (true) {
+            val argResult = completer.completeUnquotedString(parsers.keys.toList(), CompletionItemKind.Property)
+            if (argResult is ArgumentCompleter.ShouldComplete) {
+                return argResult.items
+            }
+            val argName = (argResult as ArgumentCompleter.ShouldContinue).input
+
+            (completer.completeChar(
+                listOf('='),
+                CompletionItemKind.Keyword
+            ) as? ArgumentCompleter.ShouldComplete)?.run {
+                return items
+            }
+
+            val argCompleter = completers[argName]
+
+            if (argCompleter == null) {
+                val s = completer.readQuotableString()
+                if (s is ArgumentCompleter.QuotedString && !s.closed) {
+                    return emptyList()
+                }
+            }
+            else {
+                val argValRes = argCompleter(completer)
+                if (argValRes != null) {
+                    return argValRes
+                }
+            }
+
+            val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
+            if (lastResult is ArgumentCompleter.ShouldComplete) {
+                return lastResult.items
+            }
+            lastResult as ArgumentCompleter.ShouldContinue
+            if (lastResult.input == ']'.toString()) {
+                break
+            }
+        }
+
+        return emptyList()
+    }
+
+    private fun completeZero(completer: ArgumentCompleter): List<CompletionItem>? {
+        return (completer.completeChar(listOf('0'), CompletionItemKind.Value) as? ArgumentCompleter.ShouldComplete)?.items
+    }
+
+    private fun completeOne(completer: ArgumentCompleter): List<CompletionItem>? {
+        return (completer.completeChar(listOf('1'), CompletionItemKind.Value) as? ArgumentCompleter.ShouldComplete)?.items
+    }
+
+    private fun completeFamily(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeHasPermission(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeHasProperty(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeHasItem(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeGameMode(completer: ArgumentCompleter): List<CompletionItem>? {
+        return (
+            completer.completeUnquotedString(
+                GameMode.entries.flatMap { it.getNames().flatMap { s -> listOf(s, "!$s") } },
+                CompletionItemKind.EnumMember,
+                nonTerminators = charArrayOf('!')
+            ) as? ArgumentCompleter.ShouldComplete
+        )?.items
+    }
+
+    private fun completeScores(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeQuotableString(completer: ArgumentCompleter): List<CompletionItem>? {
+        return if (completer.isOver()) emptyList() else null
+    }
+
+    private fun completeType(completer: ArgumentCompleter): List<CompletionItem>? {
+        return (
+            completer.completeUnquotedString(
+                EntityType.IDENTIFIERS.flatMap { listOf(it, "!$it") },
+                CompletionItemKind.EnumMember,
+                nonTerminators = charArrayOf('!')
+            ) as? ArgumentCompleter.ShouldComplete
+        )?.items
     }
 
     companion object {

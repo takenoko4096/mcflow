@@ -78,8 +78,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
         }
 
-        System.err.println("c end: $remaining")
-
         return if (input in chars) {
             ShouldContinue(input.toString())
         }
@@ -216,7 +214,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return ShouldContinue(input)
     }
 
-    fun readString(): String {
+    fun readString(nonTerminators: CharArray = charArrayOf()): String {
         if (isOver()) {
             return ""
         }
@@ -234,7 +232,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 return firstChar.toString()
             }
             in setOf(KeyChar.PLUS, KeyChar.MINUS) -> {
-                if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
+                if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators }) {
                     next()
                     return ""
                 }
@@ -243,7 +241,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
         }
 
-        if (!isOver()) while (!isOver() && peek() !in KeyChar.COMMAND_WORD_TERMINATORS) {
+        if (!isOver()) while (!isOver() && peek() !in KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators }) {
             next()
         }
 
@@ -320,9 +318,9 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return QuotableString(readString())
     }
 
-    fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+    fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind, nonTerminators: CharArray = charArrayOf()): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
-        val input = readString()
+        val input = readString(nonTerminators)
 
         val items = candidates
             .filter { it.startsWith(input) }
@@ -344,7 +342,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeQuotedString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
-        System.err.println("q start: $remaining")
         val span = getRemainingSourceSpanOrNull()
         val input = readQuotedString()
 

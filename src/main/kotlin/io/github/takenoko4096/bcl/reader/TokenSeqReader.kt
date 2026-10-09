@@ -708,7 +708,7 @@ open class TokenSeqReader(
         return list
     }
 
-    fun <K, V> readMap(prefix: Symbol, postfix: Symbol, keyParser: TokenSeqReader.() -> K, kvSeparatorParser: TokenSeqReader.() -> Unit, valueParser: TokenSeqReader.() -> V): Map<K, Pair<SourceSpan, WithSpan<V>>> {
+    fun <K, V> readMap(prefix: Symbol, postfix: Symbol, keyParser: TokenSeqReader.() -> K, kvSeparatorParser: TokenSeqReader.() -> Unit, valueParser: TokenSeqReader.() -> V): List<Pair<WithSpan<K>, WithSpan<V>>> {
         val list = mutableListOf<Pair<WithSpan<K>, WithSpan<V>>>()
 
         expect(prefix)
@@ -719,7 +719,7 @@ open class TokenSeqReader(
 
         if (peek() `is` postfix) {
             next()
-            return mapOf()
+            return list
         }
 
         while (true) {
@@ -763,17 +763,7 @@ open class TokenSeqReader(
             }
         }
 
-        val map = mutableMapOf<K, Pair<SourceSpan, WithSpan<V>>>()
-
-        for ((key, value) in list) {
-            if (key.value in map) {
-                throw exception(key.sourceSpan, "マップの読み取りに失敗しました: キー '${key.value}' が重複しています")
-            }
-
-            map[key.value] = key.sourceSpan to value
-        }
-
-        return map
+        return list
     }
 
     fun <K, S, V> readTypedMap(prefix: Symbol, postfix: Symbol, kvSeparatorParser: TokenSeqReader.() -> S, keyParser: TokenSeqReader.() -> K, valueParsers: Map<K, TokenSeqReader.(S) -> V>, fallbackValueParser: TokenSeqReader.(WithSpan<K>, S) -> Unit): Map<K, V> {

@@ -58,8 +58,6 @@ class BlockStateArgumentType(
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
         val completer = ArgumentCompleter(context)
 
-        System.err.println(context.string)
-
         val blockTypeCompleteResult = completer.completeUnquotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
         if (blockTypeCompleteResult is ArgumentCompleter.ShouldComplete) {
             return blockTypeCompleteResult.items
@@ -77,12 +75,11 @@ class BlockStateArgumentType(
         while (true) {
             val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
             if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
-                System.err.println(propertyNameCompletionResult.items)
                 return propertyNameCompletionResult.items
             }
             propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
 
-            val property = BlockProperties.getProperty(propertyNameCompletionResult.input) ?: return emptyList()
+            val property = BlockProperties.getProperty(propertyNameCompletionResult.input)
 
             (completer.completeChar(
                 listOf('='),
@@ -95,11 +92,10 @@ class BlockStateArgumentType(
                 completer.completeQuotedString(property.values.map { it.getString() }, CompletionItemKind.Value)
             }
             else {
-                completer.completeUnquotedString(property.strings.values.toList(), CompletionItemKind.Value)
+                completer.completeUnquotedString(property?.strings?.values?.toList() ?: emptyList(), CompletionItemKind.Value)
             }
 
             if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
-                System.err.println(propertyValueCompletionResult.items)
                 return propertyValueCompletionResult.items
             }
 
