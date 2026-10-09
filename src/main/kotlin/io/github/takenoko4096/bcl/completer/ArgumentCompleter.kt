@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.completer
 
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.Radix
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.CompletionItem
@@ -88,6 +89,107 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         else {
             ShouldComplete(emptyList())
         }
+    }
+
+    private fun digits(): String {
+        val sb = StringBuilder()
+
+        val numbers = KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)
+
+        while (!isOver() && peek() in numbers) {
+            sb.append(peek())
+            next()
+        }
+
+        return sb.toString()
+    }
+
+    fun readNumber(): String? {
+        if (isOver()) {
+            return null
+        }
+
+        val sb = StringBuilder()
+
+        if (peek() == KeyChar.MINUS) {
+            sb.append(KeyChar.MINUS)
+            next()
+        }
+
+        val intPart = digits()
+
+        if (intPart.isEmpty()) {
+            return sb.toString()
+        }
+
+        sb.append(intPart)
+
+        if (isOver()) {
+            return sb.toString()
+        }
+        else if (peek() == KeyChar.DECIMAL_POINT) {
+            sb.append(peek())
+            next()
+            sb.append(digits())
+
+            return sb.toString()
+        }
+        else {
+            return sb.toString()
+        }
+    }
+
+    fun readComponent(): String? {
+        if (isOver()) {
+            return null
+        }
+
+        val sb = StringBuilder()
+
+        if (peek() in charArrayOf('~', '^')) {
+            sb.append(peek())
+            next()
+        }
+
+        return if (isOver()) {
+            sb.toString()
+        }
+        else if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
+            sb.append(readNumber() ?: throw IllegalStateException("NEVER HAPPENS"))
+            sb.toString()
+        }
+        else {
+            sb.toString()
+        }
+    }
+
+    fun completeCoordinate(components: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val x = readComponent()
+        val y = readComponent()
+        val z = readComponent()
+        val input = x?.run { x + (y?.run { ' ' + y + (z?.run { " $z" } ?: "") } ?: "") } ?: ""
+
+        val items = components
+            .filter { it.startsWith(input) }
+            .map {
+                CompletionItem(it).apply {
+                    this.kind = kind
+                    span?.run {
+                        textEdit = Either.forLeft(TextEdit(
+                            toLsp4jRange(),
+                            it
+                        ))
+                    }
+                }
+            }
+
+        if (isOver()) {
+            System.err.println("ccov:"+items)
+            return ShouldComplete(items)
+        }
+
+        return ShouldContinue(input)
     }
 
     fun readString(): String {

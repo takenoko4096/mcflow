@@ -146,8 +146,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                         }
                         ?: ""
 
-                    System.err.println("rrr:"+tokenizer.sourceCode)
-
                     val context = BclCompletionContext(
                         string,
                         candidate.startPosition,

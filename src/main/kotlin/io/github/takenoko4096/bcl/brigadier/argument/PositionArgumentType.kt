@@ -6,8 +6,13 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
+import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
 
 class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Coordinate> {
@@ -30,5 +35,31 @@ class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint =
             }
 
         return Argument(this, coordinate, start..end)
+    }
+
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = ArgumentCompleter(context)
+        val res = completer.completeCoordinate(listOf(
+            Coordinate.from(
+                CoordinateComponent.Absolute.ZERO,
+                CoordinateComponent.Absolute.ZERO,
+                CoordinateComponent.Absolute.ZERO
+            )!!,
+            Coordinate.from(
+                CoordinateComponent.Relative.ZERO,
+                CoordinateComponent.Relative.ZERO,
+                CoordinateComponent.Relative.ZERO
+            )!!,
+            Coordinate.from(
+                CoordinateComponent.Local.ZERO,
+                CoordinateComponent.Local.ZERO,
+                CoordinateComponent.Local.ZERO
+            )!!
+        ).map(Coordinate::toString), CompletionItemKind.Value)
+        if (res is ArgumentCompleter.ShouldComplete) {
+            return res.items
+        }
+        System.err.println("inp:"+(res as ArgumentCompleter.ShouldContinue).input)
+        return emptyList()
     }
 }

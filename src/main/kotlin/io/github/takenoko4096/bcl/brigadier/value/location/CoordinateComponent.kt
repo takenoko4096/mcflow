@@ -7,17 +7,29 @@ sealed class CoordinateComponent(val value: Float) {
         override fun toString(): String {
             return value.toString()
         }
+
+        companion object {
+            val ZERO = Absolute(0f)
+        }
     }
 
     class Relative(value: Float): World(value) {
         override fun toString(): String {
             return "~$value"
         }
+
+        companion object {
+            val ZERO = Relative(0f)
+        }
     }
 
     class Local(value: Float): CoordinateComponent(value) {
         override fun toString(): String {
             return "^$value"
+        }
+
+        companion object {
+            val ZERO = Local(0f)
         }
     }
 }
