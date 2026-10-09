@@ -15,7 +15,7 @@ sealed class CoordinateComponent(val value: Float) {
 
     class Relative(value: Float): World(value) {
         override fun toString(): String {
-            return "~$value"
+            return if (value == 0f) "~" else "~$value"
         }
 
         companion object {
@@ -25,7 +25,7 @@ sealed class CoordinateComponent(val value: Float) {
 
     class Local(value: Float): CoordinateComponent(value) {
         override fun toString(): String {
-            return "^$value"
+            return if (value == 0f) "^" else "^$value"
         }
 
         companion object {

@@ -35,7 +35,7 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
             }
             else string
 
-            if (s == value) return Value(this, entry)
+            if (s == value.toString()) return Value(this, entry)
         }
 
         return null

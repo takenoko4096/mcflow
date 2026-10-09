@@ -6,7 +6,7 @@ sealed class Coordinate(
     val z: CoordinateComponent
 ){
     override fun toString(): String {
-        return "Coordinate($x $y $z)"
+        return "$x $y $z"
     }
 
     class InWorld(

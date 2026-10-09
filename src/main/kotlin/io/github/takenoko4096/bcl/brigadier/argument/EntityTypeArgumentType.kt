@@ -41,9 +41,8 @@ class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType
         return Argument(this, entityType, start..end)
     }
 
-    // TODO summonableOnly
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        return EntityType.IDENTIFIERS
+        return (if (summonableOnly) EntityType.SUMMONABLE_IDENTIFIERS else EntityType.IDENTIFIERS)
             .filter { it.startsWith(context.string) }
             .map {
                 CompletionItem(it).apply {

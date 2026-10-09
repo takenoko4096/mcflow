@@ -163,6 +163,31 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
+    fun completeComponent(components: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val input = readComponent() ?: ""
+
+        val items = components
+            .filter { it.startsWith(input) }
+            .map {
+                CompletionItem(it).apply {
+                    this.kind = kind
+                    span?.run {
+                        textEdit = Either.forLeft(TextEdit(
+                            toLsp4jRange(),
+                            it
+                        ))
+                    }
+                }
+            }
+
+        if (isOver()) {
+            return ShouldComplete(items)
+        }
+
+        return ShouldContinue(input)
+    }
+
     fun completeCoordinate(components: List<String>, kind: CompletionItemKind): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
         val x = readComponent()
@@ -185,7 +210,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
 
         if (isOver()) {
-            System.err.println("ccov:"+items)
             return ShouldComplete(items)
         }
 

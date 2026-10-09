@@ -152,6 +152,15 @@ enum class EntityType(
             }
         }
 
+        val SUMMONABLE_IDENTIFIERS = entries.filter { it.summonable }.flatMap {
+            if (it.identifier.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
+                listOf(it.identifier.toString(), it.identifier.value)
+            }
+            else {
+                listOf(it.identifier.toString())
+            }
+        }
+
         fun get(identifier: NamespacedIdentifier): EntityType? {
             return entries.find { it.identifier == identifier }
         }

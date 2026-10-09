@@ -37,6 +37,9 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
                 emptyList()
             )
         ).apply { full = Either.forLeft(true) }
+        capabilities.completionProvider = CompletionOptions().apply {
+            triggerCharacters = listOf(" ", "\"", ",", "=")
+        }
 
         return capabilities
     }
