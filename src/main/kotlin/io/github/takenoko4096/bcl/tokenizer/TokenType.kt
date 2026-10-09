@@ -29,7 +29,7 @@ enum class TokenType {
     TIME_T,
     LEVEL,
 
-    INVALID;
+    UNKNOWN;
 
     override fun toString(): String {
         return name.lowercase()

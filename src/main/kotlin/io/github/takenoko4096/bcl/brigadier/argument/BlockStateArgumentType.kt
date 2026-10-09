@@ -77,6 +77,7 @@ class BlockStateArgumentType(
         while (true) {
             val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
             if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
+                System.err.println(propertyNameCompletionResult.items)
                 return propertyNameCompletionResult.items
             }
             propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
@@ -98,6 +99,7 @@ class BlockStateArgumentType(
             }
 
             if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
+                System.err.println(propertyValueCompletionResult.items)
                 return propertyValueCompletionResult.items
             }
 

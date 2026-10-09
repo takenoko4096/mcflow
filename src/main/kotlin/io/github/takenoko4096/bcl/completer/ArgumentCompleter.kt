@@ -47,12 +47,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         )
     }
 
-    private fun getRemainingSourceSpan(): SourceSpan? {
-        return context.sourceSpan?.run {
-            getCurrentSourcePosition()..end
-        }
-    }
-
     private fun getRemainingSourceSpanOrNull(): SourceSpan? {
         return context.sourceSpan?.run {
             val start = getCurrentSourcePosition()
@@ -82,6 +76,8 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 }
             }
         }
+
+        System.err.println("c end: $remaining")
 
         return if (input in chars) {
             ShouldContinue(input.toString())
@@ -222,6 +218,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeQuotedString(candidates: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        System.err.println("q start: $remaining")
         val span = getRemainingSourceSpanOrNull()
         val input = readQuotedString()
 
