@@ -214,7 +214,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return ShouldContinue(input)
     }
 
-    fun readString(nonTerminators: CharArray = charArrayOf()): String {
+    fun readString(prefixable: Set<Char> = emptySet()): String {
         if (isOver()) {
             return ""
         }
@@ -232,16 +232,17 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 return firstChar.toString()
             }
             in setOf(KeyChar.PLUS, KeyChar.MINUS) -> {
-                if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators }) {
+                if (secondChar == null || secondChar in KeyChar.COMMAND_WORD_TERMINATORS) {
                     next()
                     return ""
                 }
 
                 next()
             }
+            in prefixable -> next()
         }
 
-        if (!isOver()) while (!isOver() && peek() !in KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators }) {
+        if (!isOver()) while (!isOver() && peek() !in KeyChar.COMMAND_WORD_TERMINATORS) {
             next()
         }
 
@@ -318,9 +319,9 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return QuotableString(readString())
     }
 
-    fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind, nonTerminators: CharArray = charArrayOf()): ValueCompletionResult {
+    fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind, prefixable: Set<Char> = emptySet()): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
-        val input = readString(nonTerminators)
+        val input = readString(prefixable)
 
         val items = candidates
             .filter { it.startsWith(input) }

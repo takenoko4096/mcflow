@@ -52,6 +52,28 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
     fun parse(reader: TokenSeqReader): CommandLineParseResult {
         val semanticTokens = mutableListOf<BclSemanticToken>()
 
+        if (reader.isOver()) {
+            return CommandLineParseResult.Failure(
+                null,
+                route = listOf(),
+                emptyList(),
+                emptyList(),
+                getCommands()
+                    .map {
+                        CompletionCandidate(it, reader.getEntireSourceSpan().start, null)
+                    },
+                listOf(
+                    BclDiagnostic(
+                        "不明なコマンド名です: ''",
+                        reader.sourceCode,
+                        reader.getOverNextSourceSpan()
+                    )
+                ),
+                reader.getEntireSourceSpan(),
+                semanticTokens
+            )
+        }
+
         val start = reader.getCurrentTokenStartPosition()
 
         val initialState = DispatcherParseState(
@@ -251,7 +273,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             completionCandidates.add(CompletionCandidate(node, start, start..end))
                             candidateReader.cursor = cursor
                             potentials += RoutePotential(
-                                state = nextState,
+                                state = nextState.copy(
+                                    literalCount = state.literalCount
+                                ),
                                 diagnostics = unfatalErrors + listOf(
                                     BclDiagnostic(
                                         """
@@ -329,7 +353,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 if (detailedOutput) error.printStackTrace(System.err)
 
                 potentials += RoutePotential(
-                    nextState,
+                    nextState.copy(
+                        literalCount = state.literalCount
+                    ),
                     unfatalErrors + listOf(
                         BclDiagnostic(
                             """

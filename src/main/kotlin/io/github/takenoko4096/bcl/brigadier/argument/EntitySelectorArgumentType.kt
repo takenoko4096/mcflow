@@ -823,7 +823,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, start..end))
     }
 
-    private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorType {
+    private fun parseSelectorType(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorType? {
         val start = reader.getCurrentTokenStartPosition()
 
         val t = reader.peek()
@@ -851,9 +851,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         if ('@' in string) {
             diagnostics.add(reader.diagnostic(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです: '$string'"))
+            return null
         }
 
-        return SelectorType.PLAYER // これでいいんかなあ
+        return SelectorType.PLAYER
     }
 
     private fun parseSelectorArguments(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
@@ -939,6 +940,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         val end = reader.getPreviousTokenEndPosition()
 
+        if (type == null) {
+            return NoValuedArgument(this, start..end, diagnostics)
+        }
+
         val selector = EntitySelector(type, arguments)
         validator?.invoke(reader, selector, start..end, diagnostics)
 
@@ -956,7 +961,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val typeResult = completer.completeUnquotedString(
             candidates = listOf("@s", "@p", "@a", "@r", "@e", "@n", "@initiator"),
             CompletionItemKind.Variable,
-            nonTerminators = charArrayOf('@')
+            prefixable = setOf('@')
         )
         if (typeResult is ArgumentCompleter.ShouldComplete) {
             return typeResult.items
@@ -1038,7 +1043,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             completer.completeUnquotedString(
                 GameMode.entries.flatMap { it.getNames().flatMap { s -> listOf(s, "!$s") } },
                 CompletionItemKind.EnumMember,
-                nonTerminators = charArrayOf('!')
+                prefixable = setOf('!')
             ) as? ArgumentCompleter.ShouldComplete
         )?.items
     }
@@ -1056,7 +1061,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             completer.completeUnquotedString(
                 EntityType.IDENTIFIERS.flatMap { listOf(it, "!$it") },
                 CompletionItemKind.EnumMember,
-                nonTerminators = charArrayOf('!')
+                prefixable = setOf('!')
             ) as? ArgumentCompleter.ShouldComplete
         )?.items
     }

@@ -2,7 +2,9 @@ package io.github.takenoko4096.bcl.brigadier.argument
 
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
+import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -13,14 +15,19 @@ class IdentifierArgumentType(
     private val quotable: Boolean = true,
     private val strict: Boolean = true
 ) : ArgumentType<NamespacedIdentifier>(name) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): Argument<NamespacedIdentifier> {
-        val start = reader.getCurrentTokenStartPosition()
-        val identifier = reader.readNamespacedIdentifier(defaultNamespace, quotable, strict)
-        val end = reader.getPreviousTokenEndPosition()
+    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<NamespacedIdentifier> {
+        val identifier = reader.unfatalize(diagnostics) {
+            readNamespacedIdentifier(defaultNamespace, quotable, strict)
+        }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
 
-        return Argument(this, identifier, start..end)
+        return if (identifier is TokenSeqReader.ReadResult.Successful) {
+            Argument(this, identifier.value, identifier.sourceSpan)
+        }
+        else {
+            NoValuedArgument(this, identifier.sourceSpan, diagnostics)
+        }
     }
 
     companion object {

@@ -240,6 +240,8 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
                 return invalid(start..end, type, "整数接尾辞は10進数に対してのみ有効です")
             }
 
+            end = getCurrentSourcePosition()
+
             return tokenOf(
                 type,
                 sb.toString(),

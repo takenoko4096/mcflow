@@ -165,9 +165,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             }
         }
 
-        System.err.println("compl:"+items.size)
-
-        return CompletableFuture.completedFuture(Either.forLeft(items))
+        return CompletableFuture.completedFuture(Either.forLeft(items.distinctBy {
+            it.label to it.textEdit
+        }))
     }
 
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {

@@ -41,6 +41,8 @@ object KeyChar {
     const val PLUS = '+'
     const val MINUS = '-'
     const val WILDCARD = '*'
+    const val AT = '@'
+    const val EXCLAMATION = '!'
 
     val COMMAND_WORD_TERMINATORS = charArrayOf(
         ' ', '{', '}', '[', ']', ',', '!', ';', '"', '\'', '`', '@', '=', '~', '^', '|', '/', '+', '#', '$', '<','>', '*', '&', '\r', '\n', '\t'

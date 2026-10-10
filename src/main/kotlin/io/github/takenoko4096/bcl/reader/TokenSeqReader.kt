@@ -964,6 +964,17 @@ open class TokenSeqReader(
 
         val end = getPreviousTokenEndPosition()
 
+        val invalids = tokens.filter { it.sourceSpan.start.index >= startIndex && it.sourceSpan.end.index <= index }
+            .filterIsInstance<Token.Invalid>()
+        val invalid = invalids.firstOrNull()
+        if (invalid != null) {
+            val span = invalids.first().sourceSpan.start..invalids.last().sourceSpan.end
+            throw exception(
+                span,
+                "文字列の解析に失敗しました: ${invalid.value}"
+            )
+        }
+
         if (string.isEmpty()) {
             val pS = peek().sourceSpan
             throw exception(

@@ -295,8 +295,12 @@ object Commands {
             "item_name"(ItemTypeArgumentType()) {
                 executes()
 
-                "count"(IntegerArgumentType.integer()) {
+                "data"(IntegerArgumentType.integer()) {
                     executes()
+
+                    "max_count"(IntegerArgumentType.integer()) {
+                        executes()
+                    }
                 }
             }
         }
@@ -564,6 +568,10 @@ object Commands {
                         redirect("execute")
                     }
                 }
+            }
+
+            "position"(PositionArgumentType()) {
+                redirect("execute")
             }
         }
 
@@ -1687,9 +1695,9 @@ object Commands {
     }
 
     val SCRIPTEVENT = Command.builder("scriptevent") {
-        "id"(IdentifierArgumentType.namespaced("script_event_id")) {
+        "id"(IdentifierArgumentType.namespaced("namespaced_identifier")) {
             executes {
-                val argument = getArgument<NamespacedIdentifier>("script_event_id")
+                val argument = getArgument<NamespacedIdentifier>("id")
                 if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
                     addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
                 }
@@ -1697,7 +1705,7 @@ object Commands {
 
             "message"(StringArgumentType.greedy()) {
                 executes {
-                    val argument = getArgument<NamespacedIdentifier>("script_event_id")
+                    val argument = getArgument<NamespacedIdentifier>("id")
                     if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
                         addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
                     }
