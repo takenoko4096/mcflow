@@ -11,19 +11,6 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         }
     }
 
-    fun split(tokens: List<Token>): List<SourceSpan> {
-        return tokens
-            .filter { it.sourceSpan.start.index >= start.index && it.sourceSpan.end.index <= end.index }
-            .groupBy { it.sourceSpan.start.line }
-            .values
-            .map { line ->
-                SourceSpan(
-                    line.first().sourceSpan.start,
-                    line.last().sourceSpan.end
-                )
-            }
-    }
-
     fun trimEdge(): SourceSpan {
         return SourcePosition(start.line, start.column + 1, start.index + 1)..SourcePosition(end.line, end.column - 1, end.index - 1)
     }

@@ -341,26 +341,41 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
 
         if (isOver()) return
 
-        val start = getCurrentSourcePosition()
+        val start0 = getCurrentSourcePosition()
 
         if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
             var count = 1
-            while (!isOver()) {
-                if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
+            var start = start0
+            var end: SourcePosition
+            while (true) {
+                if (isOver()) {
+                    end = getSourcePositionAtBack()
+                    commentRangeCollector.add(start..end)
+                    break
+                }
+                else if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
                     count++
                 }
                 else if (testThenAdvance(KeyChar.BLOCK_COMMENT_END_SEQUENCE)) {
                     count--
                 }
+                else if (peek() == KeyChar.LINEBREAK) {
+                    end = getSourcePositionAtBack()
+                    next()
+                    if (end.index > start.index) commentRangeCollector.add(start..end)
+                    start = getCurrentSourcePosition()
+                    continue
+                }
                 else {
                     next()
                 }
 
-                if (count == 0) break
+                if (count == 0) {
+                    end = getSourcePositionAtBack()
+                    commentRangeCollector.add(start..end)
+                    break
+                }
             }
-
-            val end = getSourcePositionAtBack()
-            commentRangeCollector.add(start..end)
         }
         else if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
             while (!isOver()) {
@@ -369,7 +384,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
             }
 
             val end = getSourcePositionAtBack()
-            commentRangeCollector.add(start..end)
+            commentRangeCollector.add(start0..end)
         }
     }
 

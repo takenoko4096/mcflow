@@ -31,17 +31,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val comments = mutableListOf<SourceSpan>()
         val tokenizer = BclTokenizer(text, interpretComments = true, commentRangeCollector = comments)
         val tokens = tokenizer.tokenize()
-        System.err.println(comments.flatMap {
-            it.split(tokens).map { sourceSpan ->
-                BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
-            }
-        })
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
         val semanticTokens = mutableListOf<BclSemanticToken>()
-        semanticTokens.addAll(comments.flatMap {
-            it.split(tokens).map { sourceSpan ->
-                BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
-            }
+        semanticTokens.addAll(comments.map { sourceSpan ->
+            BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
         })
         val block = parser.parse(semanticTokens)
         if (uri != null) {
