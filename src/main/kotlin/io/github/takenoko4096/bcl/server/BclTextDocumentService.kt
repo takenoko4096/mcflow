@@ -10,6 +10,7 @@ import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
@@ -21,16 +22,33 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     private val blocks = mutableMapOf<String, Block>()
 
+    private val extraSemanticTokens = mutableMapOf<String, List<BclSemanticToken>>()
+
     private val client: LanguageClient
         get() = server.client
 
-    private fun parse(uri: String, text: String): Block {
-        val tokenizer = BclTokenizer(text, interpretComments = false)
+    private fun parse(uri: String?, text: String): Block {
+        val comments = mutableListOf<SourceSpan>()
+        val tokenizer = BclTokenizer(text, interpretComments = true, commentRangeCollector = comments)
         val tokens = tokenizer.tokenize()
+        System.err.println(comments.flatMap {
+            it.split(tokens).map { sourceSpan ->
+                BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
+            }
+        })
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
-        val block = parser.parse()
-        blocks[uri] = block
-        documents[uri] = tokenizer.sourceCode
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+        semanticTokens.addAll(comments.flatMap {
+            it.split(tokens).map { sourceSpan ->
+                BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
+            }
+        })
+        val block = parser.parse(semanticTokens)
+        if (uri != null) {
+            blocks[uri] = block
+            extraSemanticTokens[uri] = semanticTokens
+            documents[uri] = tokenizer.sourceCode
+        }
         return block
     }
 
@@ -108,10 +126,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             }
         }
 
-        val tokenizer = BclTokenizer(sourceCode.substring(0, cursor), interpretComments = false)
-        val tokens = tokenizer.tokenize()
-        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
-        val block = parser.parse()
+        val text = sourceCode.substring(0, cursor)
+            .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
+            .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
+        val block = parse(null, text)
         val result = block.nodes.lastOrNull() ?: return empty
 
         // always passes
@@ -138,7 +156,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     val string = candidate.inputSourceSpan
                         ?.run {
                             try {
-                                getStringFromSourceCode(tokenizer.sourceCode)
+                                getStringFromSourceCode(text)
                             }
                             catch (_: Throwable) {
                                 ""
@@ -174,10 +192,11 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val semanticTokens = SemanticTokens()
 
         val block = blocks[params.textDocument.uri]!!
+        val extra = extraSemanticTokens[params.textDocument.uri]!!
 
-        val tokens = block.nodes
+        val tokens = (block.nodes
             .filterIsInstance<CommandLineParseResult>()
-            .flatMap { it.semanticTokens }
+            .flatMap { it.semanticTokens } + extra)
             .sortedBy { it.sourceSpan.start.index }
             .toList()
 
@@ -197,7 +216,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             val deltaLine = line - previousLine
             val deltaStart = if (deltaLine == 0) {
                 character - previousStart
-            } else {
+            }
+            else {
                 character
             }
 

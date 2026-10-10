@@ -10,9 +10,10 @@
 - Bedrock Dedicated Server
 
 ### arguments
-  - `LootTableArgumentType`
-  - `EntitySelectorArgumentType`
-    - `has_property` のプロパティ名バリデーション／補完
+- `LootTableArgumentType`
+- `EntitySelectorArgumentType`
+  - `has_property` のプロパティ名バリデーション／補完
+- `JsonObjectArgumentType` の補完
 
 ## 既知のバグ
 

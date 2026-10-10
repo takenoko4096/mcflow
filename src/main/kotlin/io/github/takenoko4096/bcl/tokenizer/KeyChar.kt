@@ -23,8 +23,8 @@ object KeyChar {
     val NUMBER_CHAR_SEQUENCE = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
 
     const val LINE_COMMENT_SEQUENCE = "#"
-    const val BLOCK_COMMENT_START_SEQUENCE = "/*"
-    const val BLOCK_COMMENT_END_SEQUENCE = "*/"
+    const val BLOCK_COMMENT_START_SEQUENCE = "#::"
+    const val BLOCK_COMMENT_END_SEQUENCE = "::#"
 
     const val WINDOWS_LINE_SEPARATOR_SEQUENCE = "$CARRIAGE_RETURN$LINEBREAK"
     const val MAC_LINE_SEPARATOR = CARRIAGE_RETURN

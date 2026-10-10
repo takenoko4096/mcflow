@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-class BclTokenizer(text: String, private val interpretComments: Boolean) {
+class BclTokenizer(text: String, private val interpretComments: Boolean, private val commentRangeCollector: MutableList<SourceSpan> = mutableListOf()) {
     val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
@@ -341,13 +341,9 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
         if (isOver()) return
 
-        if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
-            while (!isOver()) {
-                if (peek() == KeyChar.LINEBREAK) break
-                next()
-            }
-        }
-        else if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
+        val start = getCurrentSourcePosition()
+
+        if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
             var count = 1
             while (!isOver()) {
                 if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
@@ -362,6 +358,18 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
 
                 if (count == 0) break
             }
+
+            val end = getSourcePositionAtBack()
+            commentRangeCollector.add(start..end)
+        }
+        else if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
+            while (!isOver()) {
+                if (peek() == KeyChar.LINEBREAK) break
+                next()
+            }
+
+            val end = getSourcePositionAtBack()
+            commentRangeCollector.add(start..end)
         }
     }
 

@@ -3,6 +3,10 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.InsertTextFormat
 
 class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
     override fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean {

@@ -14,6 +14,7 @@ enum class BclSemanticTokenType : StringRepresentable {
     SELECTOR_TYPE,
     SYMBOL,
     ENUM,
+    COMMENT,
 
     ERROR;
 
