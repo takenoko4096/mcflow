@@ -890,7 +890,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 return@run ::unknown
             }
 
+            val eqStart = reader.getCurrentTokenStartPosition()
             reader.expect(Symbol.ASSIGN)
+            val eqEnd = reader.getPreviousTokenEndPosition()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, eqStart..eqEnd))
 
             if (reader.isOver()) {
                 throw reader.exception(reader.getOverNextSourceSpan(), "セレクタ引数の読み取りに失敗しました: ${Symbol.ASSIGN.value} の後に値が欠落しています")

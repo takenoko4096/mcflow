@@ -28,11 +28,11 @@ class IntegerArgumentType(
     }
 
     companion object {
-        fun integer() = IntegerArgumentType(true, null)
+        fun integer() = IntegerArgumentType(false, null)
 
         fun integer(range: IntRange) = IntegerArgumentType(false, range)
 
-        fun min(min: Int) = IntegerArgumentType(true, min..Int.MAX_VALUE)
+        fun min(min: Int) = IntegerArgumentType(false, min..Int.MAX_VALUE)
 
         fun nonnegative() = min(0)
 

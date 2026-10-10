@@ -24,6 +24,7 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
     /**
      * @throws IllegalArgumentException
      */
+    @Deprecated(message = "use ::strings")
     abstract fun parse(token: Token): Value<T>
 
     abstract val strings: Map<T, String>

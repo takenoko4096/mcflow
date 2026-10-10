@@ -113,8 +113,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         return Token(
             id++,
             type,
-            // クォートに囲まれた文字列以外の全てのトークンは大文字・小文字を区別しない
-            value.lowercase(),
+            value,
             start..end
         )
     }
@@ -212,9 +211,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         var integerPostfix: Char? = null
         if (suffix == KeyChar.UNSIGNED) {
             signed = false
+            end = getCurrentSourcePosition()
             next()
         }
         else if (suffix in KeyChar.INTEGER_POSTFIXES) {
+            end = getCurrentSourcePosition()
             next()
             integerPostfix = suffix
         }
@@ -235,12 +236,8 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
             }
 
             if (radix != Radix.DECIMAL) {
-                end = getCurrentSourcePosition()
-                next()
                 return invalid(start..end, type, "整数接尾辞は10進数に対してのみ有効です")
             }
-
-            end = getCurrentSourcePosition()
 
             return tokenOf(
                 type,
@@ -510,7 +507,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean) {
         }
 
         if (noSeparator) {
-            next()
+            word()
             val end = getSourcePositionAtBack()
             return invalid(start..end, TokenType.WORD, "トークン $previous の直後には区切りが必要です")
         }

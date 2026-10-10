@@ -39,7 +39,7 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
             val value = property.toValue(data.value)
 
             if (value == null) {
-                diagnostics.add(reader.diagnostic(data.sourceSpan, "プロパティの読み取りに失敗しました: '${data.value}' は無効な値です; ${property.values.joinToString(" | ")} を渡す必要があります"))
+                diagnostics.add(reader.diagnostic(data.sourceSpan, "プロパティの読み取りに失敗しました: '${data.value}' は無効な値です; ${property.strings.values.joinToString(" | ")} を渡す必要があります"))
                 continue
             }
 
