@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import kotlin.collections.contains
+import kotlin.text.plus
 
 class ArgumentCompleter(private val context: BclCompletionContext) {
     private var cursor: Int = 0
@@ -65,8 +66,9 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return char
     }
 
-    fun completeChar(chars: List<Char>, kind: CompletionItemKind): ValueCompletionResult {
+    fun completeChar(chars: List<Char>, kind: CompletionItemKind, optional: Boolean = false): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
+        val c = cursor
         val input = readChar()
 
         val items = chars.map {
@@ -82,10 +84,18 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             ShouldContinue(input.toString())
         }
         else if (isOver()) {
-            ShouldComplete(items)
+            if (optional && items.isEmpty()) {
+                cursor = c
+                ShouldContinue("")
+            }
+            else ShouldComplete(items)
         }
         else {
-            ShouldComplete(emptyList())
+            if (optional) {
+                cursor = c
+                ShouldContinue("")
+            }
+            else ShouldComplete(emptyList())
         }
     }
 
@@ -307,7 +317,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun readQuotableString(): QuotableString {
+    fun readQuotableString(prefixable: Set<Char> = emptySet()): QuotableString {
         if (isOver()) {
             return QuotableString("")
         }
@@ -316,7 +326,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             return readQuotedString()
         }
 
-        return QuotableString(readString())
+        return QuotableString(readString(prefixable))
     }
 
     fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind, prefixable: Set<Char> = emptySet()): ValueCompletionResult {
@@ -366,6 +376,48 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
         else {
             ShouldComplete(items)
+        }
+    }
+
+    fun completeQuotableString(candidates: List<String>, kind: CompletionItemKind, prefixable: Set<Char> = emptySet()): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val input = readQuotableString(prefixable)
+
+        val items = candidates
+            .filter { it.startsWith(input.value) }
+            .map {
+                CompletionItem(it).apply {
+                    this.kind = kind
+                    span?.run {
+                        if (input is QuotedString) {
+                            var s = '"' + it
+                            if (!input.opened) {
+                                s += '"'
+                            }
+                            this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), s))
+                        }
+                        else {
+                            this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
+                        }
+                    }
+                }
+            }
+
+        return if (input is QuotedString) {
+            if (input.closed) {
+                ShouldContinue(input.value)
+            }
+            else {
+                ShouldComplete(items)
+            }
+        }
+        else {
+            if (isOver()) {
+                ShouldComplete(items)
+            }
+            else {
+                ShouldContinue(input.value)
+            }
         }
     }
 

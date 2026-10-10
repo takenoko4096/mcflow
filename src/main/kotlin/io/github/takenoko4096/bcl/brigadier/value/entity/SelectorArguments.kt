@@ -91,7 +91,8 @@ data class SelectorArguments(
 
     data class HasProperty(
         val properties: List<InvertibleValue<NamespacedIdentifier>>,
-        val conditions: List<Pair<NamespacedIdentifier, InvertibleValue<Boolean>>>
+        val conditions: List<Pair<NamespacedIdentifier, InvertibleValue<Boolean>>>,
+        val sourceSpan: SourceSpan
     ) {
         override fun toString(): String {
             val s1 = conditions.joinToString(", ") { (id, value) -> "$id=$value" }
