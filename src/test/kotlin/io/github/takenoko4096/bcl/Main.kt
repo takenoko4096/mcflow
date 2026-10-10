@@ -114,7 +114,7 @@ fun main() {
 
     val parseResult = BclParser(
         text,
-        BclTokenizer(text, interpretComments = false).tokenize(),
+        BclTokenizer(text, extension = false).tokenize(),
         dispatcher,
         true
     ).parse()
@@ -129,7 +129,7 @@ fun main() {
 
     val s = "execute as@a[tag=a]at@s facing^1^^run tp~-1~~-2~~true"
     println(
-        BclTokenizer(s, interpretComments = false)
+        BclTokenizer(s, extension = false)
             .tokenize()
             .map { it.sourceSpan.getStringFromSourceCode(s) }
     )

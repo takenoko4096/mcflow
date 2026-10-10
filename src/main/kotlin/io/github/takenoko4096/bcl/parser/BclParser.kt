@@ -21,6 +21,7 @@ import io.github.takenoko4096.bcl.ast.statement.ReturnStatement
 import io.github.takenoko4096.bcl.ast.statement.SetStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
+import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
@@ -37,7 +38,8 @@ class BclParser(
     sourceCode: String,
     tokens: List<Token>,
     private val dispatcher: CommandDispatcher,
-    private val extension: Boolean
+    private val extension: Boolean,
+    private val betaFeatures: Boolean = false
 ) : TokenSeqReader(sourceCode, tokens, ::BclParseException) {
     private fun expression(): Expression {
         skipNewLine()
@@ -486,7 +488,7 @@ class BclParser(
     }
 
     private fun command(semanticTokens: MutableList<BclSemanticToken>/*, macros: Map<String, String>*/): CommandLineParseResult {
-        return dispatcher.parse(createCommandLineSubReader(semanticTokens))
+        return dispatcher.parse(createCommandLineSubReader(extension, semanticTokens))
     }
 
     private fun statement(semanticTokens: MutableList<BclSemanticToken>): Statement {
@@ -692,10 +694,11 @@ class BclParser(
             throw exception(getOverNextSourceSpan(), "命令のパースに失敗しました: 入力が不足しています")
         }
 
-        val node = if (extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
+        // TODO betaFeatures
+        val node = if (betaFeatures && extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
             statement(semanticTokens)
         }
-        else if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
+        else if (extension && peekIgnoreNewLine() `is` Symbol.DIVIDE) {
             val start = getCurrentTokenStartPosition()
             nextIgnoreNewLine()
             val end = getPreviousTokenEndPosition()
@@ -714,6 +717,8 @@ class BclParser(
     }
 
     fun parse(semanticTokens: MutableList<BclSemanticToken> = mutableListOf()): Block {
+        // val diagnostics = mutableListOf<BclDiagnostic>()
+
         if (isOverIgnoreNewLine()) {
             return Block(SourceSpan.NULL, emptyList())
         }

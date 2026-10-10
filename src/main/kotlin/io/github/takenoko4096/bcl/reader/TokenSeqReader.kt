@@ -539,7 +539,7 @@ open class TokenSeqReader(
         return BclDiagnostic(message, sourceCode, sourceSpan)
     }
 
-    protected fun createCommandLineSubReader(semanticTokens: MutableList<BclSemanticToken>): TokenSeqReader {
+    protected fun createCommandLineSubReader(extension: Boolean, semanticTokens: MutableList<BclSemanticToken>): TokenSeqReader {
         val tokens = mutableListOf<Token>()
         var current: Token
 
@@ -551,7 +551,7 @@ open class TokenSeqReader(
             next()
             val end = getPreviousTokenEndPosition()
 
-            if (current `is` Symbol.ESCAPE && !isOver() && peek() `is` Symbol.NEWLINE) {
+            if (extension && current `is` Symbol.ESCAPE && !isOver() && peek() `is` Symbol.NEWLINE) {
                 next()
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
                 continue

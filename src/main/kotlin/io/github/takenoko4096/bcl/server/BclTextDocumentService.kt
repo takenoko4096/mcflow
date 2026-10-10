@@ -27,11 +27,11 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     private val client: LanguageClient
         get() = server.client
 
-    private fun parse(uri: String?, text: String): Block {
+    private fun parse(uri: String?, text: String, extension: Boolean): Block {
         val comments = mutableListOf<SourceSpan>()
-        val tokenizer = BclTokenizer(text, interpretComments = true, commentRangeCollector = comments)
+        val tokenizer = BclTokenizer(text, extension, commentRangeCollector = comments)
         val tokens = tokenizer.tokenize()
-        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension = false)
+        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension)
         val semanticTokens = mutableListOf<BclSemanticToken>()
         semanticTokens.addAll(comments.map { sourceSpan ->
             BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
@@ -57,8 +57,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
+        System.err.println("opened:"+params.textDocument.uri)
         val document = params.textDocument
-        val block = parse(document.uri, document.text)
+        val block = parse(document.uri, document.text, extension = document.uri.endsWith(".mcflow"))
         blocks[document.uri] = block
         publishDiagnostics(document.uri, block)
     }
@@ -66,7 +67,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     override fun didChange(params: DidChangeTextDocumentParams) {
         val uri = params.textDocument.uri
         val text = params.contentChanges.last().text
-        val block = parse(uri, text)
+        val block = parse(uri, text, extension = uri.endsWith(".mcflow"))
         publishDiagnostics(uri, block)
     }
 
@@ -122,7 +123,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val text = sourceCode.substring(0, cursor)
             .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
-        val block = parse(null, text)
+        val block = parse(null, text, extension = uri.endsWith(".mcflow"))
         val result = block.nodes.lastOrNull() ?: return empty
 
         // always passes

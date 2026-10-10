@@ -11,8 +11,6 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
@@ -31,7 +29,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
 
     companion object {
         fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
-            val tokenizer = BclTokenizer(string, interpretComments = false)
+            val tokenizer = BclTokenizer(string, extension = false)
             val tokens = tokenizer.tokenize()
 
             val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)

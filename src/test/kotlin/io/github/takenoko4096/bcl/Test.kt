@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 object Test {
     @Test
     fun test() {
-        val tokenizer = BclTokenizer("1abcdefghijklmn", interpretComments = false)
+        val tokenizer = BclTokenizer("1abcdefghijklmn", extension = false)
         println(tokenizer.tokenize().map { it.sourceSpan.getStringFromSourceCode(tokenizer.sourceCode) + " (${it.type})" })
     }
 }

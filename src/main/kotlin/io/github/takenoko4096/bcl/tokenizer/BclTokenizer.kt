@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-class BclTokenizer(text: String, private val interpretComments: Boolean, private val commentRangeCollector: MutableList<SourceSpan> = mutableListOf()) {
+class BclTokenizer(text: String, private val extension: Boolean, private val commentRangeCollector: MutableList<SourceSpan> = mutableListOf()) {
     val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
@@ -150,6 +150,8 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
         }
 
         val radix = run {
+            if (!extension) return@run Radix.DECIMAL
+
             if (peek() != KeyChar.ZERO) return@run Radix.DECIMAL
 
             for (entry in Radix.entries) {
@@ -178,11 +180,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
 
         // ([0] == 小数点 or 指数指定 'e') and 10進 and ([1] <: 基数)
         if (!isOver()
-            && (peek() == KeyChar.DECIMAL_POINT || peek().lowercaseChar() == KeyChar.EXPONENTIAL)
+            && (peek() == KeyChar.DECIMAL_POINT || (peek() == KeyChar.EXPONENTIAL && extension))
             && radix.value == 10
             && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)
         ) {
-            val isExp = peek().lowercaseChar() == KeyChar.EXPONENTIAL
+            val isExp = peek() == KeyChar.EXPONENTIAL
 
             sb.append(peek())
             next()
@@ -209,7 +211,7 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
         val suffix = peek()
         var signed = true
         var integerPostfix: Char? = null
-        if (suffix == KeyChar.UNSIGNED) {
+        if (extension && suffix == KeyChar.UNSIGNED) {
             signed = false
             end = getCurrentSourcePosition()
             next()
@@ -337,13 +339,11 @@ class BclTokenizer(text: String, private val interpretComments: Boolean, private
     }
 
     private fun skipComment() {
-        if (!interpretComments) return
-
         if (isOver()) return
 
         val start0 = getCurrentSourcePosition()
 
-        if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
+        if (extension && testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
             var count = 1
             var start = start0
             var end: SourcePosition

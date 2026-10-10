@@ -505,7 +505,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
     }
 
     fun evaluate(sourceCode: String): List<CommandLineParseResult> {
-        val tokens = BclTokenizer(sourceCode, interpretComments = false).tokenize()
+        val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
         val block = BclParser(sourceCode, tokens, this, extension = false).parse()
         return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
