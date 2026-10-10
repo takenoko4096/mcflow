@@ -5,10 +5,10 @@
 - Parser
   - 文字列マクロ
   - `@calculate`, `@define`
-- BedrockBrigadier
+- brigadier
   - `LootTableArgumentType`
   - `EntitySelectorArgumentType`
-    - `has_property` のプロパティ名バリデーション
+    - `has_property` のプロパティ名バリデーション／補完
   - `ArgumentNodeBuilder::complete()`
   - `requires {}`
   - Education Edition

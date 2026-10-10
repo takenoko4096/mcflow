@@ -25,6 +25,7 @@ import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.InsertTextFormat
 
 class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntitySelector, SourceSpan, MutableList<BclDiagnostic>) -> Unit)? = null) : ArgumentType<EntitySelector>("entity_selector") {
     private val parsers: Map<String, TokenSeqReader.(SelectorArguments, MutableList<BclDiagnostic>, MutableList<BclSemanticToken>, SourceSpan) -> Unit> = mapOf(
@@ -1037,15 +1038,194 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeHasPermission(completer: ArgumentCompleter): List<CompletionItem>? {
-        return if (completer.isOver()) emptyList() else null
+        return completeMapLike(
+            completer,
+            SelectorArguments.HasPermission.Permission.entries.map { it.getString() },
+            { completer ->
+                val valueResult = completer.completeUnquotedString(
+                    SelectorArguments.HasPermission.PermissionState.entries.map { entry -> entry.getString() },
+                    CompletionItemKind.EnumMember
+                )
+                if (valueResult is ArgumentCompleter.ShouldComplete) return@completeMapLike valueResult.items
+                return@completeMapLike null
+            }
+        )
     }
 
     private fun completeHasProperty(completer: ArgumentCompleter): List<CompletionItem>? {
-        return if (completer.isOver()) emptyList() else null
+        return completeTypedMapLike(
+            completer,
+            mapOf(
+                "property" to { completer ->
+                    val result = completer.completeUnquotedString(
+                        listOf(), // TODO プロパティ名リスト
+                        CompletionItemKind.EnumMember
+                    )
+                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
+                    return@to null
+                }
+            ),
+            fallback = { completer ->
+                val resultB = completer.completeChar(
+                    listOf('!'),
+                    CompletionItemKind.Keyword,
+                    optional = true
+                )
+                if (resultB is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike resultB.items
+                val result = completer.completeUnquotedString(
+                    listOf("true", "false"),
+                    CompletionItemKind.Value
+                )
+                if (result is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike result.items
+                return@completeTypedMapLike null
+            }
+        )
     }
 
     private fun completeHasItem(completer: ArgumentCompleter): List<CompletionItem>? {
-        return if (completer.isOver()) emptyList() else null
+        return completeTypedMapLike(
+            completer,
+            mapOf(
+                "item" to { completer ->
+                    val result = completer.completeUnquotedString(
+                        ItemType.IDENTIFIERS,
+                        CompletionItemKind.EnumMember
+                    )
+                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
+                    return@to null
+                },
+                "location" to { completer ->
+                    val result = completer.completeUnquotedString(
+                        EntityContainerSlotType.entries.map { it.getString() },
+                        CompletionItemKind.EnumMember
+                    )
+                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
+                    return@to null
+                },
+                "slot" to { completer ->
+                    val result = completer.completeChar(
+                        listOf('!'),
+                        CompletionItemKind.Keyword,
+                        optional = true
+                    )
+                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
+                    val r = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
+                    if (r is ArgumentCompleter.ShouldComplete) return@to r.items
+                    return@to null
+                },
+                "quantity" to { completer ->
+                    val result = completer.completeChar(
+                        listOf('!'),
+                        CompletionItemKind.Keyword,
+                        optional = true
+                    )
+                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
+                    val r = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
+                    if (r is ArgumentCompleter.ShouldComplete) return@to r.items
+                    return@to null
+                },
+                "data" to { completer ->
+                    val r = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
+                    if (r is ArgumentCompleter.ShouldComplete) return@to r.items
+                    return@to null
+                }
+            )
+        )
+    }
+
+    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter) -> List<CompletionItem>?>, fallback: ((ArgumentCompleter) -> List<CompletionItem>?)? = null): List<CompletionItem>? {
+        val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
+        if (open is ArgumentCompleter.ShouldComplete) {
+            return listOf(
+                CompletionItem("{}").apply {
+                    insertTextFormat = InsertTextFormat.Snippet
+                    insertText = "{$0}"
+                }
+            )
+        }
+
+        while (true) {
+            val keyResult = completer.completeUnquotedString(
+                keys.keys.toList(),
+                CompletionItemKind.Property
+            )
+            if (keyResult is ArgumentCompleter.ShouldComplete) {
+                return keyResult.items
+            }
+            val key = (keyResult as ArgumentCompleter.ShouldContinue).input
+
+            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+                return items
+            }
+
+            val keyCompleter = keys[key] ?: fallback
+
+            if (keyCompleter == null) {
+                val s = completer.completeQuotableString(emptyList(), CompletionItemKind.Text, prefixable = setOf('!'))
+                if (s is ArgumentCompleter.ShouldComplete) {
+                    return emptyList()
+                }
+            }
+            else {
+                val valueResult = keyCompleter(completer)
+                if (valueResult != null) {
+                    return valueResult
+                }
+            }
+
+            val lastResult = completer.completeChar(listOf(',', '}'), CompletionItemKind.Keyword)
+            if (lastResult is ArgumentCompleter.ShouldComplete) {
+                return lastResult.items
+            }
+            lastResult as ArgumentCompleter.ShouldContinue
+            if (lastResult.input == '}'.toString()) {
+                break
+            }
+        }
+
+        return null
+    }
+
+    private fun completeMapLike(completer: ArgumentCompleter, keys: List<String>, callback: (ArgumentCompleter) -> List<CompletionItem>?): List<CompletionItem>? {
+        val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
+        if (open is ArgumentCompleter.ShouldComplete) {
+            return listOf(
+                CompletionItem("{}").apply {
+                    insertTextFormat = InsertTextFormat.Snippet
+                    insertText = "{$0}"
+                }
+            )
+        }
+
+        while (true) {
+            val keyResult = completer.completeUnquotedString(
+                keys,
+                CompletionItemKind.Property
+            )
+            if (keyResult is ArgumentCompleter.ShouldComplete) {
+                return keyResult.items
+            }
+
+            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
+                return items
+            }
+
+            val valueResult = callback(completer)
+            if (valueResult != null) {
+                return valueResult
+            }
+
+            val lastResult = completer.completeChar(listOf(',', '}'), CompletionItemKind.Keyword)
+            if (lastResult is ArgumentCompleter.ShouldComplete) {
+                return lastResult.items
+            }
+            lastResult as ArgumentCompleter.ShouldContinue
+            if (lastResult.input == '}'.toString()) {
+                break
+            }
+        }
+
+        return null
     }
 
     private fun completeGameMode(completer: ArgumentCompleter): List<CompletionItem>? {

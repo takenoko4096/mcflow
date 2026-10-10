@@ -348,7 +348,6 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             return ShouldComplete(items)
         }
 
-        // null: "ここでは"補完しないべき、の意 次の文字に進む
         return ShouldContinue(input)
     }
 
