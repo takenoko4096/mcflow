@@ -8,7 +8,6 @@ import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.brigadier.value.text.AbstractTextComponent
@@ -28,41 +27,41 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
             property("text") {
                 optional = true
                 duplicatable = true
-                string()
+                append(createString())
             }
 
             property("translate") {
                 optional = true
                 duplicatable = true
-                string()
+                append(createString())
             }
 
             property("with") {
                 optional = true
                 duplicatable = true
-                array(string)
+                appendArray(createString())
             }
 
             property("selector") {
                 optional = true
                 duplicatable = true
-                string()
+                append(createString()) // TODO
             }
 
             property("score") {
                 optional = true
                 duplicatable = true
-                `object` {
+                appendObject {
                     property("name") {
-                        optional = true
+                        optional = false
                         duplicatable = true
-                        string()
+                        append(createString()) // TODO
                     }
 
                     property("objective") {
-                        optional = true
+                        optional = false
                         duplicatable = true
-                        string()
+                        append(createString()) // TODO
                     }
                 }
             }
@@ -73,7 +72,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
                 optional = false
                 duplicatable = true
 
-                array(rawtext)
+                appendArray(rawtext)
             }
         }
 

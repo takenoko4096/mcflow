@@ -6,13 +6,15 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
+import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
-import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import org.eclipse.lsp4j.CompletionItemKind
 
 class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>("item_nbt_components") {
     val components = CommandJsonSchema.Builder.build {
@@ -21,10 +23,15 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             optional = true
             duplicatable = false
 
-            `object` {
+            appendObject {
                 property("blocks") {
                     duplicatable = true
-                    array(string)
+                    appendArray(createString { completer ->
+                        when (val result = completer.completeQuotedString(ItemType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                        }
+                    })
                 }
             }
         }
@@ -34,10 +41,15 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             optional = true
             duplicatable = false
 
-            `object` {
+            appendObject {
                 property("blocks") {
                     duplicatable = true
-                    array(string)
+                    appendArray(createString { completer ->
+                        when (val result = completer.completeQuotedString(ItemType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                        }
+                    })
                 }
             }
         }
@@ -47,10 +59,15 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             optional = true
             duplicatable = true
 
-            `object` {
+            appendObject {
                 property("mode") {
                     duplicatable = true
-                    string()
+                    append(createString { completer ->
+                        when (val result = completer.completeQuotedString(ItemLockMode.entries.map { it.getString() }, CompletionItemKind.EnumMember)) {
+                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                        }
+                    })
                 }
             }
         }
@@ -59,7 +76,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             aliases.add("keep_on_death")
             optional = true
             duplicatable = true
-            `object` {}
+            appendObject {}
         }
     }
 

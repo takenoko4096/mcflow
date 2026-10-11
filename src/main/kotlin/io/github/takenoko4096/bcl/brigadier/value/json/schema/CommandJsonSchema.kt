@@ -4,8 +4,6 @@ import io.github.takenoko4096.bcl.BclDsl
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.ArgumentCompleter
-import io.github.takenoko4096.bcl.reader.TokenSeqReader
-import io.github.takenoko4096.bcl.server.BclSemanticToken
 import org.eclipse.lsp4j.CompletionItem
 import kotlin.collections.set
 
@@ -41,8 +39,6 @@ sealed class CommandJsonSchema {
 
         private val schemas = mutableSetOf<CommandJsonSchema>()
 
-        val string = StringSchema
-
         val number = NumberSchema
 
         val boolean = BooleanSchema
@@ -51,23 +47,17 @@ sealed class CommandJsonSchema {
             callback()
         }
 
-        fun string() {
-            schemas.add(string)
+        fun createString(completer: ((ArgumentCompleter) -> JsonCompletionResult)? = null) = if (completer == null) StringSchema() else StringSchema(completer)
+
+        fun append(schema: CommandJsonSchema) {
+            schemas.add(schema)
         }
 
-        fun number() {
-            schemas.add(number)
-        }
-
-        fun boolean() {
-            schemas.add(boolean)
-        }
-
-        fun `object`(callback: Builder.() -> Unit) {
+        fun appendObject(callback: Builder.() -> Unit) {
             schemas.add(Builder.build(callback))
         }
 
-        fun array(vararg schemas: CommandJsonSchema) {
+        fun appendArray(vararg schemas: CommandJsonSchema) {
             this.schemas.add(ArraySchema(schemas.toSet()))
         }
 
@@ -91,64 +81,91 @@ sealed class CommandJsonSchema {
     sealed class JsonCompletionResult {
         data class Complete(val items: List<CompletionItem>) : JsonCompletionResult()
         data object Continue : JsonCompletionResult()
+        data object Invalid: JsonCompletionResult()
     }
 
     abstract fun completeJson(completer: ArgumentCompleter): JsonCompletionResult
 
     companion object {
-        fun completeSchemaUnion(completer: ArgumentCompleter, schemas: Set<CommandJsonSchema>): JsonCompletionResult {
+        fun completeSchemaUnion(
+            completer: ArgumentCompleter,
+            schemas: Set<CommandJsonSchema>
+        ): JsonCompletionResult {
             if (schemas.isEmpty()) {
-                return JsonCompletionResult.Continue
+                return JsonCompletionResult.Invalid
+            }
+
+            data class Candidate(
+                val result: JsonCompletionResult,
+                val end: ArgumentCompleter.Checkpoint
+            )
+
+            val start = completer.checkpoint()
+            val candidates = mutableListOf<Candidate>()
+
+            for (schema in schemas) {
+                completer.restore(start)
+
+                val result = schema.completeJson(completer)
+
+                if (result != JsonCompletionResult.Invalid) {
+                    candidates += Candidate(
+                        result = result,
+                        end = completer.checkpoint()
+                    )
+                }
+            }
+
+            if (candidates.isEmpty()) {
+                completer.restore(start)
+                return JsonCompletionResult.Invalid
             }
 
             /*
-             * 入力がまだ存在しない場合、各schemaが出せる候補を全部集める。
-             *
-             * ただし ObjectSchema / ArraySchema のように
-             * '{' / '[' を消費するschemaについては、ここで直接
-             * completeJson() を呼んでよい。
+             * 最も入力を消費できたschemaを優先する。
              */
-            if (completer.isOver()) {
-                val items = schemas.flatMap { schema ->
-                    when (val result = schema.completeJson(completer)) {
+            val maxCursor = candidates.maxOf { it.end.cursor }
+
+            val best = candidates.filter {
+                it.end.cursor == maxCursor
+            }
+
+            /*
+             * 同じ位置まで解析できたschemaが複数ある場合は、
+             * CompletionItemを統合する。
+             */
+            val items = best
+                .flatMap { candidate ->
+                    when (val result = candidate.result) {
                         is JsonCompletionResult.Complete -> result.items
-                        JsonCompletionResult.Continue -> emptyList()
+                        JsonCompletionResult.Continue,
+                        JsonCompletionResult.Invalid -> emptyList()
                     }
                 }
-                completer.skipWhitespaceAndComments()
-
-                return JsonCompletionResult.Complete(
-                    items.distinctBy { it.label }
-                )
-            }
+                .distinctBy { it.label }
 
             /*
-             * 先頭文字によって候補schemaをある程度絞る。
+             * 採用した解析結果の位置へcursorを戻す。
              */
-            val first = completer.peek()
+            completer.restore(best.first().end)
 
-            val matching = schemas.filter { schema ->
-                when (schema) {
-                    is ObjectSchema -> first == '{'
-                    is ArraySchema -> first == '['
-                    StringSchema -> first == '"'
-                    BooleanSchema -> first == 't' || first == 'f'
-                    NumberSchema -> first == '-' || first.isDigit()
-                    NullSchema -> first == 'n'
+            return when {
+                items.isNotEmpty() -> {
+                    JsonCompletionResult.Complete(items)
+                }
+
+                best.all { it.result is JsonCompletionResult.Continue } -> {
+                    JsonCompletionResult.Continue
+                }
+
+                else -> {
+                    /*
+                     * 有効なschemaは存在するが、
+                     * 現在提示できるCompletionItemはない。
+                     */
+                    JsonCompletionResult.Complete(emptyList())
                 }
             }
-
-            if (matching.isEmpty()) {
-                return JsonCompletionResult.Continue
-            }
-
-            /*
-             * 現状、最初に適合したschemaを解析する。
-             *
-             * BooleanSchemaとNullSchemaなどは入力文字によって一意に
-             * 決まるので問題ない。
-             */
-            return matching.first().completeJson(completer)
         }
     }
 }

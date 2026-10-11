@@ -8,10 +8,23 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
 
-class ArraySchema(val elementSchemas: Set<CommandJsonSchema>) : CommandJsonSchema() {
-    override fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean {
+class ArraySchema(
+    val elementSchemas: Set<CommandJsonSchema>
+) : CommandJsonSchema() {
+
+    override fun validate(
+        value: CommandJsonValue<*>,
+        sourceCode: String,
+        diagnostics: MutableList<BclDiagnostic>
+    ): Boolean {
         if (value !is CommandJsonArray) {
-            diagnostics.add(BclDiagnostic("ここでは配列が期待されています", sourceCode, value.sourceSpan))
+            diagnostics.add(
+                BclDiagnostic(
+                    "ここでは配列が期待されています",
+                    sourceCode,
+                    value.sourceSpan
+                )
+            )
             return false
         }
 
@@ -20,6 +33,7 @@ class ArraySchema(val elementSchemas: Set<CommandJsonSchema>) : CommandJsonSchem
         for (element in value.list) {
             var elementResult = false
             val dummyDiagnostics = mutableListOf<BclDiagnostic>()
+
             for (schema in elementSchemas) {
                 if (schema.validate(element, sourceCode, dummyDiagnostics)) {
                     elementResult = true
@@ -35,25 +49,43 @@ class ArraySchema(val elementSchemas: Set<CommandJsonSchema>) : CommandJsonSchem
         return result
     }
 
-    override fun completeJson(completer: ArgumentCompleter): JsonCompletionResult {
+    override fun completeJson(
+        completer: ArgumentCompleter
+    ): JsonCompletionResult {
+        val start = completer.checkpoint()
+
         val openResult = completer.completeChar(
             listOf('['),
             CompletionItemKind.Keyword
         )
 
-        if (openResult is ArgumentCompleter.ShouldComplete) {
-            return JsonCompletionResult.Complete(
-                listOf(
-                    CompletionItem("[]").apply {
-                        insertTextFormat = InsertTextFormat.Snippet
-                        insertText = "[$0]"
-                    }
+        when (openResult) {
+            is ArgumentCompleter.ShouldComplete -> {
+                if (openResult.items.isEmpty()) {
+                    return JsonCompletionResult.Invalid
+                }
+
+                return JsonCompletionResult.Complete(
+                    listOf(
+                        CompletionItem("[]").apply {
+                            insertTextFormat = InsertTextFormat.Snippet
+                            insertText = "[$0]"
+                        }
+                    )
                 )
-            )
+            }
+
+            is ArgumentCompleter.ShouldContinue -> {
+                // 開き括弧を消費したので続行
+            }
         }
+
         completer.skipWhitespaceAndComments()
 
         while (true) {
+            /*
+             * [] または [ ... ]
+             */
             if (!completer.isOver() && completer.peek() == ']') {
                 completer.next()
                 return JsonCompletionResult.Continue
@@ -65,26 +97,45 @@ class ArraySchema(val elementSchemas: Set<CommandJsonSchema>) : CommandJsonSchem
                     elementSchemas
                 )
             ) {
-                is JsonCompletionResult.Complete -> return result
-                JsonCompletionResult.Continue -> {}
+                is JsonCompletionResult.Complete -> {
+                    return result
+                }
+
+                JsonCompletionResult.Continue -> {
+                    // 要素が完成したのでseparatorへ進む
+                }
+
+                JsonCompletionResult.Invalid -> {
+                    return JsonCompletionResult.Invalid
+                }
             }
+
             completer.skipWhitespaceAndComments()
 
-            val separatorResult = completer.completeChar(
-                listOf(',', ']'),
-                CompletionItemKind.Keyword
-            )
+            when (
+                val separatorResult = completer.completeChar(
+                    listOf(',', ']'),
+                    CompletionItemKind.Keyword
+                )
+            ) {
+                is ArgumentCompleter.ShouldComplete -> {
+                    if (separatorResult.items.isEmpty()) {
+                        return JsonCompletionResult.Invalid
+                    }
 
-            if (separatorResult is ArgumentCompleter.ShouldComplete) {
-                return JsonCompletionResult.Complete(separatorResult.items)
+                    return JsonCompletionResult.Complete(
+                        separatorResult.items
+                    )
+                }
+
+                is ArgumentCompleter.ShouldContinue -> {
+                    if (separatorResult.input == "]") {
+                        return JsonCompletionResult.Continue
+                    }
+                }
             }
+
             completer.skipWhitespaceAndComments()
-
-            separatorResult as ArgumentCompleter.ShouldContinue
-
-            if (separatorResult.input == "]") {
-                return JsonCompletionResult.Continue
-            }
         }
     }
 }

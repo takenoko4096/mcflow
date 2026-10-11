@@ -10,9 +10,6 @@ object NumberSchema : CommandJsonSchema() {
     }
 
     override fun completeJson(completer: ArgumentCompleter): JsonCompletionResult {
-        return when (completer.completeNumber()) {
-            is ArgumentCompleter.ShouldComplete -> JsonCompletionResult.Complete(emptyList())
-            is ArgumentCompleter.ShouldContinue -> JsonCompletionResult.Continue
-        }
+        return completer.completeJsonNumber()
     }
 }

@@ -9,10 +9,18 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
 
-class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
+class ObjectSchema(
+    val keys: Map<String, KeySchema>
+) : CommandJsonSchema() {
     override fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean {
         if (value !is CommandJsonObject) {
-            diagnostics.add(BclDiagnostic("ここではオブジェクトが期待されています", sourceCode, value.sourceSpan))
+            diagnostics.add(
+                BclDiagnostic(
+                    "ここではオブジェクトが期待されています",
+                    sourceCode,
+                    value.sourceSpan
+                )
+            )
             return false
         }
 
@@ -22,23 +30,42 @@ class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
             val names = keySchema.aliases + name
 
             if (names.none { it in value } && !keySchema.isOptional) {
-                diagnostics.add(BclDiagnostic("キー '$name' は必須です", sourceCode, value.sourceSpan))
+                diagnostics.add(
+                    BclDiagnostic(
+                        "キー '$name' は必須です",
+                        sourceCode,
+                        value.sourceSpan
+                    )
+                )
                 result = false
             }
 
             for ((key, child) in value.entries.filter { it.first.value in names }) {
                 if (!keySchema.isNullable && child.value == null) {
-                    diagnostics.add(BclDiagnostic("キー '${key.value}' は null を受け入れません", sourceCode, child.sourceSpan))
+                    diagnostics.add(
+                        BclDiagnostic(
+                            "キー '${key.value}' は null を受け入れません",
+                            sourceCode,
+                            child.sourceSpan
+                        )
+                    )
                     result = false
                 }
 
                 if (!keySchema.duplicatable && value.entries.count { it.first.value in names } > 1) {
-                    diagnostics.add(BclDiagnostic("キー '${key.value}' が重複しています", sourceCode, key.sourceSpan))
+                    diagnostics.add(
+                        BclDiagnostic(
+                            "キー '${key.value}' が重複しています",
+                            sourceCode,
+                            key.sourceSpan
+                        )
+                    )
                     result = false
                 }
 
                 var keyResult = false
                 val dummyDiagnostics = mutableListOf<BclDiagnostic>()
+
                 for (schema in keySchema.schemas) {
                     if (schema.validate(child, sourceCode, dummyDiagnostics)) {
                         keyResult = true
@@ -55,111 +82,209 @@ class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
         return result
     }
 
-    override fun completeJson(completer: ArgumentCompleter): JsonCompletionResult {
+    override fun completeJson(
+        completer: ArgumentCompleter
+    ): JsonCompletionResult {
+        val start = completer.checkpoint()
+
         val openResult = completer.completeChar(
             listOf('{'),
             CompletionItemKind.Keyword
         )
 
-        if (openResult is ArgumentCompleter.ShouldComplete) {
-            return JsonCompletionResult.Complete(
-                listOf(
-                    CompletionItem("{}").apply {
-                        insertTextFormat = InsertTextFormat.Snippet
-                        insertText = "{$0}"
-                    }
+        when (openResult) {
+            is ArgumentCompleter.ShouldComplete -> {
+                if (openResult.items.isEmpty()) {
+                    completer.restore(start)
+                    return JsonCompletionResult.Invalid
+                }
+
+                return JsonCompletionResult.Complete(
+                    listOf(
+                        CompletionItem("{}").apply {
+                            insertTextFormat = InsertTextFormat.Snippet
+                            insertText = "{$0}"
+                        }
+                    )
                 )
-            )
+            }
+
+            is ArgumentCompleter.ShouldContinue -> {
+                // 開き括弧を消費したので続行
+            }
         }
+
         completer.skipWhitespaceAndComments()
 
+        /*
+         * canonical key nameを格納する。
+         *
+         * aliasで入力された場合もcanonical nameを記録する。
+         */
         val usedKeys = mutableSetOf<String>()
 
         while (true) {
+            /*
+             * 空のオブジェクト、またはオブジェクトの終了。
+             *
+             * 必須keyが残っている場合は } を許さない。
+             */
             if (!completer.isOver() && completer.peek() == '}') {
+                if (!canClose(usedKeys)) {
+                    return JsonCompletionResult.Invalid
+                }
+
                 completer.next()
                 return JsonCompletionResult.Continue
             }
 
-            val candidates = keys.filter { (name, schema) -> schema.duplicatable || name !in usedKeys }
+            /*
+             * 現在入力可能なkeyを求める。
+             *
+             * duplicatableなkeyは何度でも候補に出せる。
+             */
+            val candidates = keys
+                .filter { (name, schema) ->
+                    schema.duplicatable || name !in usedKeys
+                }
+                .keys
+                .toList()
 
             val keyResult = completer.completeQuotedString(
-                candidates.keys.toList(),
+                candidates,
                 CompletionItemKind.Property
             )
 
-            if (keyResult is ArgumentCompleter.ShouldComplete) {
-                return JsonCompletionResult.Complete(
-                    keyResult.items
-                )
-            }
-            completer.skipWhitespaceAndComments()
+            when (keyResult) {
+                is ArgumentCompleter.ShouldComplete -> {
+                    return if (keyResult.items.isEmpty()) {
+                        JsonCompletionResult.Invalid
+                    } else {
+                        JsonCompletionResult.Complete(
+                            keyResult.items
+                        )
+                    }
+                }
 
-            keyResult as ArgumentCompleter.ShouldContinue
+                is ArgumentCompleter.ShouldContinue -> {
+                    // keyを読み終えた
+                }
+            }
+
+            completer.skipWhitespaceAndComments()
 
             val key = keyResult.input
 
+            /*
+             * canonical nameまたはaliasからschemaを探す。
+             */
             val keyEntry = keys.entries.firstOrNull { (name, schema) ->
                 name == key || key in schema.aliases
-            } ?: return JsonCompletionResult.Continue
+            } ?: return JsonCompletionResult.Invalid
 
             val (canonicalKey, keySchema) = keyEntry
+
             usedKeys += canonicalKey
 
-            val colonResult = completer.completeChar(
-                listOf(KeyChar.COLON),
-                CompletionItemKind.Keyword
-            )
+            /*
+             * :
+             */
+            when (
+                val colonResult = completer.completeChar(
+                    listOf(KeyChar.COLON),
+                    CompletionItemKind.Keyword
+                )
+            ) {
+                is ArgumentCompleter.ShouldComplete -> {
+                    if (colonResult.items.isEmpty()) {
+                        return JsonCompletionResult.Invalid
+                    }
 
-            if (colonResult is ArgumentCompleter.ShouldComplete) {
-                return JsonCompletionResult.Complete(colonResult.items)
+                    return JsonCompletionResult.Complete(
+                        colonResult.items
+                    )
+                }
+
+                is ArgumentCompleter.ShouldContinue -> {
+                    // : を消費した
+                }
             }
+
             completer.skipWhitespaceAndComments()
+
+            /*
+             * value
+             */
+            val valueSchemas = buildSet {
+                addAll(keySchema.schemas)
+
+                if (keySchema.isNullable) {
+                    add(NullSchema)
+                }
+            }
 
             when (
                 val result = completeSchemaUnion(
                     completer,
-                    buildSet {
-                        addAll(keySchema.schemas)
-                        if (keySchema.isNullable) {
-                            add(NullSchema)
-                        }
-                    }
+                    valueSchemas
                 )
             ) {
-                is JsonCompletionResult.Complete -> return result
-                JsonCompletionResult.Continue -> {}
+                is JsonCompletionResult.Complete -> {
+                    return result
+                }
+
+                JsonCompletionResult.Continue -> {
+                    // valueが完成したのでseparatorへ
+                }
+
+                JsonCompletionResult.Invalid -> {
+                    return JsonCompletionResult.Invalid
+                }
             }
+
             completer.skipWhitespaceAndComments()
 
-            val separatorResult = completer.completeChar(
-                listOf(',', '}'),
-                CompletionItemKind.Keyword
-            )
-
-            if (separatorResult is ArgumentCompleter.ShouldComplete) {
-                return JsonCompletionResult.Complete(
-                    separatorResult.items.filter { item ->
+            /*
+             * , または }
+             */
+            when (
+                val separatorResult = completer.completeChar(
+                    listOf(',', '}'),
+                    CompletionItemKind.Keyword
+                )
+            ) {
+                is ArgumentCompleter.ShouldComplete -> {
+                    val items = separatorResult.items.filter { item ->
                         item.label != "}" || canClose(usedKeys)
                     }
-                )
-            }
-            completer.skipWhitespaceAndComments()
 
-            separatorResult as ArgumentCompleter.ShouldContinue
+                    return if (items.isEmpty()) {
+                        JsonCompletionResult.Invalid
+                    } else {
+                        JsonCompletionResult.Complete(items)
+                    }
+                }
 
-            if (separatorResult.input == "}") {
-                return JsonCompletionResult.Continue
+                is ArgumentCompleter.ShouldContinue -> {
+                    if (separatorResult.input == "}") {
+                        if (!canClose(usedKeys)) {
+                            return JsonCompletionResult.Invalid
+                        }
+
+                        return JsonCompletionResult.Continue
+                    }
+                }
             }
+
             completer.skipWhitespaceAndComments()
         }
     }
 
-    private fun canClose(usedKeys: Set<String>): Boolean {
+    private fun canClose(
+        usedKeys: Set<String>
+    ): Boolean {
         return keys.all { (name, schema) ->
-            schema.isOptional ||
-                schema.duplicatable ||
-                name in usedKeys
+            schema.isOptional || name in usedKeys
         }
     }
 }

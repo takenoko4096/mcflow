@@ -83,6 +83,7 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         return when (val result = getSchema().completeJson(completer)) {
             is CommandJsonSchema.JsonCompletionResult.Complete -> result.items
             is CommandJsonSchema.JsonCompletionResult.Continue -> emptyList()
+            is CommandJsonSchema.JsonCompletionResult.Invalid -> emptyList()
         }
     }
 

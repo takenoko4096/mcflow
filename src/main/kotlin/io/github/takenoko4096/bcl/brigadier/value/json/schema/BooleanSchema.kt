@@ -11,17 +11,12 @@ object BooleanSchema : CommandJsonSchema() {
     }
 
     override fun completeJson(completer: ArgumentCompleter): JsonCompletionResult {
-        return when (
-            val result = completer.completeUnquotedString(
-                listOf("true", "false"),
-                CompletionItemKind.Keyword
-            )
-        ) {
-            is ArgumentCompleter.ShouldComplete ->
-                JsonCompletionResult.Complete(result.items)
-
-            is ArgumentCompleter.ShouldContinue ->
-                JsonCompletionResult.Continue
+        return when (val result = completer.completeUnquotedString(listOf("true", "false"), CompletionItemKind.Keyword)) {
+            is ArgumentCompleter.ShouldComplete -> {
+                if (result.items.isEmpty()) JsonCompletionResult.Invalid
+                else JsonCompletionResult.Complete(result.items)
+            }
+            is ArgumentCompleter.ShouldContinue -> JsonCompletionResult.Continue
         }
     }
 }

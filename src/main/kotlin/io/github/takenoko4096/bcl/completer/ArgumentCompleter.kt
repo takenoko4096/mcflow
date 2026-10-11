@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.completer
 
+import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.Radix
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
@@ -22,6 +23,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         get() = context.string.substring(cursor)
 
     fun isOver(): Boolean = cursor >= context.string.length
+
+    fun copy(): ArgumentCompleter {
+        val cpy = ArgumentCompleter(context)
+        cpy.cursor = cursor
+        cpy.lastLineStartCursor = lastLineStartCursor
+        cpy.line = line
+        return cpy
+    }
 
     fun peek(): Char {
         if (isOver()) {
@@ -420,39 +429,141 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun completeNumber(): ValueCompletionResult {
+    fun completeJsonNumber(): CommandJsonSchema.JsonCompletionResult {
         val start = cursor
 
-        if (isOver()) {
-            return ShouldComplete(emptyList())
-        }
-
-        if (peek() == KeyChar.MINUS) {
+        /*
+         * -
+         */
+        if (!isOver() && peek() == KeyChar.MINUS) {
             next()
 
             if (isOver()) {
-                return ShouldComplete(emptyList())
+                return CommandJsonSchema.JsonCompletionResult.Complete(emptyList())
             }
         }
 
+        /*
+         * integer part
+         *
+         * JSONでは整数部分は
+         *
+         * 0
+         * または
+         * [1-9][0-9]*
+         *
+         * なので、例えば 01 は厳密には不正。
+         */
         if (isOver() || peek() !in '0'..'9') {
             cursor = start
-            return ShouldComplete(emptyList())
+            return CommandJsonSchema.JsonCompletionResult.Invalid
         }
 
-        while (!isOver() && peek() in '0'..'9') {
+        if (peek() == '0') {
             next()
+
+            /*
+             * 0の直後に数字が来たら不正。
+             */
+            if (!isOver() && peek() in '0'..'9') {
+                cursor = start
+                return CommandJsonSchema.JsonCompletionResult.Invalid
+            }
+        } else {
+            while (!isOver() && peek() in '0'..'9') {
+                next()
+            }
         }
 
+        /*
+         * fraction
+         */
         if (!isOver() && peek() == KeyChar.DECIMAL_POINT) {
             next()
+
+            /*
+             * "1." は入力途中。
+             */
+            if (isOver()) {
+                return CommandJsonSchema.JsonCompletionResult.Complete(emptyList())
+            }
+
+            /*
+             * 小数点の直後には必ず数字が必要。
+             */
+            if (peek() !in '0'..'9') {
+                cursor = start
+                return CommandJsonSchema.JsonCompletionResult.Invalid
+            }
 
             while (!isOver() && peek() in '0'..'9') {
                 next()
             }
         }
 
-        return ShouldContinue(context.string.substring(start, cursor))
+        /*
+         * exponent
+         *
+         * e / E
+         */
+        if (!isOver() && peek() in setOf('e', 'E')) {
+            next()
+
+            /*
+             * "1e" は入力途中。
+             */
+            if (isOver()) {
+                return CommandJsonSchema.JsonCompletionResult.Complete(emptyList())
+            }
+
+            /*
+             * exponentの符号。
+             */
+            if (peek() == '+' || peek() == '-') {
+                next()
+
+                /*
+                 * "1e+" は入力途中。
+                 */
+                if (isOver()) {
+                    return CommandJsonSchema.JsonCompletionResult.Complete(emptyList())
+                }
+            }
+
+            /*
+             * exponentには必ず数字が必要。
+             */
+            if (peek() !in '0'..'9') {
+                cursor = start
+                return CommandJsonSchema.JsonCompletionResult.Invalid
+            }
+
+            while (!isOver() && peek() in '0'..'9') {
+                next()
+            }
+        }
+
+        return CommandJsonSchema.JsonCompletionResult.Continue
+    }
+
+    data class Checkpoint(
+        val cursor: Int,
+        val line: Int,
+        val lastLineStartCursor: Int
+    )
+
+    fun checkpoint(): Checkpoint {
+        return Checkpoint(
+            cursor = cursor,
+            line = line,
+            lastLineStartCursor = lastLineStartCursor
+        )
+    }
+
+    fun restore(checkpoint: Checkpoint) {
+        cursor = checkpoint.cursor
+        line = checkpoint.line
+        lastLineStartCursor = checkpoint.lastLineStartCursor
     }
 
     fun skipWhitespaceAndComments() {
