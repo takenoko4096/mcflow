@@ -1,6 +1,6 @@
 # mcflow
 
-Minecraft Bedrock Edition用高精度コマンド言語サーバー及び...
+Minecraft Bedrock Edition用高精度コマンド言語サーバー及びその関連ツール
 
 ## 未実装
 
