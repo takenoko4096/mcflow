@@ -3,8 +3,10 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 import io.github.takenoko4096.bcl.BclDsl
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
+import org.eclipse.lsp4j.CompletionItem
 import kotlin.collections.set
 
 sealed class CommandJsonSchema {
@@ -83,6 +85,70 @@ sealed class CommandJsonSchema {
 
         companion object {
             fun set(keys: MutableMap<String, KeySchema>, name: String, callback: PropertyBuilder.() -> Unit) = PropertyBuilder(name, callback).set(keys)
+        }
+    }
+
+    sealed class JsonCompletionResult {
+        data class Complete(val items: List<CompletionItem>) : JsonCompletionResult()
+        data object Continue : JsonCompletionResult()
+    }
+
+    abstract fun completeJson(completer: ArgumentCompleter): JsonCompletionResult
+
+    companion object {
+        fun completeSchemaUnion(completer: ArgumentCompleter, schemas: Set<CommandJsonSchema>): JsonCompletionResult {
+            if (schemas.isEmpty()) {
+                return JsonCompletionResult.Continue
+            }
+
+            /*
+             * 入力がまだ存在しない場合、各schemaが出せる候補を全部集める。
+             *
+             * ただし ObjectSchema / ArraySchema のように
+             * '{' / '[' を消費するschemaについては、ここで直接
+             * completeJson() を呼んでよい。
+             */
+            if (completer.isOver()) {
+                val items = schemas.flatMap { schema ->
+                    when (val result = schema.completeJson(completer)) {
+                        is JsonCompletionResult.Complete -> result.items
+                        JsonCompletionResult.Continue -> emptyList()
+                    }
+                }
+                completer.skipWhitespaceAndComments()
+
+                return JsonCompletionResult.Complete(
+                    items.distinctBy { it.label }
+                )
+            }
+
+            /*
+             * 先頭文字によって候補schemaをある程度絞る。
+             */
+            val first = completer.peek()
+
+            val matching = schemas.filter { schema ->
+                when (schema) {
+                    is ObjectSchema -> first == '{'
+                    is ArraySchema -> first == '['
+                    StringSchema -> first == '"'
+                    BooleanSchema -> first == 't' || first == 'f'
+                    NumberSchema -> first == '-' || first.isDigit()
+                    NullSchema -> first == 'n'
+                }
+            }
+
+            if (matching.isEmpty()) {
+                return JsonCompletionResult.Continue
+            }
+
+            /*
+             * 現状、最初に適合したschemaを解析する。
+             *
+             * BooleanSchemaとNullSchemaなどは入力文字によって一意に
+             * 決まるので問題ない。
+             */
+            return matching.first().completeJson(completer)
         }
     }
 }

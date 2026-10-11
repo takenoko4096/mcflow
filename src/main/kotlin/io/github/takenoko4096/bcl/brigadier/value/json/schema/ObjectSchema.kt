@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
@@ -52,5 +53,113 @@ class ObjectSchema(val keys: Map<String, KeySchema>) : CommandJsonSchema() {
         }
 
         return result
+    }
+
+    override fun completeJson(completer: ArgumentCompleter): JsonCompletionResult {
+        val openResult = completer.completeChar(
+            listOf('{'),
+            CompletionItemKind.Keyword
+        )
+
+        if (openResult is ArgumentCompleter.ShouldComplete) {
+            return JsonCompletionResult.Complete(
+                listOf(
+                    CompletionItem("{}").apply {
+                        insertTextFormat = InsertTextFormat.Snippet
+                        insertText = "{$0}"
+                    }
+                )
+            )
+        }
+        completer.skipWhitespaceAndComments()
+
+        val usedKeys = mutableSetOf<String>()
+
+        while (true) {
+            if (!completer.isOver() && completer.peek() == '}') {
+                completer.next()
+                return JsonCompletionResult.Continue
+            }
+
+            val candidates = keys.filter { (name, schema) -> schema.duplicatable || name !in usedKeys }
+
+            val keyResult = completer.completeQuotedString(
+                candidates.keys.toList(),
+                CompletionItemKind.Property
+            )
+
+            if (keyResult is ArgumentCompleter.ShouldComplete) {
+                return JsonCompletionResult.Complete(
+                    keyResult.items
+                )
+            }
+            completer.skipWhitespaceAndComments()
+
+            keyResult as ArgumentCompleter.ShouldContinue
+
+            val key = keyResult.input
+
+            val keyEntry = keys.entries.firstOrNull { (name, schema) ->
+                name == key || key in schema.aliases
+            } ?: return JsonCompletionResult.Continue
+
+            val (canonicalKey, keySchema) = keyEntry
+            usedKeys += canonicalKey
+
+            val colonResult = completer.completeChar(
+                listOf(KeyChar.COLON),
+                CompletionItemKind.Keyword
+            )
+
+            if (colonResult is ArgumentCompleter.ShouldComplete) {
+                return JsonCompletionResult.Complete(colonResult.items)
+            }
+            completer.skipWhitespaceAndComments()
+
+            when (
+                val result = completeSchemaUnion(
+                    completer,
+                    buildSet {
+                        addAll(keySchema.schemas)
+                        if (keySchema.isNullable) {
+                            add(NullSchema)
+                        }
+                    }
+                )
+            ) {
+                is JsonCompletionResult.Complete -> return result
+                JsonCompletionResult.Continue -> {}
+            }
+            completer.skipWhitespaceAndComments()
+
+            val separatorResult = completer.completeChar(
+                listOf(',', '}'),
+                CompletionItemKind.Keyword
+            )
+
+            if (separatorResult is ArgumentCompleter.ShouldComplete) {
+                return JsonCompletionResult.Complete(
+                    separatorResult.items.filter { item ->
+                        item.label != "}" || canClose(usedKeys)
+                    }
+                )
+            }
+            completer.skipWhitespaceAndComments()
+
+            separatorResult as ArgumentCompleter.ShouldContinue
+
+            if (separatorResult.input == "}") {
+                return JsonCompletionResult.Continue
+            }
+            completer.skipWhitespaceAndComments()
+        }
+    }
+
+    private fun canClose(usedKeys: Set<String>): Boolean {
+        return keys.all { (name, schema) ->
+            schema.isOptional ||
+                schema.duplicatable ||
+                name in usedKeys
+        }
     }
 }

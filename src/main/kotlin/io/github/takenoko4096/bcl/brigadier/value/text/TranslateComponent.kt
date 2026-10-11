@@ -5,7 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 
 data class TranslateComponent(
-    val translate: WithSpan<String>,
+    val translate: WithSpan<String>?,
     val with: With?,
     val rawValue: CommandJsonObject
 ) : AbstractTextComponent() {

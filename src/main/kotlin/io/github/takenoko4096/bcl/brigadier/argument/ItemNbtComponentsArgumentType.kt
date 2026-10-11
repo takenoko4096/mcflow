@@ -9,6 +9,7 @@ import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
+import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -61,6 +62,8 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
             `object` {}
         }
     }
+
+    override fun getSchema() = components
 
     override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
         val result = components.validate(obj, reader.sourceCode, diagnostics)

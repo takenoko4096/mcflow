@@ -11,8 +11,10 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         }
     }
 
-    fun trimEdge(): SourceSpan {
-        return SourcePosition(start.line, start.column + 1, start.index + 1)..SourcePosition(end.line, end.column - 1, end.index - 1)
+    fun trimEdge(): SourceSpan? {
+        val newStart = SourcePosition(start.line, start.column + 1, start.index + 1)
+        val newEnd = SourcePosition(end.line, end.column - 1, end.index - 1)
+        return if (newEnd.index < newStart.index) null else newStart..newEnd
     }
 
     override fun hashCode(): Int {
@@ -32,10 +34,6 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     operator fun contains(other: SourceSpan): Boolean {
         val range = start.index..end.index
         return other.start.index in range && other.end.index in range
-    }
-
-    fun lineRange(): IntRange {
-        return start.line..end.line
     }
 
     operator fun contains(position: Position): Boolean {

@@ -8,6 +8,7 @@ import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
@@ -71,6 +72,17 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         obj.entries.forEach { (key, value) ->
             colorString(key, BclSemanticTokenType.PARAMETER, semanticTokens)
             colorValue(value, semanticTokens)
+        }
+    }
+
+    protected abstract fun getSchema(): ObjectSchema
+
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = ArgumentCompleter(context)
+
+        return when (val result = getSchema().completeJson(completer)) {
+            is CommandJsonSchema.JsonCompletionResult.Complete -> result.items
+            is CommandJsonSchema.JsonCompletionResult.Continue -> emptyList()
         }
     }
 

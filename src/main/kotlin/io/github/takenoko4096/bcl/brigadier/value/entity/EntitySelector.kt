@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
+import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
@@ -11,6 +12,8 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
@@ -28,23 +31,36 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
-        fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
+        fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
+            val dummyDiags = mutableListOf<BclDiagnostic>()
+            val dummySemcs = mutableListOf<BclSemanticToken>()
+
             val tokenizer = BclTokenizer(string, extension = false)
             val tokens = tokenizer.tokenize()
 
             val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
             val type = EntitySelectorArgumentType()
 
+            if (string.isEmpty()) {
+                diagnostics.add(BclDiagnostic(
+                    "空のセレクターは無効です",
+                    tokenizer.sourceCode,
+                    fallbackSourceSpan
+                ))
+                return NoValuedArgument(type, fallbackSourceSpan, diagnostics)
+            }
+            offset!!
+
             val start = reader.getCurrentTokenStartPosition()
 
             val selector = try {
-                type.parse(reader, diagnostics, semanticTokens)
+                type.parse(reader, dummyDiags, dummySemcs)
             }
             catch (error: BclTokenSeqReadException) {
-                diagnostics.add(reader.diagnostic(error.sourceSpan, error.description))
+                dummyDiags.add(reader.diagnostic(error.sourceSpan, error.description))
                 val span = reader.getRemainingSourceSpan()
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.peekSafely(-1).sourceSpan))
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, span))
+                dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.peekSafely(-1).sourceSpan))
+                dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, span))
                 null
             }
 
@@ -52,9 +68,27 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
 
             if (!reader.isOver() && selector != null) {
                 // 解析成功、 but 余計なのがあったとき
-                diagnostics.add(reader.diagnostic(reader.getRemainingSourceSpan(), "セレクターの終了後に無効な文字列があります"))
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.getRemainingSourceSpan()))
+                dummyDiags.add(reader.diagnostic(reader.getRemainingSourceSpan(), "セレクターの終了後に無効な文字列があります"))
+                dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.getRemainingSourceSpan()))
             }
+
+            diagnostics.addAll(
+                dummyDiags.map { diag ->
+                    BclDiagnostic(
+                        diag.message,
+                        diag.sourceCode,
+                        (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset)
+                    )
+                }
+            )
+            semanticTokens.addAll(
+                dummySemcs.map { semc ->
+                    BclSemanticToken(
+                        semc.type,
+                        (semc.sourceSpan.start + offset)..(semc.sourceSpan.end + offset)
+                    )
+                }
+            )
 
             return selector ?: NoValuedArgument(type, start..end, diagnostics)
         }

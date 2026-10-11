@@ -420,6 +420,99 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
+    fun completeNumber(): ValueCompletionResult {
+        val start = cursor
+
+        if (isOver()) {
+            return ShouldComplete(emptyList())
+        }
+
+        if (peek() == KeyChar.MINUS) {
+            next()
+
+            if (isOver()) {
+                return ShouldComplete(emptyList())
+            }
+        }
+
+        if (isOver() || peek() !in '0'..'9') {
+            cursor = start
+            return ShouldComplete(emptyList())
+        }
+
+        while (!isOver() && peek() in '0'..'9') {
+            next()
+        }
+
+        if (!isOver() && peek() == KeyChar.DECIMAL_POINT) {
+            next()
+
+            while (!isOver() && peek() in '0'..'9') {
+                next()
+            }
+        }
+
+        return ShouldContinue(context.string.substring(start, cursor))
+    }
+
+    fun skipWhitespaceAndComments() {
+        while (!isOver()) {
+            // whitespace
+            if (peek() in KeyChar.WHITESPACE_CHARS) {
+                next()
+                continue
+            }
+
+            // block comment
+            if (context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, cursor)) {
+                repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
+                    next()
+                }
+
+                var count = 1
+
+                while (!isOver() && count > 0) {
+                    when {
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, cursor) -> {
+                            repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
+                                next()
+                            }
+                            count++
+                        }
+
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_END_SEQUENCE, cursor) -> {
+                            repeat(KeyChar.BLOCK_COMMENT_END_SEQUENCE.length) {
+                                next()
+                            }
+                            count--
+                        }
+
+                        else -> {
+                            next()
+                        }
+                    }
+                }
+
+                continue
+            }
+
+            // line comment
+            if (context.string.startsWith(KeyChar.LINE_COMMENT_SEQUENCE, cursor)) {
+                repeat(KeyChar.LINE_COMMENT_SEQUENCE.length) {
+                    next()
+                }
+
+                while (!isOver() && peek() != KeyChar.LINEBREAK) {
+                    next()
+                }
+
+                continue
+            }
+
+            break
+        }
+    }
+
     sealed class ValueCompletionResult
     class ShouldContinue(val input: String) : ValueCompletionResult()
     class ShouldComplete(val items: List<CompletionItem>): ValueCompletionResult()

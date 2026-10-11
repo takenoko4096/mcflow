@@ -16,6 +16,9 @@ class CommandJsonObject(
         return entries.filter { it.first.value == key }.map { clazz.cast(it.second) }
     }
 
+    /**
+     * この辺のメソッドを使うときはキャスト例外が発生しないように気を付けて
+     */
     fun getStrings(key: String): List<CommandJsonValue<String>> {
         return entries.filter { it.first.value == key }.map { it.second as CommandJsonValue<String> }
     }

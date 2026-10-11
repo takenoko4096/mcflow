@@ -977,17 +977,20 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         if (typeResult is ArgumentCompleter.ShouldComplete) {
             return typeResult.items
         }
+        completer.skipWhitespaceAndComments()
 
         val openResult = completer.completeChar(listOf('['), kind = CompletionItemKind.Keyword)
         if (openResult is ArgumentCompleter.ShouldComplete) {
             return openResult.items
         }
+        completer.skipWhitespaceAndComments()
 
         while (true) {
             val argResult = completer.completeUnquotedString(parsers.keys.toList(), CompletionItemKind.Property)
             if (argResult is ArgumentCompleter.ShouldComplete) {
                 return argResult.items
             }
+            completer.skipWhitespaceAndComments()
             val argName = (argResult as ArgumentCompleter.ShouldContinue).input
 
             (completer.completeChar(
@@ -996,6 +999,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             ) as? ArgumentCompleter.ShouldComplete)?.run {
                 return items
             }
+            completer.skipWhitespaceAndComments()
 
             val argCompleter = completers[argName]
 
@@ -1011,11 +1015,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     return argValRes
                 }
             }
+            completer.skipWhitespaceAndComments()
 
             val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
             if (lastResult is ArgumentCompleter.ShouldComplete) {
                 return lastResult.items
             }
+            completer.skipWhitespaceAndComments()
             lastResult as ArgumentCompleter.ShouldContinue
             if (lastResult.input == ']'.toString()) {
                 break
@@ -1196,6 +1202,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
             )
         }
+        completer.skipWhitespaceAndComments()
 
         while (true) {
             val keyResult = completer.completeUnquotedString(
@@ -1205,20 +1212,24 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             if (keyResult is ArgumentCompleter.ShouldComplete) {
                 return keyResult.items
             }
+            completer.skipWhitespaceAndComments()
 
             (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
                 return items
             }
+            completer.skipWhitespaceAndComments()
 
             val valueResult = callback(completer)
             if (valueResult != null) {
                 return valueResult
             }
+            completer.skipWhitespaceAndComments()
 
             val lastResult = completer.completeChar(listOf(',', '}'), CompletionItemKind.Keyword)
             if (lastResult is ArgumentCompleter.ShouldComplete) {
                 return lastResult.items
             }
+            completer.skipWhitespaceAndComments()
             lastResult as ArgumentCompleter.ShouldContinue
             if (lastResult.input == '}'.toString()) {
                 break

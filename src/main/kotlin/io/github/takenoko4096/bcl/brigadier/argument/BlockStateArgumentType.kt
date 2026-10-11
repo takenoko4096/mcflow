@@ -63,11 +63,13 @@ class BlockStateArgumentType(
             return blockTypeCompleteResult.items
         }
         blockTypeCompleteResult as ArgumentCompleter.ShouldContinue
+        completer.skipWhitespaceAndComments()
 
         val openResult = completer.completeChar(listOf('['), CompletionItemKind.Keyword)
         if (openResult is ArgumentCompleter.ShouldComplete) {
             return openResult.items
         }
+        completer.skipWhitespaceAndComments()
 
         val blockType = NamespacedIdentifier.parse(blockTypeCompleteResult.input)?. run(BlockType::get)
         val properties = blockType?.properties ?: emptySet()
@@ -78,6 +80,7 @@ class BlockStateArgumentType(
                 return propertyNameCompletionResult.items
             }
             propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
+            completer.skipWhitespaceAndComments()
 
             val property = BlockProperties.getProperty(propertyNameCompletionResult.input)
 
@@ -87,6 +90,7 @@ class BlockStateArgumentType(
             ) as? ArgumentCompleter.ShouldComplete)?.run {
                 return items
             }
+            completer.skipWhitespaceAndComments()
 
             val propertyValueCompletionResult = if (property is BlockProperty.EnumProperty<*>) {
                 completer.completeQuotedString(property.values.map { it.getString() }, CompletionItemKind.Value)
@@ -98,11 +102,13 @@ class BlockStateArgumentType(
             if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
                 return propertyValueCompletionResult.items
             }
+            completer.skipWhitespaceAndComments()
 
             val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
             if (lastResult is ArgumentCompleter.ShouldComplete) {
                 return lastResult.items
             }
+            completer.skipWhitespaceAndComments()
             lastResult as ArgumentCompleter.ShouldContinue
 
             if (lastResult.input == ']'.toString()) {
