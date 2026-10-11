@@ -1,14 +1,23 @@
 {
     "name": "mcflow",
-    "displayName": "Minecraft Command LSP",
-    "description": "Language support for Minecraft commands",
+    "displayName": "mcflow",
+    "description": "High-precision command language server for Minecraft Bedrock Edition",
     "version": "0.1.0",
+    "icon": "icon.png",
+    "publisher": "takenoko4096",
     "engines": {
         "vscode": "^1.90.0"
     },
     "categories": [
         "Programming Languages"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/takenoko4096/mcflow"
+    },
+    "bugs": {
+        "url": "https://github.com/takenoko4096/mcflow/issues"
+    },
     "main": "./dist/extension.js",
     "contributes": {
         "languages": [
@@ -49,69 +58,83 @@
         ],
         "semanticTokenTypes": [
             {
-                "id": "number",
+                "id": "mcflow_number",
                 "description": "A number"
             },
             {
-                "id": "string",
+                "id": "mcflow_string",
                 "description": "A string"
             },
             {
-                "id": "command",
+                "id": "mcflow_command",
                 "description": "An name of command"
             },
             {
-                "id": "identifier",
+                "id": "mcflow_identifier",
                 "description": "An identifier"
             },
             {
-                "id": "boolean",
+                "id": "mcflow_boolean",
                 "description": "A boolean"
             },
             {
-                "id": "parameter",
+                "id": "mcflow_parameter",
                 "description": "A parameter"
             },
             {
-                "id": "literal",
+                "id": "mcflow_literal",
                 "description": "A literal node"
             },
             {
-                "id": "label",
+                "id": "mcflow_label",
                 "description": "A label"
             },
             {
-                "id": "selector_type",
+                "id": "mcflow_selector_type",
                 "description": "A type of selector"
             },
             {
-                "id": "symbol",
+                "id": "mcflow_symbol",
                 "description": "A symbol"
             },
             {
-                "id": "enum",
+                "id": "mcflow_enum",
                 "description": "An entry of enum"
             },
             {
-                "id": "comment",
+                "id": "mcflow_comment",
                 "description": "A comment"
             },
             {
-                "id": "error",
+                "id": "mcflow_error",
                 "description": "An error"
             }
         ],
-        "themes": [
-            {
-                "id": "mcflow-default",
-                "uiTheme": "vs-dark",
-                "path": "./colorthemes/default.json"
-            }
-        ],
+        "themes": [],
         "configurationDefaults": {
             "[mcfunction]": {
                 "editor.semanticHighlighting.enabled": true,
                 "editor.bracketPairColorization.enabled": true
+            },
+            "[mcflow]": {
+                "editor.semanticHighlighting.enabled": true,
+                "editor.bracketPairColorization.enabled": true
+            },
+            "editor.semanticTokenColorCustomizations": {
+                "rules": {
+                    "mcflow_literal": "#47a2ed",
+                    "mcflow_command": "#cc85c6",
+                    "mcflow_string": "#cd9069",
+                    "mcflow_number": "#b4cda8",
+                    "mcflow_boolean": "#b4cda8",
+                    "mcflow_parameter": "#8cd7ff",
+                    "mcflow_selector_type": "#47ccb1",
+                    "mcflow_symbol": "#e58a8a",
+                    "mcflow_error": "#f44747",
+                    "mcflow_enum": "#4fc1ff",
+                    "mcflow_comment": "#699859",
+                    "mcflow_identifier": "#e6e6aa"
+                }
             }
         }
     },
@@ -125,6 +148,5 @@
         "@types/vscode": "^1.90.0",
         "typescript": "^7.0.2",
         "@types/bun": "latest"
-    },
-    "private": true
+    }
 }

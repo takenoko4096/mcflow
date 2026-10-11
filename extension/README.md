@@ -1,4 +1,4 @@
-# mcflow
+# mcflow / extension
 
 To install dependencies:
 

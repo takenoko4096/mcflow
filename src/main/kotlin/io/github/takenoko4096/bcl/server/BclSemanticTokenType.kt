@@ -19,6 +19,6 @@ enum class BclSemanticTokenType : StringRepresentable {
     ERROR;
 
     override fun getString(): String {
-        return name.lowercase()
+        return "mcflow_" + name.lowercase()
     }
 }

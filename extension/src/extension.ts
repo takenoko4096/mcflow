@@ -10,9 +10,13 @@ import * as path from "node:path";
 let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
+    console.log("mcflow: activate begin");
+
     const jarPath = context.asAbsolutePath(
         path.join("server", "mcflow-lsp.jar")
     );
+
+    console.log("mcflow: jarPath =", jarPath);
 
     const serverOptions: ServerOptions = {
         command: "java",
@@ -41,9 +45,18 @@ export function activate(context: vscode.ExtensionContext) {
 
     client.setTrace(Trace.Verbose);
 
-    client.start();
+    console.log("mcflow: starting language client");
+
+    client.start().catch(error => {
+        console.error("mcflow: failed to start language client:", error);
+        vscode.window.showErrorMessage(
+            `mcflow LSP failed to start: ${error}`
+        );
+    });
 
     context.subscriptions.push(client);
+
+    console.log("mcflow: activate end");
 }
 
 export function deactivate(): Thenable<void> | undefined {
