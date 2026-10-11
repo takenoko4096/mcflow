@@ -1,0 +1,130 @@
+{
+    "name": "mcflow",
+    "displayName": "Minecraft Command LSP",
+    "description": "Language support for Minecraft commands",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "mcfunction",
+                "aliases": [
+                    "Minecraft Function",
+                    "mcfunction"
+                ],
+                "extensions": [
+                    ".mcfunction"
+                ],
+                "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "mcflow",
+                "aliases": [
+                    "Minecraft Command Flow",
+                    "mcflow"
+                ],
+                "extensions": [
+                    ".mcflow"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "mcfunction",
+                "scopeName": "source.mcfunction",
+                "path": "./syntaxes/mcfunction.tmLanguage.json"
+            },
+            {
+                "language": "mcflow",
+                "scopeName": "source.mcflow",
+                "path": "./syntaxes/mcfunction.tmLanguage.json"
+            }
+        ],
+        "semanticTokenTypes": [
+            {
+                "id": "number",
+                "description": "A number"
+            },
+            {
+                "id": "string",
+                "description": "A string"
+            },
+            {
+                "id": "command",
+                "description": "An name of command"
+            },
+            {
+                "id": "identifier",
+                "description": "An identifier"
+            },
+            {
+                "id": "boolean",
+                "description": "A boolean"
+            },
+            {
+                "id": "parameter",
+                "description": "A parameter"
+            },
+            {
+                "id": "literal",
+                "description": "A literal node"
+            },
+            {
+                "id": "label",
+                "description": "A label"
+            },
+            {
+                "id": "selector_type",
+                "description": "A type of selector"
+            },
+            {
+                "id": "symbol",
+                "description": "A symbol"
+            },
+            {
+                "id": "enum",
+                "description": "An entry of enum"
+            },
+            {
+                "id": "comment",
+                "description": "A comment"
+            },
+            {
+                "id": "error",
+                "description": "An error"
+            }
+        ],
+        "themes": [
+            {
+                "id": "mcflow-default",
+                "uiTheme": "vs-dark",
+                "path": "./colorthemes/default.json"
+            }
+        ],
+        "configurationDefaults": {
+            "[mcfunction]": {
+                "editor.semanticHighlighting.enabled": true,
+                "editor.bracketPairColorization.enabled": true
+            }
+        }
+    },
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.0"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.90.0",
+        "typescript": "^7.0.2",
+        "@types/bun": "latest"
+    },
+    "private": true
+}

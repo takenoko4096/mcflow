@@ -1,0 +1,32 @@
+
+{
+    "scopeName": "source.mcfunction",
+    "patterns": [
+        {
+            "include": "#double-quoted-string"
+        }
+    ],
+    "repository": {
+        "double-quoted-string": {
+            "name": "string.quoted.double.mcfunction",
+            "begin": "\"",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.begin.mcfunction"
+                }
+            },
+            "end": "\"",
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.string.end.mcfunction"
+                }
+            },
+            "patterns": [
+                {
+                    "name": "constant.character.escape.mcfunction",
+                    "match": "\\\\."
+                }
+            ]
+        }
+    }
+}

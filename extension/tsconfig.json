@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "node16",
+        "moduleResolution": "node16",
+        "lib": ["ES2022"],
+        "types": ["node", "vscode"],
+
+        "rootDir": "src",
+        "outDir": "dist",
+
+        // Best practices
+        "strict": true,
+        "sourceMap": true,
+        "skipLibCheck": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+
+        // Some stricter flags (disabled by default)
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noPropertyAccessFromIndexSignature": false,
+    },
+    "include": [
+        "src/**/*.ts"
+    ]
+}

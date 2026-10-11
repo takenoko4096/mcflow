@@ -18,11 +18,12 @@ class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint =
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Coordinate> {
         val start = reader.getCurrentTokenStartPosition()
         val x = reader.unfatalize(diagnostics) { readCoordinateComponent(blockCenterCorrection = true) }
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, x.sourceSpan))
         val y = reader.unfatalize(diagnostics) { readCoordinateComponent() }
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, y.sourceSpan))
         val z = reader.unfatalize(diagnostics) { readCoordinateComponent(blockCenterCorrection = true) }
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, z.sourceSpan))
         val end = reader.getPreviousTokenEndPosition()
-
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (x !is TokenSeqReader.ReadResult.Successful || y !is TokenSeqReader.ReadResult.Successful || z !is TokenSeqReader.ReadResult.Successful) {
             return NoValuedArgument(this, start..end, diagnostics)
@@ -59,7 +60,6 @@ class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint =
         if (res is ArgumentCompleter.ShouldComplete) {
             return res.items
         }
-        System.err.println("inp:"+(res as ArgumentCompleter.ShouldContinue).input)
         return emptyList()
     }
 }

@@ -57,7 +57,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
-        System.err.println("opened:"+params.textDocument.uri)
         val document = params.textDocument
         val block = parse(document.uri, document.text, extension = document.uri.endsWith(".mcflow"))
         blocks[document.uri] = block

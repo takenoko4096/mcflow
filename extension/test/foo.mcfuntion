@@ -1,0 +1,69 @@
+execute as @e[type=player, c=10, hasitem={item=apple}] run say @s
+
+say a
+execute run list
+
+kill @e[name="a"]
+
+kill @e[name=あ]
+
+execute as @e[type=player] at @s run say a
+
+scoreboard players set @s a 1
+
+execute as @e[type=player,name=foo] run say a
+
+execute align xz run say a
+
+execute as @e[type=player] run list
+
+kill @e[c=1]
+
+tp @s[type=player] 0 0 0
+
+tellraw @s {"rawtext": [{"text": "foo"}]}
+
+function a/b
+execute if block 0 0 0 observer["minecraft:facing_direction"="down","powered_bit"=true]
+execute as @e rotated as @s run say a
+
+tp @n[dx=0,name=a]
+
+execute as @e[name="",c=1,dx=0,type=player] run say a
+
+camera @s set minecraft:control_scheme_camera
+
+camera @s set minecraft:control_scheme_camera
+
+execute as @a[type=player,name=foo,c=1] run say a
+
+execute as @initiator[family=!a] facing ~ ~ ~ run say a
+
+execute facing 0.0 0.0 0.0 run say a
+
+aimassist @s clear
+
+script debugger connect a 1
+
+damage @s 0 falling_block
+
+xp 1l
+
+schedule delay add fn 1s replace
+
+kill @e[name=a,tag=a,c=1,dx=0,tag="a",name=!"",hasitem={data=1,item=minecraft:acacia_boat},haspermission={camera=disabled,dismount=enabled},has_property={property=a,foo=!false}]
+
+# line comment
+
+scoreboard players set @s a 1
+
+tellraw @s {"rawtext": [{"with": {"rawtext": [{"score": {"name": "@s[name=a]", "objective": "foo"}}]}}]}
+
+give @s command_block 1 0 {"minecraft:can_place_on": {"blocks": ["stone"]}, "minecraft:item_lock": {"mode": "lock_in_inventory"}, "can_destroy": {"blocks": ["white_tulip"]}}
+
+execute if score @s foo matches -2147483648..2147483647 run say a
+
+tellraw @s {"rawtext": [{"score":{"name":"@s", "objective": "foo"}}]}
+
+setblock 0.0 0.0 0.0 acacia_button  ["button_pressed_bit" = false, "facing_direction"= 4]
+# ueeee!

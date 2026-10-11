@@ -1,0 +1,19 @@
+{
+    "name": "mcflow-default",
+    "type": "dark",
+    "semanticHighlighting": true,
+    "semanticTokenColors": {
+        "literal": "#47a2ed",
+        "command": "#cc85c6",
+        "string": "#cd9069",
+        "number": "#b4cda8",
+        "boolean": "#b4cda8",
+        "parameter": "#8cd7ff",
+        "selector_type": "#47ccb1",
+        "symbol": "#e58a8a",
+        "error": "#f44747",
+        "enum": "#4fc1ff",
+        "comment": "#699859",
+        "identifier": "#e6e6aa"
+    }
+}
