@@ -11,7 +11,7 @@ let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
     const jarPath = context.asAbsolutePath(
-        path.join("..", "build", "libs", "mcflow-lsp.jar")
+        path.join("server", "mcflow-lsp.jar")
     );
 
     const serverOptions: ServerOptions = {

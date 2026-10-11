@@ -46,7 +46,7 @@ tasks {
 
         from(shadowJarTask.flatMap { it.archiveFile })
 
-        into("${providers.gradleProperty("projects-directory").get()}/mcflow/server")
+        into("extension/server")
     }
 
     named("shadowJar") {
