@@ -350,7 +350,9 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
             while (true) {
                 if (isOver()) {
                     end = getSourcePositionAtBack()
-                    commentRangeCollector.add(start..end)
+                    if (end.index >= start.index) {
+                        commentRangeCollector.add(start..end)
+                    }
                     break
                 }
                 else if (testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
@@ -362,7 +364,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 else if (peek() == KeyChar.LINEBREAK) {
                     end = getSourcePositionAtBack()
                     next()
-                    if (end.index > start.index) commentRangeCollector.add(start..end)
+                    if (end.index >= start.index) commentRangeCollector.add(start..end)
                     start = getCurrentSourcePosition()
                     continue
                 }
