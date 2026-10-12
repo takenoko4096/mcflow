@@ -338,8 +338,8 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
         return tokenOf(TokenType.DOUBLE_QUOTED, sb.toString(), start, end)
     }
 
-    private fun skipComment() {
-        if (isOver()) return
+    private fun skipComment(): Boolean {
+        if (isOver()) return false
 
         val start0 = getCurrentSourcePosition()
 
@@ -378,16 +378,24 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                     break
                 }
             }
+
+            return true
         }
         else if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
             while (!isOver()) {
-                if (peek() == KeyChar.LINEBREAK) break
+                if (peek() == KeyChar.LINEBREAK) {
+                    break
+                }
                 next()
             }
 
             val end = getSourcePositionAtBack()
             commentRangeCollector.add(start0..end)
+
+            return true
         }
+
+        return false
     }
 
     private fun word(): Token {
@@ -460,25 +468,33 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
     }
 
     private fun token(previous: Token?): Token? {
-        val result = skipWhitespace()
+        var result = skipWhitespace()
 
-        val start = getCurrentSourcePosition()
-
-        val noSeparator = previous != null
+        var noSeparator = previous != null
             && previous.type != TokenType.SYMBOL
             && previous.type != TokenType.COORDINATE_COMPONENT_LOCAL
             && previous.type != TokenType.COORDINATE_COMPONENT_RELATIVE
             && !result.foundWhitespace
 
-        if (result.linebreak != null) {
-            return tokenOf(Symbol.NEWLINE, result.linebreak, result.linebreak)
-        }
+        while (true) {
+            if (result.linebreak != null) {
+                return tokenOf(Symbol.NEWLINE, result.linebreak, result.linebreak)
+            }
 
-        skipComment()
+            if (skipComment()) {
+                noSeparator = false
+                result = skipWhitespace()
+                continue
+            }
+
+            break
+        }
 
         if (isOver()) {
             return null
         }
+
+        val start = getCurrentSourcePosition()
 
         if (peek() in KeyChar.QUOTE_CHARS) {
             if (noSeparator) {
