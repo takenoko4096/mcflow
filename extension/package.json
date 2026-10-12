@@ -139,7 +139,8 @@
         }
     },
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "package": "vsce package -o ./out/"
     },
     "dependencies": {
         "vscode-languageclient": "^9.0.0"

@@ -114,6 +114,7 @@ enum class EntityType(
     STRIDER,
     SULFUR_CUBE,
     TADPOLE,
+    THROWN_TRIDENT(summonable = false),
     TNT,
     TNT_MINECART,
     TRADER_LLAMA,

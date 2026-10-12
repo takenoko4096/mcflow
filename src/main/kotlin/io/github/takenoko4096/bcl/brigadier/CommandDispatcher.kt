@@ -316,7 +316,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             node.type.parse(candidateReader, unfatalErrors, semanticTokens)
                         }
                         catch (error: BclTokenSeqReadException) {
-                            val end = candidateReader.getPreviousTokenEndPosition()
+                            var end = candidateReader.getPreviousTokenEndPosition()
+                            if (start.index > end.index) {
+                                end = start
+                            }
                             completionCandidates.add(CompletionCandidate(node, start, start..end))
                             throw error
                         }
