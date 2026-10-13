@@ -1126,7 +1126,7 @@ object Commands {
     }
 
     val PARTICLE = Command.builder("particle") {
-        "effect"(StringArgumentType.isolated()) {
+        "effect"(ParticleArgumentType()) {
             executes()
 
             "position"(PositionArgumentType()) {
@@ -1246,7 +1246,7 @@ object Commands {
     }
 
     val PLAYSOUND = Command.builder("playsound") {
-        "sound"(StringArgumentType.isolated()) {
+        "sound"(SoundArgumentType()) {
             executes()
 
             "players"(EntitySelectorArgumentType.players()) {

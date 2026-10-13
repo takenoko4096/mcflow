@@ -6,6 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
@@ -164,7 +165,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     )
 
                     val completionItems = try {
-                        candidate.node.type.complete(context)
+                        if (candidate.node.completerOverride == null) {
+                            candidate.node.type.complete(context)
+                        }
+                        else {
+                            candidate.node.completerOverride(context)
+                        }
                     }
                     catch (_: BclArgumentCompletionException) {
                         continue

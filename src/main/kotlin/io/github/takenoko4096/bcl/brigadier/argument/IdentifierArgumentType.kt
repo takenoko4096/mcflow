@@ -9,7 +9,7 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
-class IdentifierArgumentType(
+open class IdentifierArgumentType(
     name: String,
     private val defaultNamespace: String?,
     private val quotable: Boolean = true,

@@ -1,12 +1,15 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
 import io.github.takenoko4096.bcl.brigadier.CommandContext
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import org.eclipse.lsp4j.CompletionItem
 
 sealed class CommandNode(
     val name: String,
     val executor: (CommandContext.() -> Any?)?,
     val children: Map<String, CommandNode>,
-    val redirects: List<CommandNode>
+    val redirects: List<CommandNode>,
+    val completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
 ) {
     fun getEffectiveChildren(): Map<String, CommandNode> {
         return redirects.flatMap { it.getEffectiveChildren().entries }.associate { it.key to it.value } + children

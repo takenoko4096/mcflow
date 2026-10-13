@@ -43,3 +43,4 @@ bin/
 .DS_Store
 .idea/
 src/test/resources/classes/
+src/test/resources/particles/

@@ -5,6 +5,9 @@ import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
+import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import org.eclipse.lsp4j.CompletionItem
 
 sealed class CommandNodeBuilder(protected val name: String) {
     protected val children = mutableMapOf<String, CommandNodeBuilder>()
@@ -12,6 +15,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
     protected var executor: (CommandContext.() -> Any?)? = null
 
     protected val redirects = mutableSetOf<String>()
+
+    protected var completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
 
     init {
         if (!name.matches(COMMAND_NODE_NAME_REGEX)) {
@@ -32,7 +37,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
                 name,
                 executor,
                 map,
-                list
+                list,
+               completerOverride
            )
 
             list.addAll(redirects.map { name ->
@@ -62,7 +68,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
                 type,
                 executor,
                 map,
-                list
+                list,
+                completerOverride
             )
 
             list.addAll(redirects.map { name ->
@@ -150,6 +157,15 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
         else {
             throw IllegalArgumentException("実行処理を複数書くことはできません")
+        }
+    }
+
+    fun complete(callback: (BclCompletionContext) -> List<CompletionItem>) {
+        if (completerOverride == null) {
+            completerOverride = callback
+        }
+        else {
+            throw IllegalArgumentException("補完処理を複数書くことはできません")
         }
     }
 

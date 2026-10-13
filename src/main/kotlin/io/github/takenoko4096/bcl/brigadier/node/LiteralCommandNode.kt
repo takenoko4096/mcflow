@@ -1,13 +1,16 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
 import io.github.takenoko4096.bcl.brigadier.CommandContext
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import org.eclipse.lsp4j.CompletionItem
 
 open class LiteralCommandNode(
     name: String,
     executor: (CommandContext.() -> Any?)?,
     children: Map<String, CommandNode>,
-    redirects: List<CommandNode>
-) : CommandNode(name, executor, children, redirects) {
+    redirects: List<CommandNode>,
+    completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
+) : CommandNode(name, executor, children, redirects, completerOverride) {
     override fun toString(): String {
         return name
     }
