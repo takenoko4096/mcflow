@@ -33,11 +33,12 @@ class ParticleArgumentType : IdentifierArgumentType("particle", defaultNamespace
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
         return PARTICLES
-            .filter { it.startsWith(context.string) }
+            .map(NamespacedIdentifier::parse)
+            .filter { it!!.toString().startsWith(context.string) || it.value.startsWith(context.string) }
             .map {
-                CompletionItem(it).apply {
+                CompletionItem(it.toString()).apply {
                     textEdit = context.sourceSpan?.run {
-                        Either.forLeft(TextEdit(toLsp4jRange(), it))
+                        Either.forLeft(TextEdit(toLsp4jRange(), it.toString()))
                     }
                     kind = CompletionItemKind.EnumMember
                 }

@@ -15,17 +15,15 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class BooleanArgumentType : ArgumentType<Boolean>("boolean", hasInlayHint = true) {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Boolean> {
-        val start = reader.getCurrentTokenStartPosition()
         val bool = reader.unfatalize(diagnostics) { readBool() }
-        val end = reader.getPreviousTokenEndPosition()
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, bool.sourceSpan))
 
         if (bool is TokenSeqReader.ReadResult.Failure) {
-            return NoValuedArgument(this, start..end, diagnostics)
+            return NoValuedArgument(this, bool.sourceSpan, diagnostics)
         }
 
-        return Argument(this, (bool as TokenSeqReader.ReadResult.Successful).value, start..end)
+        return Argument(this, (bool as TokenSeqReader.ReadResult.Successful).value, bool.sourceSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {

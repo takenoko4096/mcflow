@@ -17,18 +17,12 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType<EntityType>("entity_type") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntityType> {
         val start = reader.getCurrentTokenStartPosition()
-        val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
+        val identifier = reader.readNamespacedIdentifier()
         val end = reader.getPreviousTokenEndPosition()
 
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
 
-        if (identifier is TokenSeqReader.ReadResult.Failure) {
-            return NoValuedArgument(this, start..end, diagnostics)
-        }
-
-        identifier as TokenSeqReader.ReadResult.Successful
-
-        val entityType = EntityType.get(identifier.value) ?: run {
+        val entityType = EntityType.get(identifier) ?: run {
             diagnostics.add(reader.diagnostic(start..end, "不明なエンティティタイプです: ${identifier.value}"))
             return NoValuedArgument(this, start..end, diagnostics)
         }

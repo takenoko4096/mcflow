@@ -16,24 +16,22 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<ItemType> {
-        val start = reader.getCurrentTokenStartPosition()
         val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
-        val end = reader.getPreviousTokenEndPosition()
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start..end))
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
 
         if (identifier !is TokenSeqReader.ReadResult.Successful) {
-            return NoValuedArgument(this, start..end, diagnostics)
+            return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
         }
 
         for (entry in ItemType.entries) {
             if (identifier.value == entry.identifier) {
-                return Argument(this, entry, start..end)
+                return Argument(this, entry, identifier.sourceSpan)
             }
         }
 
-        diagnostics.add(reader.diagnostic(start..end, "不明なアイテムタイプです: ${identifier.value}"))
-        return NoValuedArgument(this, start..end, diagnostics)
+        diagnostics.add(reader.diagnostic(identifier.sourceSpan, "不明なアイテムタイプです: ${identifier.value}"))
+        return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
