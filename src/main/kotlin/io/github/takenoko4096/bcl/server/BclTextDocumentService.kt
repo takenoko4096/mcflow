@@ -6,7 +6,6 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
@@ -23,23 +22,26 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     private val blocks = mutableMapOf<String, Block>()
 
+    private val comments = mutableMapOf<String, List<SourceSpan>>()
+
     private val extraSemanticTokens = mutableMapOf<String, List<BclSemanticToken>>()
 
     private val client: LanguageClient
         get() = server.client
 
     private fun parse(uri: String?, text: String, extension: Boolean): Block {
-        val comments = mutableListOf<SourceSpan>()
-        val tokenizer = BclTokenizer(text, extension, commentRangeCollector = comments)
+        val uriComments = mutableListOf<SourceSpan>()
+        val tokenizer = BclTokenizer(text, extension, uriComments)
         val tokens = tokenizer.tokenize()
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension)
         val semanticTokens = mutableListOf<BclSemanticToken>()
-        semanticTokens.addAll(comments.map { sourceSpan ->
+        semanticTokens.addAll(uriComments.map { sourceSpan ->
             BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
         })
         val block = parser.parse(semanticTokens)
         if (uri != null) {
             blocks[uri] = block
+            comments[uri] = uriComments
             extraSemanticTokens[uri] = semanticTokens
             documents[uri] = tokenizer.sourceCode
         }
@@ -104,6 +106,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val empty = CompletableFuture.completedFuture(Either.forLeft<List<CompletionItem>, CompletionList>(emptyList()))
 
         val sourceCode = documents[uri] ?: return empty
+
+        val uriComments = comments[uri]!!
+        if (uriComments.any { it.contains(position) }) return empty
 
         var cursor = 0
         var currentChar: Char

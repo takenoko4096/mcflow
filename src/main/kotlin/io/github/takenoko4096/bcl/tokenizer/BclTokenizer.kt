@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-class BclTokenizer(text: String, private val extension: Boolean, private val commentRangeCollector: MutableList<SourceSpan> = mutableListOf()) {
+class BclTokenizer(text: String, private val extension: Boolean, private val comments: MutableList<SourceSpan> = mutableListOf()) {
     val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
@@ -351,7 +351,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 if (isOver()) {
                     end = getSourcePositionAtBack()
                     if (end.index >= start.index) {
-                        commentRangeCollector.add(start..end)
+                        comments.add(start..end)
                     }
                     break
                 }
@@ -364,7 +364,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 else if (peek() == KeyChar.LINEBREAK) {
                     end = getSourcePositionAtBack()
                     next()
-                    if (end.index >= start.index) commentRangeCollector.add(start..end)
+                    if (end.index >= start.index) comments.add(start..end)
                     start = getCurrentSourcePosition()
                     continue
                 }
@@ -374,7 +374,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
                 if (count == 0) {
                     end = getSourcePositionAtBack()
-                    commentRangeCollector.add(start..end)
+                    comments.add(start..end)
                     break
                 }
             }
@@ -390,7 +390,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
             }
 
             val end = getSourcePositionAtBack()
-            commentRangeCollector.add(start0..end)
+            comments.add(start0..end)
 
             return true
         }
@@ -451,7 +451,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
         if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
             val numToken = number()
 
-            if (numToken.type == TokenType.UINT) {
+            if (numToken.type == TokenType.UINT || numToken is Token.Invalid) {
                 val end = getSourcePositionAtBack()
                 return invalid(start..end, type, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
