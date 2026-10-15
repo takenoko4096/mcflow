@@ -169,26 +169,13 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 )
             }
             else {
-                val semanticTokens =
-                    bestRoutePotential.semanticTokens.toMutableList()
+                val semanticTokens = bestRoutePotential.semanticTokens.toMutableList()
 
-                semanticTokens.add(
-                    BclSemanticToken(
-                        BclSemanticTokenType.ERROR,
-                        bestRoutePotential.state.reader.peekSafely(-1).sourceSpan
-                    )
-                )
-
-                bestRoutePotential.state.reader
-                    .getSourceSpansOfRemainingLines()
-                    .forEach {
-                        semanticTokens.add(
-                            BclSemanticToken(
-                                BclSemanticTokenType.ERROR,
-                                it
-                            )
-                        )
-                    }
+                val cloned = bestRoutePotential.state.reader.clone()
+                cloned.cursor = bestRoutePotential.furthestCursor
+                cloned.getSourceSpansOfRemainingLines().forEach {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, it))
+                }
 
                 CommandLineParseResult.Failure(
                     bestRoutePotential.state.route.firstOrNull() as Command?,
@@ -224,19 +211,13 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         )
     }
 
-    private fun dispatch(
-        text: String,
-        state: DispatcherParseState,
-        effectiveChildren: Map<String, CommandNode>
-    ): MutableList<RoutePotential> {
+    private fun dispatch(text: String, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
         for ((name, node) in effectiveChildren) {
             val candidateReader = state.reader.clone()
             val candidateLiterals = state.literals.toMutableList()
             val candidateArguments = state.arguments.toMutableList()
-
-            // この候補ルートだけが生成した semantic token。
             val candidateSemanticTokens = mutableListOf<BclSemanticToken>()
 
             val nextState = DispatcherParseState(
@@ -244,8 +225,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 literals = candidateLiterals,
                 arguments = candidateArguments,
                 route = state.route + node,
-                literalCount = state.literalCount +
-                    if (state.noUnfatal && node is LiteralCommandNode) 1 else 0,
+                literalCount = state.literalCount + if (state.noUnfatal && node is LiteralCommandNode) 1 else 0,
                 noUnfatal = true
             )
 
@@ -261,16 +241,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 when (node) {
                     is LiteralCommandNode -> {
                         if (candidateReader.isOver()) {
-                            if (
-                                candidateReader.sourceCode
-                                    .getOrNull(
-                                        candidateReader
-                                            .getEntireSourceSpan()
-                                            .end
-                                            .index + 1
-                                    )
-                                    ?.isWhitespace() == true
-                            ) {
+                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
                                 completionCandidates.add(
                                     CompletionCandidate(
                                         node,
@@ -312,6 +283,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 )
                             )
 
+                            val furthestCursor = candidateReader.cursor
+
                             candidateReader.cursor = cursor
 
                             potentials += RoutePotential(
@@ -321,26 +294,27 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 diagnostics = unfatalErrors + listOf(
                                     BclDiagnostic(
                                         """
-                                    ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
-                                    ${
-                                            if (effectiveChildren.size == 1) {
-                                                effectiveChildren.values.first()
-                                                    .toString() + " が期待されています"
+                                        ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
+                                        ${
+                                                if (effectiveChildren.size == 1) {
+                                                    effectiveChildren.values.first()
+                                                        .toString() + " が期待されています"
+                                                }
+                                                else {
+                                                    effectiveChildren.values.joinToString(
+                                                        " | ",
+                                                        postfix = " のいずれかが期待されています"
+                                                    )
+                                                }
                                             }
-                                            else {
-                                                effectiveChildren.values.joinToString(
-                                                    " | ",
-                                                    postfix = " のいずれかが期待されています"
-                                                )
-                                            }
-                                        }
-                                    """.trimIndent(),
+                                        """.trimIndent(),
                                         text,
                                         start..end
                                     )
                                 ),
                                 completionCandidates = completionCandidates.toList(),
-                                semanticTokens = candidateSemanticTokens.toList()
+                                semanticTokens = candidateSemanticTokens.toList(),
+                                furthestCursor = furthestCursor
                             )
 
                             continue
@@ -391,6 +365,11 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             if (start.index > end.index) {
                                 end = start
                             }
+
+                            candidateSemanticTokens.add(BclSemanticToken(
+                                BclSemanticTokenType.ERROR,
+                                start..end
+                            ))
 
                             completionCandidates.add(
                                 CompletionCandidate(

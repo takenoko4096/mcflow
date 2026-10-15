@@ -46,10 +46,7 @@ open class TokenSeqReader(
         // tokens.find { it.sourceSpan.start.index >= rem.start.index && it `is` Symbol.NEWLINE }
 
         return tokens
-            .filter {
-                it.sourceSpan.start.index >= rem.start.index &&
-                    it.sourceSpan.end.index <= rem.end.index
-            }
+            .filter { it.sourceSpan.start.index >= rem.start.index }
             .groupBy { it.sourceSpan.start.line }
             .values
             .map { line ->
