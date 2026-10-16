@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.server
 import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
@@ -10,6 +11,7 @@ import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -110,20 +112,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val uriComments = comments[uri]!!
         if (uriComments.any { it.contains(position) }) return empty
 
-        var cursor = 0
-        var currentChar: Char
-        var line = 0
-        var lastLineStartCursor = 0
-
-        while (!(line == position.line && (cursor - lastLineStartCursor) == position.character) && cursor < sourceCode.length) {
-            currentChar = sourceCode[cursor]
-            cursor++
-
-            if (currentChar == KeyChar.LINEBREAK) {
-                line++
-                lastLineStartCursor = cursor
-            }
-        }
+        val sourcePosition = SourcePosition.from(sourceCode, position)
+        val cursor = sourcePosition.index
 
         val text = sourceCode.substring(0, cursor)
             .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
@@ -241,4 +231,79 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         return CompletableFuture.completedFuture(semanticTokens)
     }
+
+    override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> {
+        val textDocument = params.textDocument
+        val sourceCode = documents[textDocument.uri]!!
+
+        val uriComments = comments[textDocument.uri] ?: emptyList()
+        if (uriComments.any { it.contains(params.position) }) {
+            return CompletableFuture.completedFuture(null)
+        }
+
+        val cursor = SourcePosition.from(sourceCode, params.position).index
+
+        val text = sourceCode.substring(0, cursor)
+            .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
+            .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
+
+        val block = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
+        val result = block.nodes.lastOrNull() ?: return CompletableFuture.completedFuture(null)
+        result as CommandLineParseResult
+
+        val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
+        command as Command
+
+        val route = result.route
+        val tail = route.last()
+        val children = tail.getEffectiveChildren().values
+
+        if (children.isEmpty()) {
+            return CompletableFuture.completedFuture(null)
+        }
+
+        return CompletableFuture.completedFuture(SignatureHelp(
+            route.run {
+                children.map { child ->
+                    SignatureInformation(
+                        joinToString(" ") { it.toString() } + ' ' + child.toString(),
+                        "",
+                        map { ParameterInformation(it.toString()) } + ParameterInformation(child.toString())
+                    )
+                }
+            },
+            0,
+            route.size
+        ))
+    }
+
+    /*override fun hover(params: HoverParams): CompletableFuture<Hover?> {
+        val block = blocks[params.textDocument.uri]!!
+
+        val result = block.nodes.filterIsInstance<CommandLineParseResult>()
+            .find {
+                val command = it.route.firstOrNull()
+                if (command !is Command) return@find false
+                val sourceSpan = it.literals.find { (node, _) -> node == command }?.second ?: return@find false
+                return@find params.position in sourceSpan
+            }
+            ?: return CompletableFuture.completedFuture(null)
+
+        val command = result.route.first() as Command
+
+        return CompletableFuture.completedFuture(Hover(
+            MarkupContent(
+                MarkupKind.PLAINTEXT,
+                """
+                /${command.name} - ${command.description}
+                
+                {USAGE}
+                """.trimIndent()
+                    .replace(
+                        "{USAGE}",
+                        command.getTreeUsage()
+                    )
+            )
+        ))
+    }*/
 }

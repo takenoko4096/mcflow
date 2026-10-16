@@ -330,12 +330,8 @@ object Commands {
 
                     "filtered" {
                         "clone_mode"(EnumArgumentType.of<CloneMode>()) {
-                            "tile_name"(BlockTypeArgumentType()) {
+                            "tile_state"(BlockStateArgumentType.blockState()) {
                                 executes()
-
-                                "block_properties"(BlockPropertiesArgumentType()) {
-                                    executes()
-                                }
                             }
                         }
                     }

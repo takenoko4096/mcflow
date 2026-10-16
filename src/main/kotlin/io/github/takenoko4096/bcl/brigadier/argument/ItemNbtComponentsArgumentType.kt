@@ -27,7 +27,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                 property("blocks") {
                     duplicatable = true
                     appendArray(createString { completer ->
-                        when (val result = completer.completeQuotedString(ItemType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                        when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
                             is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
                             is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
@@ -45,7 +45,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                 property("blocks") {
                     duplicatable = true
                     appendArray(createString { completer ->
-                        when (val result = completer.completeQuotedString(ItemType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                        when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
                             is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
                             is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }

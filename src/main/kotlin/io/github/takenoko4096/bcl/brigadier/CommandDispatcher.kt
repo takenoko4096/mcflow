@@ -289,7 +289,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                             potentials += RoutePotential(
                                 state = nextState.copy(
-                                    literalCount = state.literalCount
+                                    literalCount = state.literalCount,
+                                    route = state.route
                                 ),
                                 diagnostics = unfatalErrors + listOf(
                                     BclDiagnostic(
@@ -366,10 +367,11 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 end = start
                             }
 
-                            candidateSemanticTokens.add(BclSemanticToken(
+                            // TODO これやるか迷い
+                            /*candidateSemanticTokens.add(BclSemanticToken(
                                 BclSemanticTokenType.ERROR,
                                 start..end
-                            ))
+                            ))*/
 
                             completionCandidates.add(
                                 CompletionCandidate(
@@ -432,7 +434,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                 potentials += RoutePotential(
                     nextState.copy(
-                        literalCount = state.literalCount
+                        literalCount = state.literalCount,
+                        route = state.route
                     ),
                     unfatalErrors + listOf(
                         BclDiagnostic(
@@ -512,15 +515,21 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             candidateReader.getRemainingSourceSpan()
                         )
                     },
-                    completionCandidates = completionCandidates.toList(),
+                    completionCandidates = completionCandidates.toList() + if (node.getEffectiveChildren().isEmpty()) {
+                        emptyList()
+                    }
+                    else {
+                        node.getEffectiveChildren().map { (_, value) ->
+                            CompletionCandidate(value, candidateReader.getOverNextSourceSpan().start, null)
+                        }
+                    },
                     semanticTokens = candidateSemanticTokens.toList()
                 )
             }
 
             // さらに子へ進む可能性
             if (node.getEffectiveChildren().isNotEmpty()) {
-                val childrenAndRedirectsOfCurrent =
-                    node.getEffectiveChildren()
+                val childrenAndRedirectsOfCurrent = node.getEffectiveChildren()
 
                 /*
                  * ここでは必ず nextState を渡す。
@@ -538,7 +547,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     potentials += childPotentials.map { potential ->
                         potential.copy(
                             state = unfatalState ?: potential.state,
-
                             diagnostics =
                                 if (unfatalState != null) {
                                     unfatalErrors + potential.diagnostics
@@ -546,11 +554,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 else {
                                     potential.diagnostics
                                 },
-
                             furthestCursor = potential.furthestCursor,
-
-                            completionCandidates =
-                                completionCandidates + potential.completionCandidates,
+                            completionCandidates = completionCandidates + potential.completionCandidates,
 
                             /*
                              * 現在の node が生成した token と、
@@ -558,8 +563,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                              *
                              * 別 route の token はここには入ってこない。
                              */
-                            semanticTokens =
-                                candidateSemanticTokens + potential.semanticTokens
+                            semanticTokens = candidateSemanticTokens + potential.semanticTokens
                         )
                     }
                 }

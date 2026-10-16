@@ -38,8 +38,10 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
             )
         ).apply { full = Either.forLeft(true) }
         capabilities.completionProvider = CompletionOptions().apply {
-            triggerCharacters = listOf(" ", "\"", ",", "=", "@", "/", "~", "^")
+            triggerCharacters = TRIGGER_CHARACTERS
         }
+        capabilities.signatureHelpProvider = SignatureHelpOptions(TRIGGER_CHARACTERS)
+        // capabilities.hoverProvider = Either.forLeft(true)
 
         return capabilities
     }
@@ -62,5 +64,9 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
 
     override fun getWorkspaceService(): WorkspaceService {
         return workspaceService
+    }
+
+    companion object {
+        private val TRIGGER_CHARACTERS = listOf(" ", "\"", ",", "=", ":", "@", "/", "~", "^")
     }
 }
