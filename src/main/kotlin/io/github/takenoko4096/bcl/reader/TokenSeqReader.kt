@@ -532,8 +532,8 @@ open class TokenSeqReader(
         return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause, unfatalizable)
     }
 
-    fun diagnostic(sourceSpan: SourceSpan, message: String): BclDiagnostic {
-        return BclDiagnostic(message, sourceCode, sourceSpan)
+    fun diagnostic(sourceSpan: SourceSpan, message: String, isWarning: Boolean = false): BclDiagnostic {
+        return BclDiagnostic(message, sourceCode, sourceSpan, isWarning)
     }
 
     protected fun createCommandLineSubReader(extension: Boolean, semanticTokens: MutableList<BclSemanticToken>): TokenSeqReader {

@@ -8,6 +8,7 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
+import io.github.takenoko4096.bcl.brigadier.value.entity.AccessibleActorProperties
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityContainerSlotType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
@@ -248,7 +249,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         val properties = mutableListOf<InvertibleValue<NamespacedIdentifier>>()
 
-        val list = reader.readDuplicatableMap(
+        val list: List<Pair<NamespacedIdentifier, InvertibleValue<Any>>> = reader.readDuplicatableMap(
             Symbol.BRACE_START,
             Symbol.BRACE_END,
             kvSeparatorParser = {
@@ -270,11 +271,17 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
 
-                return@readDuplicatableMap NamespacedIdentifier.parse(key)
-                    ?: run {
-                        diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)"))
-                        null
-                    }
+                val identifier = NamespacedIdentifier.parse(key) ?: run {
+                    diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: 文字列 '$key' は識別子として無効です (識別子は '${NamespacedIdentifier.REGEX}' の形式に従う必要があります)"))
+                    return@readDuplicatableMap null
+                }
+
+                if (AccessibleActorProperties.getProperty(identifier) == null) {
+                    diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: 識別子 '$identifier' に一致するプロパティは存在しません"))
+                    return@readDuplicatableMap null
+                }
+
+                return@readDuplicatableMap identifier
             },
             valueParser = { key, inv ->
                 if (key == NamespacedIdentifier("", "property")) {
@@ -287,25 +294,46 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
 
                 val start2 = getCurrentTokenStartPosition()
-                val value = readQuotableCommandString(allowFloat = true, keepQuotation = true)
+                val string = readQuotableCommandString(allowFloat = true, keepQuotation = true)
                 val end2 = getPreviousTokenEndPosition()
 
-                if (value in setOf("true", "false")) {
+                val value = if (string in setOf("true", "false")) {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start2..end2))
+                    string.toBoolean()
                 }
-                else if (value.matches(KeyChar.NUMBER_REGEX)) {
+                else if (string.matches(KeyChar.NUMBER_REGEX)) {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start2..end2))
+                    val i = string.toIntOrNull()
+                    if (i == null) {
+                        diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: 浮動小数点数はプロパティの値として無効です"))
+                        return@readDuplicatableMap null
+                    }
+                    else i
                 }
-                else if (value.startsWith('"') && value.endsWith('"')) {
+                else if (string.startsWith('"') && string.endsWith('"')) {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+                    string.slice(1..<string.lastIndex)
                 }
                 else {
-                    diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$value' は無効な値です"))
+                    diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$string' は無効な値です"))
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, start2..end2))
                     return@readDuplicatableMap null
                 }
 
-                InvertibleValue(inv.value, value, start2..end2)
+                val invertible = InvertibleValue<Any>(inv.value, value, start2..end2)
+
+                if (key == null) {
+                    return@readDuplicatableMap invertible
+                }
+
+                val property = AccessibleActorProperties.getProperty(key)!!
+                val propertyValue = property.toValue(value)
+
+                if (propertyValue == null) {
+                    diagnostics.add(diagnostic(start2..end2, "プロパティ '$property' に存在しないエントリです: '$value'"))
+                }
+
+                return@readDuplicatableMap invertible
             }
         )
 
@@ -973,7 +1001,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val selector = EntitySelector(type, arguments)
         validator?.invoke(reader, selector, start..end, diagnostics)
 
-        return if (diagnostics.isEmpty()) {
+        return if (diagnostics.filter { !it.isWarning }.isEmpty()) {
             Argument(this, selector, start..end)
         }
         else {
@@ -1059,42 +1087,39 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeHasPermission(completer: ArgumentCompleter): List<CompletionItem>? {
-        return completeMapLike(
-            completer,
-            SelectorArguments.HasPermission.Permission.entries.map { it.getString() },
-            { completer ->
-                val valueResult = completer.completeUnquotedString(
-                    SelectorArguments.HasPermission.PermissionState.entries.map { entry -> entry.getString() },
-                    CompletionItemKind.EnumMember
-                )
-                if (valueResult is ArgumentCompleter.ShouldComplete) return@completeMapLike valueResult.items
-                return@completeMapLike null
-            }
-        )
+        return completeMapLike(completer, SelectorArguments.HasPermission.Permission.entries.map { it.getString() }) { completer, _ ->
+            val valueResult = completer.completeUnquotedString(
+                SelectorArguments.HasPermission.PermissionState.entries.map { entry -> entry.getString() },
+                CompletionItemKind.EnumMember
+            )
+            if (valueResult is ArgumentCompleter.ShouldComplete) return@completeMapLike valueResult.items
+            return@completeMapLike null
+        }
     }
 
     private fun completeHasProperty(completer: ArgumentCompleter): List<CompletionItem>? {
         return completeTypedMapLike(
             completer,
             mapOf(
-                "property" to { completer ->
+                "property" to { completer, _ ->
                     val result = completer.completeUnquotedString(
-                        listOf(), // TODO プロパティ名リスト
+                        AccessibleActorProperties.properties.map { it.identifier.toString() },
                         CompletionItemKind.EnumMember
                     )
                     if (result is ArgumentCompleter.ShouldComplete) return@to result.items
                     return@to null
                 }
             ),
-            fallback = { completer ->
+            fallback = { completer, key ->
                 val resultB = completer.completeChar(
                     listOf('!'),
                     CompletionItemKind.Keyword,
                     optional = true
                 )
                 if (resultB is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike resultB.items
+                val property = NamespacedIdentifier.parse(key)?.run(AccessibleActorProperties::getProperty)
                 val result = completer.completeUnquotedString(
-                    listOf("true", "false"),
+                    property?.strings?.values?.toList() ?: emptyList(),
                     CompletionItemKind.Value
                 )
                 if (result is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike result.items
@@ -1107,7 +1132,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return completeTypedMapLike(
             completer,
             mapOf(
-                "item" to { completer ->
+                "item" to { completer, _ ->
                     val result = completer.completeUnquotedString(
                         ItemType.IDENTIFIERS,
                         CompletionItemKind.EnumMember
@@ -1115,7 +1140,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (result is ArgumentCompleter.ShouldComplete) return@to result.items
                     return@to null
                 },
-                "location" to { completer ->
+                "location" to { completer, _ ->
                     val result = completer.completeUnquotedString(
                         EntityContainerSlotType.entries.map { it.getString() },
                         CompletionItemKind.EnumMember
@@ -1123,7 +1148,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (result is ArgumentCompleter.ShouldComplete) return@to result.items
                     return@to null
                 },
-                "slot" to { completer ->
+                "slot" to { completer, _ ->
                     val result = completer.completeChar(
                         listOf('!'),
                         CompletionItemKind.Keyword,
@@ -1134,7 +1159,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
                 },
-                "quantity" to { completer ->
+                "quantity" to { completer, _ ->
                     val result = completer.completeChar(
                         listOf('!'),
                         CompletionItemKind.Keyword,
@@ -1145,7 +1170,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
                 },
-                "data" to { completer ->
+                "data" to { completer, _ ->
                     val r = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
@@ -1154,7 +1179,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter) -> List<CompletionItem>?>, fallback: ((ArgumentCompleter) -> List<CompletionItem>?)? = null): List<CompletionItem>? {
+    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter, String) -> List<CompletionItem>?>, fallback: ((ArgumentCompleter, String) -> List<CompletionItem>?)? = null): List<CompletionItem>? {
         val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
         if (open is ArgumentCompleter.ShouldComplete) {
             return listOf(
@@ -1188,7 +1213,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
             }
             else {
-                val valueResult = keyCompleter(completer)
+                val valueResult = keyCompleter(completer, key)
                 if (valueResult != null) {
                     return valueResult
                 }
@@ -1207,7 +1232,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return null
     }
 
-    private fun completeMapLike(completer: ArgumentCompleter, keys: List<String>, callback: (ArgumentCompleter) -> List<CompletionItem>?): List<CompletionItem>? {
+    private fun completeMapLike(completer: ArgumentCompleter, keys: List<String>, callback: (ArgumentCompleter, String) -> List<CompletionItem>?): List<CompletionItem>? {
         val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
         if (open is ArgumentCompleter.ShouldComplete) {
             return listOf(
@@ -1227,6 +1252,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             if (keyResult is ArgumentCompleter.ShouldComplete) {
                 return keyResult.items
             }
+            keyResult as ArgumentCompleter.ShouldContinue
             completer.skipWhitespaceAndComments()
 
             (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)?.run {
@@ -1234,7 +1260,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             }
             completer.skipWhitespaceAndComments()
 
-            val valueResult = callback(completer)
+            val valueResult = callback(completer, keyResult.input)
             if (valueResult != null) {
                 return valueResult
             }

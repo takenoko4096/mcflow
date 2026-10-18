@@ -1,9 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
-import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
-import kotlin.enums.EnumEntries
-import kotlin.enums.enumEntries
 
 sealed class ActorProperty<T>(val identifier: NamespacedIdentifier, val values: List<T>) {
     override fun hashCode(): Int {

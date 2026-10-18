@@ -50,8 +50,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
     }
 
     private fun compare(a: RoutePotential, b: RoutePotential): Int {
-        val aNoDiagnostics = a.diagnostics.isEmpty()
-        val bNoDiagnostics = b.diagnostics.isEmpty()
+        val aNoDiagnostics = a.diagnostics.filter { !it.isWarning }.isEmpty()
+        val bNoDiagnostics = b.diagnostics.filter { !it.isWarning }.isEmpty()
 
         return when {
             aNoDiagnostics != bNoDiagnostics ->
@@ -125,7 +125,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 .flatMap { it.completionCandidates }
                 .distinct()
 
-            return if (bestRoutePotential.diagnostics.isEmpty()) {
+            return if (bestRoutePotential.diagnostics.filter { !it.isWarning }.isEmpty()) {
                 val diagnostics = mutableListOf<BclDiagnostic>()
 
                 val context = CommandContext(
