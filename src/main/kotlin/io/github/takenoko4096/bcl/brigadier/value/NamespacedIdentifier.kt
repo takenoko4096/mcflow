@@ -18,6 +18,10 @@ data class NamespacedIdentifier(val namespace: String, val value: String) {
             return NamespacedIdentifier(namespace, path)
         }
 
+        fun defaultNamespaced(value: String): NamespacedIdentifier {
+            return NamespacedIdentifier(NamespacedIdentifier.DEFAULT_NAMESPACE, value)
+        }
+
         val REGEX = "^(?:([a-zA-Z_\\-.]+[a-zA-Z0-9_\\-.]*):)?([a-zA-Z_\\-.]+[a-zA-Z0-9_\\-.]*)$".toRegex()
 
         const val DEFAULT_NAMESPACE = "minecraft"

@@ -5,10 +5,16 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty.Value
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
+import kotlin.text.endsWith
+import kotlin.text.lastIndex
+import kotlin.text.slice
+import kotlin.text.startsWith
+import kotlin.toString
 
 class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_properties") {
     override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<BlockProperties> {

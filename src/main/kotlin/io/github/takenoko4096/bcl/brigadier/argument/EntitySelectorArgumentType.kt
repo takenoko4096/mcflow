@@ -287,10 +287,25 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
 
                 val start2 = getCurrentTokenStartPosition()
-                val flag = readBool()
+                val value = readQuotableCommandString(allowFloat = true, keepQuotation = true)
                 val end2 = getPreviousTokenEndPosition()
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start2..end2))
-                InvertibleValue(inv.value, flag, start2..end2)
+
+                if (value in setOf("true", "false")) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, start2..end2))
+                }
+                else if (value.matches(KeyChar.NUMBER_REGEX)) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start2..end2))
+                }
+                else if (value.startsWith('"') && value.endsWith('"')) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+                }
+                else {
+                    diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$value' は無効な値です"))
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, start2..end2))
+                    return@readDuplicatableMap null
+                }
+
+                InvertibleValue(inv.value, value, start2..end2)
             }
         )
 

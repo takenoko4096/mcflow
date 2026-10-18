@@ -2,7 +2,7 @@
     "name": "mcflow",
     "displayName": "mcflow",
     "description": "High-precision command language server for Minecraft Bedrock Edition",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "icon": "icon.png",
     "publisher": "takenoko4096",
     "engines": {

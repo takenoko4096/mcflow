@@ -983,7 +983,7 @@ open class TokenSeqReader(
                 unfatalizable = true
             )
         }
-        else if (!allowFloat && string.matches("^\\d+(?:\\.\\d+)?$".toRegex())) {
+        else if (!allowFloat && string.matches(KeyChar.NUMBER_REGEX)) {
             throw exception(
                 start..end,
                 "文字列の解析に失敗しました: 数値として構成される文字列は不正です",
@@ -1001,13 +1001,14 @@ open class TokenSeqReader(
         return string
     }
 
-    fun readQuotableCommandString(allowFloat: Boolean = false): String {
+    fun readQuotableCommandString(allowFloat: Boolean = false, keepQuotation: Boolean = false): String {
         if (isOver()) {
             throw exception(getOverNextSourceSpan(), "二重引用符付き文字列または文字列の解析に失敗しました: 入力が不足しています")
         }
 
         return if (peek().type == TokenType.DOUBLE_QUOTED) {
-            readQuotedString()
+            val s = readQuotedString()
+            if (keepQuotation) "\"$s\"" else s
         }
         else {
             readCommandString(allowFloat)

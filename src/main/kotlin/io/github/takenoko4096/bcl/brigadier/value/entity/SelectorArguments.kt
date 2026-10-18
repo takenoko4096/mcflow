@@ -91,7 +91,7 @@ data class SelectorArguments(
 
     data class HasProperty(
         val properties: List<InvertibleValue<NamespacedIdentifier>>,
-        val conditions: List<Pair<NamespacedIdentifier, InvertibleValue<Boolean>>>,
+        val conditions: List<Pair<NamespacedIdentifier, InvertibleValue<String>>>,
         val sourceSpan: SourceSpan
     ) {
         override fun toString(): String {

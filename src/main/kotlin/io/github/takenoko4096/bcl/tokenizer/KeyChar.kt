@@ -29,6 +29,8 @@ object KeyChar {
     const val WINDOWS_LINE_SEPARATOR_SEQUENCE = "$CARRIAGE_RETURN$LINEBREAK"
     const val MAC_LINE_SEPARATOR = CARRIAGE_RETURN
 
+    val NUMBER_REGEX = "^-?\\d+(?:\\.\\d+)?$".toRegex()
+
     val CONTROL_CHARS = mapOf(
         'r' to '\r',
         'n' to '\n',
