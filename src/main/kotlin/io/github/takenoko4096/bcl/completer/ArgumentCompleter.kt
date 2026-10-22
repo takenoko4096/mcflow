@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.completer
 
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.Radix
@@ -77,7 +78,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun completeChar(chars: List<Char>, kind: CompletionItemKind, optional: Boolean = false): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
-        val c = cursor
+        val cpy = copy()
         val input = readChar()
 
         val items = chars.map {
@@ -92,16 +93,20 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return if (input in chars) {
             ShouldContinue(input.toString())
         }
-        else if (isOver()) {
+        else if (input == null) {
             if (optional && items.isEmpty()) {
-                cursor = c
+                cursor = cpy.cursor
+                lastLineStartCursor = cpy.lastLineStartCursor
+                line = cpy.line
                 ShouldContinue("")
             }
             else ShouldComplete(items)
         }
         else {
             if (optional) {
-                cursor = c
+                cursor = cpy.cursor
+                lastLineStartCursor = cpy.lastLineStartCursor
+                line = cpy.line
                 ShouldContinue("")
             }
             else ShouldComplete(emptyList())
@@ -343,7 +348,11 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         val input = readString(prefixable)
 
         val items = candidates
-            .filter { it.startsWith(input) }
+            .filter {
+                if (it.startsWith(input)) return@filter true
+                val identifier = NamespacedIdentifier.parse(it) ?: return@filter false
+                return@filter identifier.value.startsWith(input)
+            }
             .map {
                 CompletionItem(it).apply {
                     this.kind = kind

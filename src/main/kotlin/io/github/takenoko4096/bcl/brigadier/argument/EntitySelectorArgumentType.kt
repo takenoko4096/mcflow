@@ -1098,32 +1098,33 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeHasProperty(completer: ArgumentCompleter): List<CompletionItem>? {
-        return completeTypedMapLike(
+        return completeMapLike(
             completer,
-            mapOf(
-                "property" to { completer, _ ->
+            keys = AccessibleActorProperties.properties.map { it.identifier.toString() },
+            callback = { completer, key ->
+                if (key == "property") {
                     val result = completer.completeUnquotedString(
                         AccessibleActorProperties.properties.map { it.identifier.toString() },
                         CompletionItemKind.EnumMember
                     )
-                    if (result is ArgumentCompleter.ShouldComplete) return@to result.items
-                    return@to null
+                    if (result is ArgumentCompleter.ShouldComplete) return@completeMapLike result.items
+                    return@completeMapLike null
                 }
-            ),
-            fallback = { completer, key ->
-                val resultB = completer.completeChar(
-                    listOf('!'),
-                    CompletionItemKind.Keyword,
-                    optional = true
-                )
-                if (resultB is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike resultB.items
+
+                val res = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
+                if (res is ArgumentCompleter.ShouldComplete) {
+                    return@completeMapLike res.items
+                }
+
                 val property = NamespacedIdentifier.parse(key)?.run(AccessibleActorProperties::getProperty)
-                val result = completer.completeUnquotedString(
-                    property?.strings?.values?.toList() ?: emptyList(),
+                // TODO nonstring -> unquoted ArgumentCompleter側の改良が必要？
+                // completeValue(List<CompletionValue>) union的補完が欲しくなる
+                val result = completer.completeQuotedString(
+                    property?.values?.map { it.toString() } ?: emptyList(),
                     CompletionItemKind.Value
                 )
-                if (result is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike result.items
-                return@completeTypedMapLike null
+                if (result is ArgumentCompleter.ShouldComplete) return@completeMapLike result.items
+                return@completeMapLike null
             }
         )
     }
@@ -1132,7 +1133,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return completeTypedMapLike(
             completer,
             mapOf(
-                "item" to { completer, _ ->
+                "item" to { completer ->
                     val result = completer.completeUnquotedString(
                         ItemType.IDENTIFIERS,
                         CompletionItemKind.EnumMember
@@ -1140,7 +1141,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (result is ArgumentCompleter.ShouldComplete) return@to result.items
                     return@to null
                 },
-                "location" to { completer, _ ->
+                "location" to { completer ->
                     val result = completer.completeUnquotedString(
                         EntityContainerSlotType.entries.map { it.getString() },
                         CompletionItemKind.EnumMember
@@ -1148,7 +1149,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (result is ArgumentCompleter.ShouldComplete) return@to result.items
                     return@to null
                 },
-                "slot" to { completer, _ ->
+                "slot" to { completer ->
                     val result = completer.completeChar(
                         listOf('!'),
                         CompletionItemKind.Keyword,
@@ -1159,7 +1160,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
                 },
-                "quantity" to { completer, _ ->
+                "quantity" to { completer ->
                     val result = completer.completeChar(
                         listOf('!'),
                         CompletionItemKind.Keyword,
@@ -1170,7 +1171,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
                 },
-                "data" to { completer, _ ->
+                "data" to { completer ->
                     val r = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
                     if (r is ArgumentCompleter.ShouldComplete) return@to r.items
                     return@to null
@@ -1179,7 +1180,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter, String) -> List<CompletionItem>?>, fallback: ((ArgumentCompleter, String) -> List<CompletionItem>?)? = null): List<CompletionItem>? {
+    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter) -> List<CompletionItem>?>, fallback: ((ArgumentCompleter, String) -> List<CompletionItem>?)? = null): List<CompletionItem>? {
         val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
         if (open is ArgumentCompleter.ShouldComplete) {
             return listOf(
@@ -1204,7 +1205,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 return items
             }
 
-            val keyCompleter = keys[key] ?: fallback
+            val keyCompleter: ((ArgumentCompleter, String) -> List<CompletionItem>?)? = keys[key]?.run {
+                { completer, _ -> this(completer) }
+            } ?: fallback
 
             if (keyCompleter == null) {
                 val s = completer.completeQuotableString(emptyList(), CompletionItemKind.Text, prefixable = setOf('!'))

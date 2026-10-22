@@ -58,6 +58,6 @@ sealed class ActorProperty<T>(val identifier: NamespacedIdentifier, val values: 
     }
 
     class EnumProperty(identifier: NamespacedIdentifier, entries: List<String>) : ActorProperty<String>(identifier, entries) {
-        override val strings: Map<String, String> = values.associateWith { "\"$it\"" }
+        override val strings: Map<String, String> = values.associateWith { it }
     }
 }
