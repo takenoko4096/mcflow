@@ -21,13 +21,13 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     private var lastLineStartCursor: Int = 0
 
     private val remaining: String
-        get() = context.string.substring(cursor)
+        get() = context.string.substring(this@ArgumentCompleter.cursor)
 
-    fun isOver(): Boolean = cursor >= context.string.length
+    fun isOver(): Boolean = this@ArgumentCompleter.cursor >= context.string.length
 
     fun copy(): ArgumentCompleter {
         val cpy = ArgumentCompleter(context)
-        cpy.cursor = cursor
+        cpy.cursor = this@ArgumentCompleter.cursor
         cpy.lastLineStartCursor = lastLineStartCursor
         cpy.line = line
         return cpy
@@ -38,24 +38,24 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             throw BclArgumentCompletionException()
         }
 
-        return context.string[cursor]
+        return context.string[this@ArgumentCompleter.cursor]
     }
 
     fun next() {
         val current = peek()
-        cursor++
+        this@ArgumentCompleter.cursor++
 
         if (current == KeyChar.LINEBREAK) {
             line++
-            lastLineStartCursor = cursor
+            lastLineStartCursor = this@ArgumentCompleter.cursor
         }
     }
 
     private fun getCurrentSourcePosition(): SourcePosition {
         return SourcePosition(
             line + context.offset.line,
-            (cursor - lastLineStartCursor) + context.offset.column,
-            cursor + context.offset.index
+            (this@ArgumentCompleter.cursor - lastLineStartCursor) + context.offset.column,
+            this@ArgumentCompleter.cursor + context.offset.index
         )
     }
 
@@ -95,7 +95,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
         else if (input == null) {
             if (optional && items.isEmpty()) {
-                cursor = cpy.cursor
+                this@ArgumentCompleter.cursor = cpy.cursor
                 lastLineStartCursor = cpy.lastLineStartCursor
                 line = cpy.line
                 ShouldContinue("")
@@ -104,7 +104,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
         else {
             if (optional) {
-                cursor = cpy.cursor
+                this@ArgumentCompleter.cursor = cpy.cursor
                 lastLineStartCursor = cpy.lastLineStartCursor
                 line = cpy.line
                 ShouldContinue("")
@@ -243,7 +243,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             return ""
         }
 
-        val start = cursor
+        val start = this@ArgumentCompleter.cursor
 
         val firstChar = remaining.getOrNull(start)
         val secondChar = remaining.getOrNull(start + 1)
@@ -270,7 +270,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             next()
         }
 
-        return context.string.substring(start, cursor)
+        return context.string.substring(start, this@ArgumentCompleter.cursor)
     }
 
     open class QuotableString(val value: String)
@@ -439,7 +439,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeJsonNumber(): CommandJsonSchema.JsonCompletionResult {
-        val start = cursor
+        val start = this@ArgumentCompleter.cursor
 
         /*
          * -
@@ -464,7 +464,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
          * なので、例えば 01 は厳密には不正。
          */
         if (isOver() || peek() !in '0'..'9') {
-            cursor = start
+            this@ArgumentCompleter.cursor = start
             return CommandJsonSchema.JsonCompletionResult.Invalid
         }
 
@@ -475,7 +475,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * 0の直後に数字が来たら不正。
              */
             if (!isOver() && peek() in '0'..'9') {
-                cursor = start
+                this@ArgumentCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
         } else {
@@ -501,7 +501,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * 小数点の直後には必ず数字が必要。
              */
             if (peek() !in '0'..'9') {
-                cursor = start
+                this@ArgumentCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
 
@@ -543,7 +543,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * exponentには必ず数字が必要。
              */
             if (peek() !in '0'..'9') {
-                cursor = start
+                this@ArgumentCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
 
@@ -563,14 +563,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun checkpoint(): Checkpoint {
         return Checkpoint(
-            cursor = cursor,
+            cursor = this@ArgumentCompleter.cursor,
             line = line,
             lastLineStartCursor = lastLineStartCursor
         )
     }
 
     fun restore(checkpoint: Checkpoint) {
-        cursor = checkpoint.cursor
+        this@ArgumentCompleter.cursor = checkpoint.cursor
         line = checkpoint.line
         lastLineStartCursor = checkpoint.lastLineStartCursor
     }
@@ -584,7 +584,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
 
             // block comment
-            if (context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, cursor)) {
+            if (context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@ArgumentCompleter.cursor)) {
                 repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
                     next()
                 }
@@ -593,14 +593,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
                 while (!isOver() && count > 0) {
                     when {
-                        context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, cursor) -> {
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@ArgumentCompleter.cursor) -> {
                             repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
                                 next()
                             }
                             count++
                         }
 
-                        context.string.startsWith(KeyChar.BLOCK_COMMENT_END_SEQUENCE, cursor) -> {
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_END_SEQUENCE, this@ArgumentCompleter.cursor) -> {
                             repeat(KeyChar.BLOCK_COMMENT_END_SEQUENCE.length) {
                                 next()
                             }
@@ -617,7 +617,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
 
             // line comment
-            if (context.string.startsWith(KeyChar.LINE_COMMENT_SEQUENCE, cursor)) {
+            if (context.string.startsWith(KeyChar.LINE_COMMENT_SEQUENCE, this@ArgumentCompleter.cursor)) {
                 repeat(KeyChar.LINE_COMMENT_SEQUENCE.length) {
                     next()
                 }
@@ -633,7 +633,56 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
+    fun completeAnyOf(vararg completers: ArgumentCompleter.() -> ValueCompletionResult?): ValueCompletionResult? {
+        if (completers.isEmpty()) {
+            return null
+        }
+
+        val start = checkpoint()
+        val candidates = mutableListOf<Candidate>()
+
+        for (completer in completers) {
+            restore(start)
+
+            val result = completer(this)
+
+            if (result != null) {
+                candidates += Candidate(
+                    result = result,
+                    cursor = checkpoint()
+                )
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            restore(start)
+            return null
+        }
+
+        val maxCursorCandidate = candidates.maxBy { it.cursor.cursor }
+        val bestCandidates = candidates.filter { it.cursor.cursor == maxCursorCandidate.cursor.cursor }
+
+        val items = bestCandidates
+            .flatMap { candidate ->
+                when (candidate.result) {
+                    is ShouldComplete -> candidate.result.items
+                    is ShouldContinue -> emptyList()
+                }
+            }
+            .distinctBy { it.label }
+
+        restore(maxCursorCandidate.cursor)
+
+        return when {
+            items.isNotEmpty() -> ShouldComplete(items)
+            bestCandidates.all { it.result is ShouldContinue } -> ShouldContinue((maxCursorCandidate.result as ShouldContinue).input)
+            else -> ShouldComplete(emptyList())
+        }
+    }
+
     sealed class ValueCompletionResult
     class ShouldContinue(val input: String) : ValueCompletionResult()
     class ShouldComplete(val items: List<CompletionItem>): ValueCompletionResult()
+
+    data class Candidate(val result: ValueCompletionResult, val cursor: Checkpoint)
 }

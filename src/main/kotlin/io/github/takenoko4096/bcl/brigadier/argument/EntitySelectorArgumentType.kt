@@ -56,6 +56,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         "z" to ::z
     )
 
+    // returning null means 変な値が書いてあって補完に出すものないんで適当に読み取ってください補完する気はないです
     private val completers: Map<String, (ArgumentCompleter) -> List<CompletionItem>?> = mapOf(
         "c" to ::completeOne,
         "dx" to ::completeZero,
@@ -1117,12 +1118,25 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
 
                 val property = NamespacedIdentifier.parse(key)?.run(AccessibleActorProperties::getProperty)
+                    ?: return@completeMapLike emptyList()
+
                 // TODO nonstring -> unquoted ArgumentCompleter側の改良が必要？
                 // completeValue(List<CompletionValue>) union的補完が欲しくなる
                 val result = completer.completeQuotedString(
-                    property?.values?.map { it.toString() } ?: emptyList(),
+                    property.values.map { it.toString() },
                     CompletionItemKind.Value
                 )
+
+                completer.completeAnyOf(
+                    {
+
+                        completeQuotedString(
+                            property?.values?.map { it.toString() } ?: emptyList(),
+                            CompletionItemKind.Value
+                        )
+                    }
+                )
+
                 if (result is ArgumentCompleter.ShouldComplete) return@completeMapLike result.items
                 return@completeMapLike null
             }
