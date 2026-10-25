@@ -6,6 +6,8 @@ import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 
 class BclDiagnostic(val message: String, val sourceCode: String, val sourceSpan: SourceSpan, val isWarning: Boolean = false) {
+    val isError = !isWarning
+
     override fun toString(): String {
         return BclException.getPointedMessage(message, sourceCode, sourceSpan)
     }

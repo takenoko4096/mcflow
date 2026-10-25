@@ -6,12 +6,11 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
-import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import org.eclipse.lsp4j.CompletionItemKind
@@ -28,8 +27,8 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                     duplicatable = true
                     appendArray(createString { completer ->
                         when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
-                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
-                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                            is BclCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is BclCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
                     })
                 }
@@ -46,8 +45,8 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                     duplicatable = true
                     appendArray(createString { completer ->
                         when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
-                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
-                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                            is BclCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is BclCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
                     })
                 }
@@ -64,8 +63,8 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                     duplicatable = true
                     append(createString { completer ->
                         when (val result = completer.completeQuotedString(ItemLockMode.entries.map { it.getString() }, CompletionItemKind.EnumMember)) {
-                            is ArgumentCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
-                            is ArgumentCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
+                            is BclCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
+                            is BclCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
                     })
                 }

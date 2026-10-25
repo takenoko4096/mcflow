@@ -977,7 +977,7 @@ object Commands {
         }
 
         "structure" {
-            "id"(StringArgumentType.isolated()) {
+            "id"(StringEnumArgumentType.of("structure_feature", StructureFeature.IDENTIFIERS)) {
                 executes()
 
                 "use_new_chunks_only"(BooleanArgumentType()) {

@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl
 
+import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 

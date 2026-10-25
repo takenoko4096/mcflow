@@ -6,6 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class CommandLineParseResult(
@@ -14,6 +15,7 @@ sealed class CommandLineParseResult(
     val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     val completionCandidates: List<CompletionCandidate>,
     sourceSpan: SourceSpan,
+    val lastSourcePosition: SourcePosition,
     val semanticTokens: List<BclSemanticToken>
 ) : Node(sourceSpan) {
     class Successful(
@@ -23,9 +25,10 @@ sealed class CommandLineParseResult(
         arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
         completionCandidates: List<CompletionCandidate>,
         sourceSpan: SourceSpan,
+        lastSourcePosition: SourcePosition,
         semanticTokens: List<BclSemanticToken>,
         val resultValue: Any?
-    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, semanticTokens) {
+    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, lastSourcePosition, semanticTokens) {
         override fun toString(): String {
             return "Successful<${route.joinToString(" ") { it.toString() }}> $arguments"
         }
@@ -39,8 +42,9 @@ sealed class CommandLineParseResult(
         completionCandidates: List<CompletionCandidate>,
         val diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan,
+        lastSourcePosition: SourcePosition,
         semanticTokens: List<BclSemanticToken>
-    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, semanticTokens) {
+    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, lastSourcePosition, semanticTokens) {
         override fun toString(): String {
             return if (command == null) {
                 "Failure<UNKNOWN COMMAND> $arguments;\n${diagnostics.joinToString("; ")}"

@@ -7,9 +7,9 @@ import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
-import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
+import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
@@ -50,34 +50,27 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
     }
 
     private fun compare(a: RoutePotential, b: RoutePotential): Int {
-        val aNoDiagnostics = a.diagnostics.filter { !it.isWarning }.isEmpty()
-        val bNoDiagnostics = b.diagnostics.filter { !it.isWarning }.isEmpty()
+        val aNoError = a.diagnostics.none { it.isError }
+        val bNoError = b.diagnostics.none { it.isError }
 
         return when {
-            aNoDiagnostics != bNoDiagnostics ->
-                aNoDiagnostics.compareTo(bNoDiagnostics)
-
-            aNoDiagnostics ->
-                compareValuesBy(
-                    a,
-                    b,
-                    { it.state.reader.isOver() },
-                    { it.state.reader.cursor },
-                    { it.state.literalCount }
-                )
-
-            else ->
-                compareValuesBy(
-                    a,
-                    b,
-                    { it.furthestCursor },
-                    { it.state.reader.isOver() },
-                    { it.state.literalCount }
-                )
+            aNoError != bNoError -> aNoError.compareTo(bNoError)
+            aNoError -> compareValuesBy(
+                a, b,
+                { it.state.reader.isOver() },
+                { it.state.reader.cursor },
+                { it.state.literalCount }
+            )
+            else -> compareValuesBy(
+                a, b,
+                { it.furthestCursor },
+                { it.state.reader.isOver() },
+                { it.state.literalCount }
+            )
         }
     }
 
-    fun parse(reader: TokenSeqReader): CommandLineParseResult {
+    fun parse(reader: CommandLineReader): CommandLineParseResult {
         if (reader.isOver()) {
             return CommandLineParseResult.Failure(
                 null,
@@ -96,6 +89,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     )
                 ),
                 reader.getEntireSourceSpan(),
+                reader.lastSourcePosition,
                 emptyList()
             )
         }
@@ -125,7 +119,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 .flatMap { it.completionCandidates }
                 .distinct()
 
-            return if (bestRoutePotential.diagnostics.filter { !it.isWarning }.isEmpty()) {
+            return if (bestRoutePotential.diagnostics.none { it.isError }) {
                 val diagnostics = mutableListOf<BclDiagnostic>()
 
                 val context = CommandContext(
@@ -153,6 +147,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             bestRoutePotential.state.reader.getEntireSourceSpan()
                         ),
                         start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                        bestRoutePotential.state.reader.lastSourcePosition,
                         bestRoutePotential.semanticTokens
                     )
                 }
@@ -164,6 +159,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.arguments,
                     completionCandidates,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                    bestRoutePotential.state.reader.lastSourcePosition,
                     bestRoutePotential.semanticTokens,
                     resultValue
                 )
@@ -185,6 +181,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     completionCandidates,
                     bestRoutePotential.diagnostics,
                     start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                    bestRoutePotential.state.reader.lastSourcePosition,
                     semanticTokens
                 )
             }
@@ -207,6 +204,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 )
             ),
             sourceSpan,
+            reader.lastSourcePosition,
             emptyList()
         )
     }
@@ -326,16 +324,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                     is ArgumentCommandNode<*> -> {
                         if (candidateReader.isOver()) {
-                            if (
-                                candidateReader.sourceCode
-                                    .getOrNull(
-                                        candidateReader
-                                            .getEntireSourceSpan()
-                                            .end
-                                            .index + 1
-                                    )
-                                    ?.isWhitespace() == true
-                            ) {
+                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
                                 completionCandidates.add(
                                     CompletionCandidate(
                                         node,
@@ -354,11 +343,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         val start = candidateReader.getCurrentTokenStartPosition()
 
                         val argumentParseResult = try {
-                            node.type.parse(
-                                candidateReader,
-                                unfatalErrors,
-                                candidateSemanticTokens
-                            )
+                            node.type.parse(candidateReader, unfatalErrors, candidateSemanticTokens)
                         }
                         catch (error: BclTokenSeqReadException) {
                             var end = candidateReader.getPreviousTokenEndPosition()
@@ -373,13 +358,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 start..end
                             ))*/
 
-                            completionCandidates.add(
-                                CompletionCandidate(
-                                    node,
-                                    start,
-                                    start..end
-                                )
-                            )
+                            completionCandidates.add(CompletionCandidate(node, start, start..end))
 
                             throw error
                         }
@@ -391,18 +370,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         }
 
                         if (argumentParseResult is NoValuedArgument) {
-                            completionCandidates.add(
-                                CompletionCandidate(
-                                    node,
-                                    start,
-                                    start..end
-                                )
-                            )
+                            completionCandidates.add(CompletionCandidate(node, start, start..end))
                         }
 
-                        candidateArguments.add(
-                            node to argumentParseResult
-                        )
+                        candidateArguments.add(node to argumentParseResult)
 
                         if (unfatalErrors.isNotEmpty()) {
                             /*
@@ -433,27 +404,24 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 }
 
                 potentials += RoutePotential(
-                    nextState.copy(
-                        literalCount = state.literalCount,
-                        route = state.route
-                    ),
+                    nextState.copy(literalCount = state.literalCount, route = state.route),
                     unfatalErrors + listOf(
                         BclDiagnostic(
                             """
-                        ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
-                        ${
-                                if (effectiveChildren.size == 1) {
-                                    effectiveChildren.values.first().toString() +
-                                        " が期待されています"
+                            ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
+                            ${
+                                    if (effectiveChildren.size == 1) {
+                                        effectiveChildren.values.first().toString() +
+                                            " が期待されています"
+                                    }
+                                    else {
+                                        effectiveChildren.values.joinToString(
+                                            " | ",
+                                            postfix = " のいずれかが期待されています"
+                                        )
+                                    }
                                 }
-                                else {
-                                    effectiveChildren.values.joinToString(
-                                        " | ",
-                                        postfix = " のいずれかが期待されています"
-                                    )
-                                }
-                            }
-                        """.trimIndent(),
+                            """.trimIndent(),
                             text,
                             error.sourceSpan
                         )

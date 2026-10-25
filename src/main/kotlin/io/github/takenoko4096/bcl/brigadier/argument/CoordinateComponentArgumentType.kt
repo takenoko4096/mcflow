@@ -6,7 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -31,12 +31,12 @@ class CoordinateComponentArgumentType : ArgumentType<CoordinateComponent.World>(
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        val completer = ArgumentCompleter(context)
+        val completer = BclCompleter(context)
         val res = completer.completeComponent(
             listOf("~"),
             CompletionItemKind.Value
         )
-        if (res is ArgumentCompleter.ShouldComplete) {
+        if (res is BclCompleter.ShouldComplete) {
             return res.items
         }
         return emptyList()

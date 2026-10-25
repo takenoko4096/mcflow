@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 import io.github.takenoko4096.bcl.BclDsl
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import org.eclipse.lsp4j.CompletionItem
 import kotlin.collections.set
 
@@ -47,7 +47,7 @@ sealed class CommandJsonSchema {
             callback()
         }
 
-        fun createString(completer: ((ArgumentCompleter) -> JsonCompletionResult)? = null) = if (completer == null) StringSchema() else StringSchema(completer)
+        fun createString(completer: ((BclCompleter) -> JsonCompletionResult)? = null) = if (completer == null) StringSchema() else StringSchema(completer)
 
         fun append(schema: CommandJsonSchema) {
             schemas.add(schema)
@@ -84,11 +84,11 @@ sealed class CommandJsonSchema {
         data object Invalid: JsonCompletionResult()
     }
 
-    abstract fun completeJson(completer: ArgumentCompleter): JsonCompletionResult
+    abstract fun completeJson(completer: BclCompleter): JsonCompletionResult
 
     companion object {
         fun completeSchemaUnion(
-            completer: ArgumentCompleter,
+            completer: BclCompleter,
             schemas: Set<CommandJsonSchema>
         ): JsonCompletionResult {
             if (schemas.isEmpty()) {
@@ -97,7 +97,7 @@ sealed class CommandJsonSchema {
 
             data class Candidate(
                 val result: JsonCompletionResult,
-                val end: ArgumentCompleter.Checkpoint
+                val end: BclCompleter.Checkpoint
             )
 
             val start = completer.checkpoint()

@@ -11,7 +11,7 @@ import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import org.eclipse.lsp4j.CompletionItem
@@ -56,17 +56,17 @@ class BlockStateArgumentType(
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        val completer = ArgumentCompleter(context)
+        val completer = BclCompleter(context)
 
         val blockTypeCompleteResult = completer.completeUnquotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
-        if (blockTypeCompleteResult is ArgumentCompleter.ShouldComplete) {
+        if (blockTypeCompleteResult is BclCompleter.ShouldComplete) {
             return blockTypeCompleteResult.items
         }
-        blockTypeCompleteResult as ArgumentCompleter.ShouldContinue
+        blockTypeCompleteResult as BclCompleter.ShouldContinue
         completer.skipWhitespaceAndComments()
 
         val openResult = completer.completeChar(listOf('['), CompletionItemKind.Keyword)
-        if (openResult is ArgumentCompleter.ShouldComplete) {
+        if (openResult is BclCompleter.ShouldComplete) {
             return openResult.items
         }
         completer.skipWhitespaceAndComments()
@@ -76,10 +76,10 @@ class BlockStateArgumentType(
 
         while (true) {
             val propertyNameCompletionResult = completer.completeQuotedString(properties.map { it.name }, CompletionItemKind.Property)
-            if (propertyNameCompletionResult is ArgumentCompleter.ShouldComplete) {
+            if (propertyNameCompletionResult is BclCompleter.ShouldComplete) {
                 return propertyNameCompletionResult.items
             }
-            propertyNameCompletionResult as ArgumentCompleter.ShouldContinue
+            propertyNameCompletionResult as BclCompleter.ShouldContinue
             completer.skipWhitespaceAndComments()
 
             val property = BlockProperties.getProperty(propertyNameCompletionResult.input)
@@ -87,7 +87,7 @@ class BlockStateArgumentType(
             (completer.completeChar(
                 listOf('='),
                 CompletionItemKind.Keyword
-            ) as? ArgumentCompleter.ShouldComplete)?.run {
+            ) as? BclCompleter.ShouldComplete)?.run {
                 return items
             }
             completer.skipWhitespaceAndComments()
@@ -99,17 +99,17 @@ class BlockStateArgumentType(
                 completer.completeUnquotedString(property?.strings?.values?.toList() ?: emptyList(), CompletionItemKind.Value)
             }
 
-            if (propertyValueCompletionResult is ArgumentCompleter.ShouldComplete) {
+            if (propertyValueCompletionResult is BclCompleter.ShouldComplete) {
                 return propertyValueCompletionResult.items
             }
             completer.skipWhitespaceAndComments()
 
             val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
-            if (lastResult is ArgumentCompleter.ShouldComplete) {
+            if (lastResult is BclCompleter.ShouldComplete) {
                 return lastResult.items
             }
             completer.skipWhitespaceAndComments()
-            lastResult as ArgumentCompleter.ShouldContinue
+            lastResult as BclCompleter.ShouldContinue
 
             if (lastResult.input == ']'.toString()) {
                 break

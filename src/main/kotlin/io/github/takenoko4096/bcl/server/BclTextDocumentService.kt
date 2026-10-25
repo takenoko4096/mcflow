@@ -156,7 +156,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     val context = BclCompletionContext(
                         string,
                         candidate.startPosition,
-                        candidate.inputSourceSpan
+                        candidate.inputSourceSpan,
+                        sourceCode
                     )
 
                     val completionItems = try {
@@ -178,9 +179,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         }
 
         val completionItems = items.distinctBy { it.label to it.textEdit }
-
-        // @DEBUG
-        System.err.println("completion items: ${completionItems.map { it.label }}")
 
         return CompletableFuture.completedFuture(Either.forLeft(completionItems))
     }
@@ -253,6 +251,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val block = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
         val result = block.nodes.lastOrNull() ?: return CompletableFuture.completedFuture(null)
         result as CommandLineParseResult
+
+        System.err.println("last:"+result.lastSourcePosition)
+
+        if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
+            return CompletableFuture.completedFuture(null)
+        }
 
         val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         command as Command

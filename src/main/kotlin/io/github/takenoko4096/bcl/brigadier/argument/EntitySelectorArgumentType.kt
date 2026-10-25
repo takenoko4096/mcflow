@@ -18,7 +18,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorType
 import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -59,7 +59,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     )
 
     // returning null means ShouldContinue
-    private val completers: Map<String, (ArgumentCompleter) -> ArgumentCompleter.ValueCompletionResult> = mapOf(
+    private val completers: Map<String, (BclCompleter) -> BclCompleter.ValueCompletionResult> = mapOf(
         "c" to ::completeOne,
         "dx" to ::completeZero,
         "dy" to ::completeZero,
@@ -318,7 +318,6 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
                 else {
                     diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$string' は無効な値です"))
-                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, start2..end2))
                     return@readDuplicatableMap null
                 }
 
@@ -1005,7 +1004,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val selector = EntitySelector(type, arguments)
         validator?.invoke(reader, selector, start..end, diagnostics)
 
-        return if (diagnostics.filter { !it.isWarning }.isEmpty()) {
+        return if (diagnostics.none { it.isError }) {
             Argument(this, selector, start..end)
         }
         else {
@@ -1014,36 +1013,36 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        val completer = ArgumentCompleter(context)
+        val completer = BclCompleter(context)
 
         val typeResult = completer.completeUnquotedString(
             candidates = listOf("@s", "@p", "@a", "@r", "@e", "@n", "@initiator"),
             CompletionItemKind.Variable,
             prefixable = setOf('@')
         )
-        if (typeResult is ArgumentCompleter.ShouldComplete) {
+        if (typeResult is BclCompleter.ShouldComplete) {
             return typeResult.items
         }
         completer.skipWhitespaceAndComments()
 
         val openResult = completer.completeChar(listOf('['), kind = CompletionItemKind.Keyword)
-        if (openResult is ArgumentCompleter.ShouldComplete) {
+        if (openResult is BclCompleter.ShouldComplete) {
             return openResult.items
         }
         completer.skipWhitespaceAndComments()
 
         while (true) {
             val argResult = completer.completeUnquotedString(parsers.keys.toList(), CompletionItemKind.Property)
-            if (argResult is ArgumentCompleter.ShouldComplete) {
+            if (argResult is BclCompleter.ShouldComplete) {
                 return argResult.items
             }
             completer.skipWhitespaceAndComments()
-            val argName = (argResult as ArgumentCompleter.ShouldContinue).input
+            val argName = (argResult as BclCompleter.ShouldContinue).input
 
             (completer.completeChar(
                 listOf('='),
                 CompletionItemKind.Keyword
-            ) as? ArgumentCompleter.ShouldComplete)?.run {
+            ) as? BclCompleter.ShouldComplete)?.run {
                 return items
             }
             completer.skipWhitespaceAndComments()
@@ -1052,24 +1051,24 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
             if (argCompleter == null) {
                 val s = completer.completeQuotableString(emptyList(), CompletionItemKind.Text, prefixable = setOf('!'))
-                if (s is ArgumentCompleter.ShouldComplete) {
+                if (s is BclCompleter.ShouldComplete) {
                     return emptyList()
                 }
             }
             else {
                 val argValRes = argCompleter(completer)
-                if (argValRes is ArgumentCompleter.ShouldComplete) {
+                if (argValRes is BclCompleter.ShouldComplete) {
                     return argValRes.items
                 }
             }
             completer.skipWhitespaceAndComments()
 
             val lastResult = completer.completeChar(listOf(',', ']'), CompletionItemKind.Keyword)
-            if (lastResult is ArgumentCompleter.ShouldComplete) {
+            if (lastResult is BclCompleter.ShouldComplete) {
                 return lastResult.items
             }
             completer.skipWhitespaceAndComments()
-            lastResult as ArgumentCompleter.ShouldContinue
+            lastResult as BclCompleter.ShouldContinue
             if (lastResult.input == ']'.toString()) {
                 break
             }
@@ -1078,19 +1077,19 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return emptyList()
     }
 
-    private fun completeZero(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeZero(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completer.completeInteger(listOf(0), CompletionItemKind.Value)
     }
 
-    private fun completeOne(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeOne(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completer.completeInteger(listOf(1), CompletionItemKind.Value)
     }
 
-    private fun completeFamily(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeFamily(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completer.combine(
             {
                 val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
-                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                if (invertion is BclCompleter.ShouldComplete) return@combine invertion
                 completeUnquotedString(emptyList(), CompletionItemKind.EnumMember)
             },
             {
@@ -1099,7 +1098,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeHasPermission(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeHasPermission(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completeMapLike(completer, SelectorArguments.HasPermission.Permission.strings) { completer, _ ->
             completer.completeUnquotedString(
                 SelectorArguments.HasPermission.Permission.strings,
@@ -1108,7 +1107,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    private fun completeHasProperty(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeHasProperty(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completeMapLike(
             completer,
             keys = AccessibleActorProperties.properties.map { it.identifier.toString() } + "property",
@@ -1121,9 +1120,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 }
 
                 val property = NamespacedIdentifier.parse(key)?.run(AccessibleActorProperties::getProperty)
-                    ?: return@completeMapLike ArgumentCompleter.ShouldComplete(emptyList())
+                    ?: return@completeMapLike BclCompleter.ShouldComplete(emptyList())
 
-                val entryCompleter: ArgumentCompleter.() -> ArgumentCompleter.ValueCompletionResult = when (property) {
+                val entryCompleter: BclCompleter.() -> BclCompleter.ValueCompletionResult = when (property) {
                     is ActorProperty.EnumProperty -> {
                         { completeQuotedString(property.values, CompletionItemKind.EnumMember) }
                     }
@@ -1139,7 +1138,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     {
                         val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
                         completer.skipWhitespaceAndComments()
-                        if (invertion is ArgumentCompleter.ShouldComplete) {
+                        if (invertion is BclCompleter.ShouldComplete) {
                             return@combine invertion
                         }
                         completer.skipWhitespaceAndComments()
@@ -1153,7 +1152,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeHasItem(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeHasItem(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completeTypedMapLike(
             completer,
             mapOf(
@@ -1168,13 +1167,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                         {
                             val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
                             skipWhitespaceAndComments()
-                            if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
-                            invertion as ArgumentCompleter.ShouldContinue
+                            if (invertion is BclCompleter.ShouldComplete) return@combine invertion
+                            invertion as BclCompleter.ShouldContinue
                             val slot = completeIntegerRange(listOf(InvertibleIntegerRange(min = 0, max = 8)), CompletionItemKind.Value)
                             skipWhitespaceAndComments()
-                            if (slot is ArgumentCompleter.ShouldComplete) return@combine slot
-                            slot as ArgumentCompleter.ShouldContinue
-                            return@combine ArgumentCompleter.ShouldContinue(invertion.input + slot.input)
+                            if (slot is BclCompleter.ShouldComplete) return@combine slot
+                            slot as BclCompleter.ShouldContinue
+                            return@combine BclCompleter.ShouldContinue(invertion.input + slot.input)
                         },
                         {
                             completeIntegerRange(listOf(InvertibleIntegerRange(min = 0, max = 8)), CompletionItemKind.Value)
@@ -1186,13 +1185,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                         {
                             val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
                             skipWhitespaceAndComments()
-                            if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
-                            invertion as ArgumentCompleter.ShouldContinue
+                            if (invertion is BclCompleter.ShouldComplete) return@combine invertion
+                            invertion as BclCompleter.ShouldContinue
                             val slot = completeIntegerRange(listOf(InvertibleIntegerRange.ZERO), CompletionItemKind.Value)
                             skipWhitespaceAndComments()
-                            if (slot is ArgumentCompleter.ShouldComplete) return@combine slot
-                            slot as ArgumentCompleter.ShouldContinue
-                            return@combine ArgumentCompleter.ShouldContinue(invertion.input + slot.input)
+                            if (slot is BclCompleter.ShouldComplete) return@combine slot
+                            slot as BclCompleter.ShouldContinue
+                            return@combine BclCompleter.ShouldContinue(invertion.input + slot.input)
                         },
                         {
                             completeIntegerRange(listOf(InvertibleIntegerRange.ZERO), CompletionItemKind.Value)
@@ -1204,13 +1203,13 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeTypedMapLike(completer: ArgumentCompleter, keys: Map<String, (ArgumentCompleter) -> ArgumentCompleter.ValueCompletionResult>, fallback: ((ArgumentCompleter, String) -> ArgumentCompleter.ValueCompletionResult)? = null): ArgumentCompleter.ValueCompletionResult {
+    private fun completeTypedMapLike(completer: BclCompleter, keys: Map<String, (BclCompleter) -> BclCompleter.ValueCompletionResult>, fallback: ((BclCompleter, String) -> BclCompleter.ValueCompletionResult)? = null): BclCompleter.ValueCompletionResult {
         val sb = StringBuilder()
 
         val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
         completer.skipWhitespaceAndComments()
-        if (open is ArgumentCompleter.ShouldComplete) {
-            return ArgumentCompleter.ShouldComplete(listOf(
+        if (open is BclCompleter.ShouldComplete) {
+            return BclCompleter.ShouldComplete(listOf(
                 CompletionItem("{}").apply {
                     insertTextFormat = InsertTextFormat.Snippet
                     insertText = "{$0}"
@@ -1226,62 +1225,62 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 CompletionItemKind.Property
             )
             completer.skipWhitespaceAndComments()
-            if (keyResult is ArgumentCompleter.ShouldComplete) {
+            if (keyResult is BclCompleter.ShouldComplete) {
                 return keyResult
             }
-            val key = (keyResult as ArgumentCompleter.ShouldContinue).input
+            val key = (keyResult as BclCompleter.ShouldContinue).input
             sb.append(key)
 
-            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)
+            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? BclCompleter.ShouldComplete)
                 ?.run { return this }
             completer.skipWhitespaceAndComments()
             sb.append('=')
 
-            val keyCompleter: ((ArgumentCompleter, String) -> ArgumentCompleter.ValueCompletionResult)? = keys[key]?.run {
+            val keyCompleter: ((BclCompleter, String) -> BclCompleter.ValueCompletionResult)? = keys[key]?.run {
                 { completer, _ -> this(completer) }
             } ?: fallback
 
             if (keyCompleter == null) {
                 val s = completer.completeQuotableString(emptyList(), CompletionItemKind.Text, prefixable = setOf('!'))
                 completer.skipWhitespaceAndComments()
-                if (s is ArgumentCompleter.ShouldComplete) {
-                    return ArgumentCompleter.ShouldComplete(emptyList())
+                if (s is BclCompleter.ShouldComplete) {
+                    return BclCompleter.ShouldComplete(emptyList())
                 }
-                s as ArgumentCompleter.ShouldContinue
+                s as BclCompleter.ShouldContinue
                 sb.append(s.input)
             }
             else {
                 val valueResult = keyCompleter(completer, key)
                 completer.skipWhitespaceAndComments()
-                if (valueResult is ArgumentCompleter.ShouldComplete) {
+                if (valueResult is BclCompleter.ShouldComplete) {
                     return valueResult
                 }
-                valueResult as ArgumentCompleter.ShouldContinue
+                valueResult as BclCompleter.ShouldContinue
                 sb.append(valueResult.input)
             }
 
             val lastResult = completer.completeChar(listOf(',', '}'), CompletionItemKind.Keyword)
             completer.skipWhitespaceAndComments()
-            if (lastResult is ArgumentCompleter.ShouldComplete) {
+            if (lastResult is BclCompleter.ShouldComplete) {
                 return lastResult
             }
-            lastResult as ArgumentCompleter.ShouldContinue
+            lastResult as BclCompleter.ShouldContinue
             sb.append(lastResult.input)
             if (lastResult.input == '}'.toString()) {
                 break
             }
         }
 
-        return ArgumentCompleter.ShouldContinue(sb.toString())
+        return BclCompleter.ShouldContinue(sb.toString())
     }
 
-    private fun completeMapLike(completer: ArgumentCompleter, keys: List<String>, callback: (ArgumentCompleter, String) -> ArgumentCompleter.ValueCompletionResult): ArgumentCompleter.ValueCompletionResult {
+    private fun completeMapLike(completer: BclCompleter, keys: List<String>, callback: (BclCompleter, String) -> BclCompleter.ValueCompletionResult): BclCompleter.ValueCompletionResult {
         val sb = StringBuilder()
 
         val open = completer.completeChar(listOf('{'), CompletionItemKind.Keyword)
         completer.skipWhitespaceAndComments()
-        if (open is ArgumentCompleter.ShouldComplete) {
-            return ArgumentCompleter.ShouldComplete(listOf(
+        if (open is BclCompleter.ShouldComplete) {
+            return BclCompleter.ShouldComplete(listOf(
                 CompletionItem("{}").apply {
                     insertTextFormat = InsertTextFormat.Snippet
                     insertText = "{$0}"
@@ -1293,46 +1292,46 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         while (true) {
             val keyResult = completer.completeUnquotedString(keys, CompletionItemKind.Property)
             completer.skipWhitespaceAndComments()
-            if (keyResult is ArgumentCompleter.ShouldComplete) {
+            if (keyResult is BclCompleter.ShouldComplete) {
                 return keyResult
             }
-            keyResult as ArgumentCompleter.ShouldContinue
+            keyResult as BclCompleter.ShouldContinue
             sb.append(keyResult.input)
 
-            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? ArgumentCompleter.ShouldComplete)
+            (completer.completeChar(listOf('='), CompletionItemKind.Keyword) as? BclCompleter.ShouldComplete)
                 ?.run { return this }
             completer.skipWhitespaceAndComments()
             sb.append('=')
 
             val valueResult = callback(completer, keyResult.input)
             completer.skipWhitespaceAndComments()
-            if (valueResult is ArgumentCompleter.ShouldComplete) {
+            if (valueResult is BclCompleter.ShouldComplete) {
                 return valueResult
             }
-            valueResult as ArgumentCompleter.ShouldContinue
+            valueResult as BclCompleter.ShouldContinue
             sb.append(valueResult.input)
 
             val lastResult = completer.completeChar(listOf(',', '}'), CompletionItemKind.Keyword)
             completer.skipWhitespaceAndComments()
-            if (lastResult is ArgumentCompleter.ShouldComplete) {
+            if (lastResult is BclCompleter.ShouldComplete) {
                 return lastResult
             }
-            lastResult as ArgumentCompleter.ShouldContinue
+            lastResult as BclCompleter.ShouldContinue
             sb.append(lastResult.input)
             if (lastResult.input == '}'.toString()) {
                 break
             }
         }
 
-        return ArgumentCompleter.ShouldContinue(sb.toString())
+        return BclCompleter.ShouldContinue(sb.toString())
     }
 
-    private fun completeGameMode(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeGameMode(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completer.combine(
             {
                 val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
-                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
-                invertion as ArgumentCompleter.ShouldContinue
+                if (invertion is BclCompleter.ShouldComplete) return@combine invertion
+                invertion as BclCompleter.ShouldContinue
                 completeUnquotedString(
                     GameMode.entries.flatMap { it.getNames() },
                     CompletionItemKind.EnumMember
@@ -1347,10 +1346,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeScores(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeScores(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completeTypedMapLike(completer, emptyMap()) { completer, _ ->
             val invertion = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-            if (invertion is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike invertion
+            if (invertion is BclCompleter.ShouldComplete) return@completeTypedMapLike invertion
             completer.skipWhitespaceAndComments()
             return@completeTypedMapLike completer.completeIntegerRange(
                 ranges = listOf(InvertibleIntegerRange()),
@@ -1359,15 +1358,15 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    private fun completeName(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeName(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         val invertion = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-        if (invertion is ArgumentCompleter.ShouldComplete) return invertion
+        if (invertion is BclCompleter.ShouldComplete) return invertion
         return completer.completeQuotableString(emptyList(), CompletionItemKind.Text)
     }
 
-    private fun completeTag(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeTag(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         val invertion = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-        if (invertion is ArgumentCompleter.ShouldComplete) return invertion
+        if (invertion is BclCompleter.ShouldComplete) return invertion
         completer.skipWhitespaceAndComments()
         return completer.completeQuotableString(
             emptyList(), // TODO Dynamic Completion
@@ -1375,11 +1374,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun completeType(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
+    private fun completeType(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completer.combine(
             {
                 val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
-                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                if (invertion is BclCompleter.ShouldComplete) return@combine invertion
                 completeUnquotedString(EntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
             },
             {

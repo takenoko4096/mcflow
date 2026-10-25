@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
@@ -83,7 +83,7 @@ class ObjectSchema(
     }
 
     override fun completeJson(
-        completer: ArgumentCompleter
+        completer: BclCompleter
     ): JsonCompletionResult {
         val start = completer.checkpoint()
 
@@ -93,7 +93,7 @@ class ObjectSchema(
         )
 
         when (openResult) {
-            is ArgumentCompleter.ShouldComplete -> {
+            is BclCompleter.ShouldComplete -> {
                 if (openResult.items.isEmpty()) {
                     completer.restore(start)
                     return JsonCompletionResult.Invalid
@@ -109,7 +109,7 @@ class ObjectSchema(
                 )
             }
 
-            is ArgumentCompleter.ShouldContinue -> {
+            is BclCompleter.ShouldContinue -> {
                 // 開き括弧を消費したので続行
             }
         }
@@ -156,7 +156,7 @@ class ObjectSchema(
             )
 
             when (keyResult) {
-                is ArgumentCompleter.ShouldComplete -> {
+                is BclCompleter.ShouldComplete -> {
                     return if (keyResult.items.isEmpty()) {
                         JsonCompletionResult.Invalid
                     } else {
@@ -166,7 +166,7 @@ class ObjectSchema(
                     }
                 }
 
-                is ArgumentCompleter.ShouldContinue -> {
+                is BclCompleter.ShouldContinue -> {
                     // keyを読み終えた
                 }
             }
@@ -195,7 +195,7 @@ class ObjectSchema(
                     CompletionItemKind.Keyword
                 )
             ) {
-                is ArgumentCompleter.ShouldComplete -> {
+                is BclCompleter.ShouldComplete -> {
                     if (colonResult.items.isEmpty()) {
                         return JsonCompletionResult.Invalid
                     }
@@ -205,7 +205,7 @@ class ObjectSchema(
                     )
                 }
 
-                is ArgumentCompleter.ShouldContinue -> {
+                is BclCompleter.ShouldContinue -> {
                     // : を消費した
                 }
             }
@@ -253,7 +253,7 @@ class ObjectSchema(
                     CompletionItemKind.Keyword
                 )
             ) {
-                is ArgumentCompleter.ShouldComplete -> {
+                is BclCompleter.ShouldComplete -> {
                     val items = separatorResult.items.filter { item ->
                         item.label != "}" || canClose(usedKeys)
                     }
@@ -265,7 +265,7 @@ class ObjectSchema(
                     }
                 }
 
-                is ArgumentCompleter.ShouldContinue -> {
+                is BclCompleter.ShouldContinue -> {
                     if (separatorResult.input == "}") {
                         if (!canClose(usedKeys)) {
                             return JsonCompletionResult.Invalid

@@ -20,7 +20,9 @@ open class IdentifierArgumentType(
             readNamespacedIdentifier(defaultNamespace, quotable, strict)
         }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
+        if (identifier.nonnull) {
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
+        }
 
         return if (identifier is TokenSeqReader.ReadResult.Successful) {
             Argument(this, identifier.value, identifier.sourceSpan)

@@ -15,7 +15,7 @@ import kotlin.collections.contains
 import kotlin.text.plus
 import kotlin.text.startsWith
 
-class ArgumentCompleter(private val context: BclCompletionContext) {
+class BclCompleter(private val context: BclCompletionContext) {
     private var cursor: Int = 0
 
     private var line: Int = 0
@@ -23,13 +23,13 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     private var lastLineStartCursor: Int = 0
 
     private val remaining: String
-        get() = context.string.substring(this@ArgumentCompleter.cursor)
+        get() = context.string.substring(this@BclCompleter.cursor)
 
-    fun isOver(): Boolean = this@ArgumentCompleter.cursor >= context.string.length
+    fun isOver(): Boolean = this@BclCompleter.cursor >= context.string.length
 
-    fun copy(): ArgumentCompleter {
-        val cpy = ArgumentCompleter(context)
-        cpy.cursor = this@ArgumentCompleter.cursor
+    fun copy(): BclCompleter {
+        val cpy = BclCompleter(context)
+        cpy.cursor = this@BclCompleter.cursor
         cpy.lastLineStartCursor = lastLineStartCursor
         cpy.line = line
         return cpy
@@ -40,16 +40,16 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             throw BclArgumentCompletionException()
         }
 
-        return context.string[this@ArgumentCompleter.cursor]
+        return context.string[this@BclCompleter.cursor]
     }
 
     fun next() {
         val current = peek()
-        this@ArgumentCompleter.cursor++
+        this@BclCompleter.cursor++
 
         if (current == KeyChar.LINEBREAK) {
             line++
-            lastLineStartCursor = this@ArgumentCompleter.cursor
+            lastLineStartCursor = this@BclCompleter.cursor
         }
     }
 
@@ -73,8 +73,8 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     private fun getCurrentSourcePosition(): SourcePosition {
         return SourcePosition(
             line + context.offset.line,
-            (this@ArgumentCompleter.cursor - lastLineStartCursor) + context.offset.column,
-            this@ArgumentCompleter.cursor + context.offset.index
+            (this@BclCompleter.cursor - lastLineStartCursor) + context.offset.column,
+            this@BclCompleter.cursor + context.offset.index
         )
     }
 
@@ -114,7 +114,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
         else if (input == null) {
             if (optional && items.isEmpty()) {
-                this@ArgumentCompleter.cursor = cpy.cursor
+                this@BclCompleter.cursor = cpy.cursor
                 lastLineStartCursor = cpy.lastLineStartCursor
                 line = cpy.line
                 ShouldContinue("")
@@ -123,7 +123,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
         else {
             if (optional) {
-                this@ArgumentCompleter.cursor = cpy.cursor
+                this@BclCompleter.cursor = cpy.cursor
                 lastLineStartCursor = cpy.lastLineStartCursor
                 line = cpy.line
                 ShouldContinue("")
@@ -364,7 +364,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             return ""
         }
 
-        val start = this@ArgumentCompleter.cursor
+        val start = this@BclCompleter.cursor
 
         val firstChar = remaining.getOrNull(start)
         val secondChar = remaining.getOrNull(start + 1)
@@ -391,7 +391,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             next()
         }
 
-        return context.string.substring(start, this@ArgumentCompleter.cursor)
+        return context.string.substring(start, this@BclCompleter.cursor)
     }
 
     open class QuotableString(val value: String)
@@ -565,9 +565,11 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                                 s += '"'
                             }
                             this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), s))
+                            this@apply.filterText = s
                         }
                         else {
                             this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it))
+                            this@apply.filterText = it
                         }
                     }
                 }
@@ -592,7 +594,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     fun completeJsonNumber(): CommandJsonSchema.JsonCompletionResult {
-        val start = this@ArgumentCompleter.cursor
+        val start = this@BclCompleter.cursor
 
         /*
          * -
@@ -617,7 +619,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
          * なので、例えば 01 は厳密には不正。
          */
         if (isOver() || peek() !in '0'..'9') {
-            this@ArgumentCompleter.cursor = start
+            this@BclCompleter.cursor = start
             return CommandJsonSchema.JsonCompletionResult.Invalid
         }
 
@@ -628,7 +630,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * 0の直後に数字が来たら不正。
              */
             if (!isOver() && peek() in '0'..'9') {
-                this@ArgumentCompleter.cursor = start
+                this@BclCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
         } else {
@@ -654,7 +656,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * 小数点の直後には必ず数字が必要。
              */
             if (peek() !in '0'..'9') {
-                this@ArgumentCompleter.cursor = start
+                this@BclCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
 
@@ -696,7 +698,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
              * exponentには必ず数字が必要。
              */
             if (peek() !in '0'..'9') {
-                this@ArgumentCompleter.cursor = start
+                this@BclCompleter.cursor = start
                 return CommandJsonSchema.JsonCompletionResult.Invalid
             }
 
@@ -716,16 +718,16 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun checkpoint(): Checkpoint {
         return Checkpoint(
-            cursor = this@ArgumentCompleter.cursor,
-            line = this@ArgumentCompleter.line,
-            lastLineStartCursor = this@ArgumentCompleter.lastLineStartCursor
+            cursor = this@BclCompleter.cursor,
+            line = this@BclCompleter.line,
+            lastLineStartCursor = this@BclCompleter.lastLineStartCursor
         )
     }
 
     fun restore(checkpoint: Checkpoint) {
-        this@ArgumentCompleter.cursor = checkpoint.cursor
-        this@ArgumentCompleter.line = checkpoint.line
-        this@ArgumentCompleter.lastLineStartCursor = checkpoint.lastLineStartCursor
+        this@BclCompleter.cursor = checkpoint.cursor
+        this@BclCompleter.line = checkpoint.line
+        this@BclCompleter.lastLineStartCursor = checkpoint.lastLineStartCursor
     }
 
     fun skipWhitespaceAndComments() {
@@ -737,7 +739,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
 
             // block comment
-            if (context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@ArgumentCompleter.cursor)) {
+            if (context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@BclCompleter.cursor)) {
                 repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
                     next()
                 }
@@ -746,14 +748,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
                 while (!isOver() && count > 0) {
                     when {
-                        context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@ArgumentCompleter.cursor) -> {
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_START_SEQUENCE, this@BclCompleter.cursor) -> {
                             repeat(KeyChar.BLOCK_COMMENT_START_SEQUENCE.length) {
                                 next()
                             }
                             count++
                         }
 
-                        context.string.startsWith(KeyChar.BLOCK_COMMENT_END_SEQUENCE, this@ArgumentCompleter.cursor) -> {
+                        context.string.startsWith(KeyChar.BLOCK_COMMENT_END_SEQUENCE, this@BclCompleter.cursor) -> {
                             repeat(KeyChar.BLOCK_COMMENT_END_SEQUENCE.length) {
                                 next()
                             }
@@ -770,7 +772,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
 
             // line comment
-            if (context.string.startsWith(KeyChar.LINE_COMMENT_SEQUENCE, this@ArgumentCompleter.cursor)) {
+            if (context.string.startsWith(KeyChar.LINE_COMMENT_SEQUENCE, this@BclCompleter.cursor)) {
                 repeat(KeyChar.LINE_COMMENT_SEQUENCE.length) {
                     next()
                 }
@@ -786,7 +788,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun combine(vararg completers: ArgumentCompleter.() -> ValueCompletionResult): ValueCompletionResult {
+    fun combine(vararg completers: BclCompleter.() -> ValueCompletionResult): ValueCompletionResult {
         if (completers.isEmpty()) {
             return ShouldComplete(emptyList())
         }

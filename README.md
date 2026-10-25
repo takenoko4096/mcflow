@@ -6,8 +6,7 @@ Minecraft Bedrock Edition用高精度コマンド言語サーバー及びその�
 
 ### brigadier
 
-- `ArgumentNodeBuilder::complete()`
-- `requires()`
+- `ArgumentNodeBuilder::requires()`
 - Education Edition
 - Bedrock Dedicated Server
 

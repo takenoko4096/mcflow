@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
-import io.github.takenoko4096.bcl.completer.ArgumentCompleter
+import io.github.takenoko4096.bcl.completer.BclCompleter
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
@@ -50,7 +50,7 @@ class ArraySchema(
     }
 
     override fun completeJson(
-        completer: ArgumentCompleter
+        completer: BclCompleter
     ): JsonCompletionResult {
         val start = completer.checkpoint()
 
@@ -60,7 +60,7 @@ class ArraySchema(
         )
 
         when (openResult) {
-            is ArgumentCompleter.ShouldComplete -> {
+            is BclCompleter.ShouldComplete -> {
                 if (openResult.items.isEmpty()) {
                     return JsonCompletionResult.Invalid
                 }
@@ -75,7 +75,7 @@ class ArraySchema(
                 )
             }
 
-            is ArgumentCompleter.ShouldContinue -> {
+            is BclCompleter.ShouldContinue -> {
                 // 開き括弧を消費したので続行
             }
         }
@@ -118,7 +118,7 @@ class ArraySchema(
                     CompletionItemKind.Keyword
                 )
             ) {
-                is ArgumentCompleter.ShouldComplete -> {
+                is BclCompleter.ShouldComplete -> {
                     if (separatorResult.items.isEmpty()) {
                         return JsonCompletionResult.Invalid
                     }
@@ -128,7 +128,7 @@ class ArraySchema(
                     )
                 }
 
-                is ArgumentCompleter.ShouldContinue -> {
+                is BclCompleter.ShouldContinue -> {
                     if (separatorResult.input == "]") {
                         return JsonCompletionResult.Continue
                     }

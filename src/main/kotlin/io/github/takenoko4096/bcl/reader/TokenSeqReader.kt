@@ -21,14 +21,12 @@ import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-open class TokenSeqReader(
-    val sourceCode: String,
-    protected val tokens: List<Token>,
-    private val exceptionConstructor: (message: String, text: String, span: SourceSpan, cause: Throwable?, unfatalizable: Boolean) -> BclTokenSeqReadException
-) {
+open class TokenSeqReader(val sourceCode: String, protected val tokens: List<Token>, val exceptionConstructor: ExceptionConstructor) {
+    typealias ExceptionConstructor = (String, String, SourceSpan, Throwable?, Boolean) -> BclTokenSeqReadException
+
     var cursor: Int = 0
 
-    fun clone(): TokenSeqReader {
+    open fun clone(): TokenSeqReader {
         val cpy = TokenSeqReader(sourceCode, tokens, exceptionConstructor)
         cpy.cursor = cursor
         return cpy
@@ -536,32 +534,43 @@ open class TokenSeqReader(
         return BclDiagnostic(message, sourceCode, sourceSpan, isWarning)
     }
 
-    protected fun createCommandLineSubReader(extension: Boolean, semanticTokens: MutableList<BclSemanticToken>): TokenSeqReader {
+    protected fun createCommandLineSubReader(extension: Boolean, semanticTokens: MutableList<BclSemanticToken>): CommandLineReader {
         val tokens = mutableListOf<Token>()
         var current: Token
 
         skipNewLine()
+
+        var lastSourcePosition = if (cursor == 0) SourcePosition.NULL else getPreviousTokenEndPosition()
+
+        fun overwrite(sourcePosition: SourcePosition) {
+            if (lastSourcePosition.index < sourcePosition.index) {
+                lastSourcePosition = sourcePosition
+            }
+        }
 
         while (!isOver()) {
             current = peek()
             val start = getCurrentTokenStartPosition()
             next()
             val end = getPreviousTokenEndPosition()
+            overwrite(end)
 
             if (extension && current `is` Symbol.ESCAPE && !isOver() && peek() `is` Symbol.NEWLINE) {
                 next()
+                overwrite(getCurrentTokenStartPosition())
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
                 continue
             }
 
             if (current `is` Symbol.NEWLINE) {
+                overwrite(getCurrentTokenStartPosition())
                 break
             }
 
             tokens.add(current)
         }
 
-        return TokenSeqReader(sourceCode, tokens, ::BclParseException)
+        return CommandLineReader(sourceCode, tokens, ::BclParseException, lastSourcePosition)
     }
 
     fun readIntRange(): IntRange {
