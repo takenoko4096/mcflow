@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import kotlin.collections.contains
 import kotlin.text.plus
+import kotlin.text.startsWith
 
 class ArgumentCompleter(private val context: BclCompletionContext) {
     private var cursor: Int = 0
@@ -49,6 +50,23 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             line++
             lastLineStartCursor = this@ArgumentCompleter.cursor
         }
+    }
+
+    fun testThenAdvance(target: String): Boolean {
+        if (isOver()) {
+            return false
+        }
+
+        val remaining = context.string.substring(cursor)
+
+        if (remaining.startsWith(target)) {
+            for (char in target) {
+                next()
+            }
+            return true
+        }
+
+        return false
     }
 
     private fun getCurrentSourcePosition(): SourcePosition {
@@ -126,9 +144,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return sb.toString()
     }
 
-    fun readNumber(): String? {
+    data class NumberString(
+        val input: String,
+        val complete: Boolean
+    )
+
+    fun readInteger(): NumberString {
         if (isOver()) {
-            return null
+            return NumberString(input = "", complete = false)
         }
 
         val sb = StringBuilder()
@@ -141,19 +164,50 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         val intPart = digits()
 
         if (intPart.isEmpty()) {
-            return sb.toString()
+            return NumberString(input = sb.toString(), complete = false)
         }
 
         sb.append(intPart)
 
+        return NumberString(input = sb.toString(), complete = true)
+    }
+
+    fun readIntegerRange(): String {
+        if (isOver()) {
+            return ""
+        }
+
+        val sb = StringBuilder()
+
+        if (testThenAdvance("..")) {
+            sb.append("..")
+            skipWhitespaceAndComments()
+            sb.append(readInteger().input)
+            return sb.toString()
+        }
+
+        val min = readInteger()
+        sb.append(min.input)
+        if (!min.complete) {
+            return sb.toString()
+        }
+
+        skipWhitespaceAndComments()
+
+        if (!testThenAdvance("..")) {
+            return sb.toString()
+        }
+        sb.append("..")
+
+        skipWhitespaceAndComments()
+
         if (isOver()) {
             return sb.toString()
         }
-        else if (peek() == KeyChar.DECIMAL_POINT) {
-            sb.append(peek())
-            next()
-            sb.append(digits())
 
+        if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
+            val max = readInteger()
+            sb.append(max)
             return sb.toString()
         }
         else {
@@ -161,9 +215,50 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun readComponent(): String? {
+    fun readNumber(): NumberString {
         if (isOver()) {
-            return null
+            return NumberString(input = "", complete = false)
+        }
+
+        val sb = StringBuilder()
+
+        if (peek() == KeyChar.MINUS) {
+            sb.append(KeyChar.MINUS)
+            next()
+        }
+
+        val intPart = digits()
+
+        if (intPart.isEmpty()) {
+            return NumberString(input =  sb.toString(), complete = false)
+        }
+
+        sb.append(intPart)
+
+        if (isOver()) {
+            return NumberString(input = sb.toString(), complete = true)
+        }
+        else if (peek() == KeyChar.DECIMAL_POINT) {
+            sb.append(peek())
+            next()
+            val decimalPart = digits()
+
+            if (decimalPart.isEmpty()) {
+                return NumberString(input = sb.toString(), complete = false)
+            }
+
+            sb.append(decimalPart)
+
+            return NumberString(input = sb.toString(), complete = true)
+        }
+        else {
+            return NumberString(input = sb.toString(), complete = true)
+        }
+    }
+
+    fun readComponent(): String {
+        if (isOver()) {
+            return ""
         }
 
         val sb = StringBuilder()
@@ -177,7 +272,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             sb.toString()
         }
         else if (peek() == KeyChar.MINUS || peek() in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<Radix.DECIMAL.value)) {
-            sb.append(readNumber() ?: throw IllegalStateException("NEVER HAPPENS"))
+            sb.append(readNumber().input)
             sb.toString()
         }
         else {
@@ -187,7 +282,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun completeComponent(components: List<String>, kind: CompletionItemKind): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
-        val input = readComponent() ?: ""
+        val input = readComponent()
 
         val items = components
             .filter { it.startsWith(input) }
@@ -210,11 +305,36 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return ShouldContinue(input)
     }
 
+    fun completeIntegerRange(ranges: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val input = readIntegerRange()
+
+        val items = ranges
+            .filter { it.startsWith(input) }
+            .map {
+                CompletionItem(it).apply {
+                    this.kind = kind
+                    span?.run {
+                        textEdit = Either.forLeft(TextEdit(
+                            toLsp4jRange(),
+                            it
+                        ))
+                    }
+                }
+            }
+
+        if (isOver()) {
+            return ShouldComplete(items)
+        }
+
+        return ShouldContinue(input)
+    }
+
     fun completeCoordinate(components: List<String>, kind: CompletionItemKind): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
-        val x = readComponent()
-        val y = readComponent()
-        val z = readComponent()
+        val x = readComponent().ifEmpty { null }
+        val y = readComponent().ifEmpty { null }
+        val z = readComponent().ifEmpty { null }
         val input = x?.run { x + (y?.run { ' ' + y + (z?.run { " $z" } ?: "") } ?: "") } ?: ""
 
         val items = components
@@ -343,6 +463,32 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return QuotableString(readString(prefixable))
     }
 
+    fun completeInteger(candidates: List<Int>, kind: CompletionItemKind): ValueCompletionResult {
+        val span = getRemainingSourceSpanOrNull()
+        val input = readInteger().input
+
+        val items = candidates
+            .filter { it.toString().startsWith(input) }
+            .map {
+                CompletionItem(it.toString()).apply {
+                    this.kind = kind
+                    span?.run {
+                        this@apply.textEdit = Either.forLeft(TextEdit(toLsp4jRange(), it.toString()))
+                    }
+                }
+            }
+
+        if (input.toIntOrNull() in candidates) {
+            return ShouldContinue(input)
+        }
+
+        if (isOver()) {
+            return ShouldComplete(items)
+        }
+
+        return ShouldContinue(input)
+    }
+
     fun completeUnquotedString(candidates: List<String>, kind: CompletionItemKind, prefixable: Set<Char> = emptySet()): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
         val input = readString(prefixable)
@@ -362,6 +508,10 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
                 }
             }
 
+        if (input in candidates) {
+            return ShouldContinue(input)
+        }
+
         if (isOver()) {
             return ShouldComplete(items)
         }
@@ -373,8 +523,10 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         val span = getRemainingSourceSpanOrNull()
         val input = readQuotedString()
 
+        val string = if (input.opened) input.value else readString()
+
         val items = candidates
-            .filter { it.startsWith(input.value) }
+            .filter { it.startsWith(string) }
             .map {
                 CompletionItem("\"$it\"").apply {
                     this.kind = kind
@@ -563,14 +715,14 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun checkpoint(): Checkpoint {
         return Checkpoint(
-            cursor = this@ArgumentCompleter.cursor,
+            cursor = cursor,
             line = line,
             lastLineStartCursor = lastLineStartCursor
         )
     }
 
     fun restore(checkpoint: Checkpoint) {
-        this@ArgumentCompleter.cursor = checkpoint.cursor
+        cursor = checkpoint.cursor
         line = checkpoint.line
         lastLineStartCursor = checkpoint.lastLineStartCursor
     }
@@ -633,9 +785,9 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         }
     }
 
-    fun completeAnyOf(vararg completers: ArgumentCompleter.() -> ValueCompletionResult?): ValueCompletionResult? {
+    fun combine(vararg completers: ArgumentCompleter.() -> ValueCompletionResult): ValueCompletionResult {
         if (completers.isEmpty()) {
-            return null
+            return ShouldComplete(emptyList())
         }
 
         val start = checkpoint()
@@ -643,20 +795,15 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
         for (completer in completers) {
             restore(start)
-
             val result = completer(this)
-
-            if (result != null) {
-                candidates += Candidate(
-                    result = result,
-                    cursor = checkpoint()
-                )
+            if (result is ShouldComplete && !result.items.isEmpty()) {
+                candidates += Candidate(result = result, cursor = checkpoint())
             }
         }
 
         if (candidates.isEmpty()) {
             restore(start)
-            return null
+            return ShouldComplete(emptyList())
         }
 
         val maxCursorCandidate = candidates.maxBy { it.cursor.cursor }
@@ -673,6 +820,8 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
         restore(maxCursorCandidate.cursor)
 
+        System.err.println("rem:"+remaining)
+
         return when {
             items.isNotEmpty() -> ShouldComplete(items)
             bestCandidates.all { it.result is ShouldContinue } -> ShouldContinue((maxCursorCandidate.result as ShouldContinue).input)
@@ -681,8 +830,12 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
     }
 
     sealed class ValueCompletionResult
-    class ShouldContinue(val input: String) : ValueCompletionResult()
-    class ShouldComplete(val items: List<CompletionItem>): ValueCompletionResult()
+    class ShouldContinue(val input: String) : ValueCompletionResult() {
+        override fun toString() = "ShouldContinue(\"$input\")"
+    }
+    class ShouldComplete(val items: List<CompletionItem>): ValueCompletionResult() {
+        override fun toString() = "ShouldComplete(${items.joinToString(", ") { it.label }})"
+    }
 
     data class Candidate(val result: ValueCompletionResult, val cursor: Checkpoint)
 }

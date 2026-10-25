@@ -177,9 +177,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             }
         }
 
-        return CompletableFuture.completedFuture(Either.forLeft(items.distinctBy {
-            it.label to it.textEdit
-        }))
+        val completionItems = items.distinctBy { it.label to it.textEdit }
+
+        // @DEBUG
+        System.err.println("completion items: ${completionItems.map { it.label }}")
+
+        return CompletableFuture.completedFuture(Either.forLeft(completionItems))
     }
 
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {

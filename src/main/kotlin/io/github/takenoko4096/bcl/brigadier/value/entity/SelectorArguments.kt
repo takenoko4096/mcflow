@@ -152,6 +152,8 @@ data class SelectorArguments(
             }
 
             companion object {
+                val strings = entries.map { it.getString() }
+
                 fun parse(name: String): Permission? {
                     return entries.find { it.getString() == name }
                 }

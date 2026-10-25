@@ -32,5 +32,7 @@ enum class EntityContainerSlotType(private val string: String) : StringRepresent
         fun parse(string: String): EntityContainerSlotType? {
             return entries.find { it.getString() == string }
         }
+
+        val strings = entries.map { it.string }
     }
 }

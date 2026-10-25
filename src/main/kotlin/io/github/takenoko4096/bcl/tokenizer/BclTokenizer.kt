@@ -304,7 +304,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
             else if (peek() == KeyChar.LINEBREAK) {
                 next()
                 end = getSourcePositionAtBack()
-                return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません; 文字列内で改行するには '${KeyChar.ESCAPE}' を使用してください: $sb")
+                return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません: $sb")
             }
             else if (peek() == KeyChar.ESCAPE) {
                 next()
@@ -314,7 +314,9 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 // ただし改行お前はダメだ
                 if (c == KeyChar.LINEBREAK) {
                     next()
-                    continue
+                    end = getSourcePositionAtBack()
+                    if (extension) continue
+                    else return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません; 文字列内で改行することはできません")
                 }
 
                 if (c in KeyChar.CONTROL_CHARS) {
