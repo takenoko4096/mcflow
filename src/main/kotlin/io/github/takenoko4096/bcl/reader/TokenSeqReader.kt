@@ -875,6 +875,8 @@ open class TokenSeqReader(
          * つまり fatal
          */
         class Failure<T>(sourceSpan: SourceSpan) : ReadResult<T>(successful = false, sourceSpan)
+
+        val nonnull = sourceSpan != SourceSpan.NULL
     }
 
     /**
@@ -895,10 +897,10 @@ open class TokenSeqReader(
             }
         }
 
-        var end = getPreviousTokenEndPosition()
+        val end = getPreviousTokenEndPosition()
 
         if (start.index > end.index) {
-            end = start
+            return ReadResult.Failure(SourceSpan.NULL)
         }
 
         return if (value == null) ReadResult.Failure(start..end)

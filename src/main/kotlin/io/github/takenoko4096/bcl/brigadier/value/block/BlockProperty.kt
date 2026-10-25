@@ -25,6 +25,9 @@ sealed class BlockProperty<T>(val name: String, val values: List<T>) {
             if (value == t) {
                 return Value(this, t)
             }
+            else if (t is StringRepresentable && value == t.getString()) {
+                return Value(this, t)
+            }
         }
 
         return null

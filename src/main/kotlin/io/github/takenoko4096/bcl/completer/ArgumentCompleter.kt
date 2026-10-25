@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl.completer
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
+import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.Radix
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
@@ -305,19 +306,19 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         return ShouldContinue(input)
     }
 
-    fun completeIntegerRange(ranges: List<String>, kind: CompletionItemKind): ValueCompletionResult {
+    fun completeIntegerRange(ranges: List<InvertibleIntegerRange>, kind: CompletionItemKind): ValueCompletionResult {
         val span = getRemainingSourceSpanOrNull()
         val input = readIntegerRange()
 
         val items = ranges
-            .filter { it.startsWith(input) }
+            .filter { it.toString().startsWith(input) || it.toFullString().startsWith(input) }
             .map {
-                CompletionItem(it).apply {
+                CompletionItem(it.toString()).apply {
                     this.kind = kind
                     span?.run {
                         textEdit = Either.forLeft(TextEdit(
                             toLsp4jRange(),
-                            it
+                            it.toString()
                         ))
                     }
                 }
@@ -715,16 +716,16 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
     fun checkpoint(): Checkpoint {
         return Checkpoint(
-            cursor = cursor,
-            line = line,
-            lastLineStartCursor = lastLineStartCursor
+            cursor = this@ArgumentCompleter.cursor,
+            line = this@ArgumentCompleter.line,
+            lastLineStartCursor = this@ArgumentCompleter.lastLineStartCursor
         )
     }
 
     fun restore(checkpoint: Checkpoint) {
-        cursor = checkpoint.cursor
-        line = checkpoint.line
-        lastLineStartCursor = checkpoint.lastLineStartCursor
+        this@ArgumentCompleter.cursor = checkpoint.cursor
+        this@ArgumentCompleter.line = checkpoint.line
+        this@ArgumentCompleter.lastLineStartCursor = checkpoint.lastLineStartCursor
     }
 
     fun skipWhitespaceAndComments() {
@@ -795,9 +796,13 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
 
         for (completer in completers) {
             restore(start)
-            val result = completer(this)
-            if (result is ShouldComplete && !result.items.isEmpty()) {
-                candidates += Candidate(result = result, cursor = checkpoint())
+            val a = cursor
+            val ca = checkpoint()
+            val result = completer()
+            val b = cursor
+            val cb = checkpoint()
+            if ((result is ShouldComplete && result.items.isNotEmpty()) || result is ShouldContinue) {
+                candidates += Candidate(result = result, checkpoint = checkpoint())
             }
         }
 
@@ -806,8 +811,8 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             return ShouldComplete(emptyList())
         }
 
-        val maxCursorCandidate = candidates.maxBy { it.cursor.cursor }
-        val bestCandidates = candidates.filter { it.cursor.cursor == maxCursorCandidate.cursor.cursor }
+        val maxCursorCandidate = candidates.maxBy { it.checkpoint.cursor }
+        val bestCandidates = candidates.filter { it.checkpoint.cursor == maxCursorCandidate.checkpoint.cursor }
 
         val items = bestCandidates
             .flatMap { candidate ->
@@ -818,9 +823,7 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
             }
             .distinctBy { it.label }
 
-        restore(maxCursorCandidate.cursor)
-
-        System.err.println("rem:"+remaining)
+        restore(maxCursorCandidate.checkpoint)
 
         return when {
             items.isNotEmpty() -> ShouldComplete(items)
@@ -837,5 +840,5 @@ class ArgumentCompleter(private val context: BclCompletionContext) {
         override fun toString() = "ShouldComplete(${items.joinToString(", ") { it.label }})"
     }
 
-    data class Candidate(val result: ValueCompletionResult, val cursor: Checkpoint)
+    data class Candidate(val result: ValueCompletionResult, val checkpoint: Checkpoint)
 }

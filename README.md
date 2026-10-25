@@ -14,7 +14,6 @@ Minecraft Bedrock Edition用高精度コマンド言語サーバー及びその�
 ### arguments
 - `LootTableArgumentType`
 - `EntitySelectorArgumentType`
-  - `has_property` のプロパティ名バリデーション／補完
 - `RawTextComponentArgumentType`
   - セレクターの補完
 

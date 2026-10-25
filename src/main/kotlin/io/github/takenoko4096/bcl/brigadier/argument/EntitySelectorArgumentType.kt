@@ -17,6 +17,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorType
+import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
 import io.github.takenoko4096.bcl.completer.ArgumentCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -158,16 +159,12 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     private fun family(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val inverted = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
-        val string = reader.unfatalize(diagnostics) { readQuotableCommandString() }
+        val string = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()
 
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
 
-        if (string !is TokenSeqReader.ReadResult.Successful) {
-            return
-        }
-
-        arguments.family.add(InvertibleValue(inverted, string.value, start..end))
+        arguments.family.add(InvertibleValue(inverted, string, start..end))
     }
 
     private fun hasPermission(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -291,6 +288,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     val identifier = readNamespacedIdentifier()
                     val end2 = getPreviousTokenEndPosition()
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
+                    if (AccessibleActorProperties.getProperty(identifier) == null) {
+                        diagnostics.add(reader.diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$identifier' は不明なプロパティです"))
+                    }
                     properties.add(InvertibleValue(inv.value, identifier, start2..end2))
                     return@readDuplicatableMap null
                 }
@@ -722,7 +722,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             val objective = reader.unfatalize(diagnostics) { readQuotableCommandString() }
             val end2 = reader.getPreviousTokenEndPosition()
 
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+            if (objective.nonnull) {
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+            }
 
             reader.expect(Symbol.ASSIGN)
             val inverted = reader.readIsInverted()
@@ -1077,15 +1079,24 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeZero(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
-        return completer.completeChar(listOf('0'), CompletionItemKind.Value)
+        return completer.completeInteger(listOf(0), CompletionItemKind.Value)
     }
 
     private fun completeOne(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
-        return completer.completeChar(listOf('1'), CompletionItemKind.Value)
+        return completer.completeInteger(listOf(1), CompletionItemKind.Value)
     }
 
     private fun completeFamily(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
-        return completer.completeQuotableString(emptyList(), CompletionItemKind.EnumMember, setOf('!'))
+        return completer.combine(
+            {
+                val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
+                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                completeUnquotedString(emptyList(), CompletionItemKind.EnumMember)
+            },
+            {
+                completeUnquotedString(emptyList(), CompletionItemKind.EnumMember)
+            }
+        )
     }
 
     private fun completeHasPermission(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
@@ -1126,7 +1137,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
                 return@completeMapLike completer.combine(
                     {
-                        val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
+                        val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
                         completer.skipWhitespaceAndComments()
                         if (invertion is ArgumentCompleter.ShouldComplete) {
                             return@combine invertion
@@ -1138,16 +1149,6 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                         return@combine completer.entryCompleter()
                     }
                 )
-
-                /*val invertion = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-                if (invertion is ArgumentCompleter.ShouldComplete) {
-                    return@completeMapLike invertion
-                }
-
-                return@completeMapLike completer.completeQuotedString(
-                    property.values.map { it.toString() },
-                    CompletionItemKind.Value
-                )*/
             }
         )
     }
@@ -1163,28 +1164,42 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     it.completeUnquotedString(EntityContainerSlotType.strings, CompletionItemKind.EnumMember)
                 },
                 "slot" to { completer ->
-                    val invertion = completer.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-                    completer.skipWhitespaceAndComments()
-                    if (invertion is ArgumentCompleter.ShouldComplete) return@to invertion
-                    invertion as ArgumentCompleter.ShouldContinue
-                    val slot = completer.completeUnquotedString(emptyList(), CompletionItemKind.Value)
-                    completer.skipWhitespaceAndComments()
-                    if (slot is ArgumentCompleter.ShouldComplete) return@to slot
-                    slot as ArgumentCompleter.ShouldContinue
-                    return@to ArgumentCompleter.ShouldContinue(invertion.input + slot.input)
+                    completer.combine(
+                        {
+                            val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
+                            skipWhitespaceAndComments()
+                            if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                            invertion as ArgumentCompleter.ShouldContinue
+                            val slot = completeIntegerRange(listOf(InvertibleIntegerRange(min = 0, max = 8)), CompletionItemKind.Value)
+                            skipWhitespaceAndComments()
+                            if (slot is ArgumentCompleter.ShouldComplete) return@combine slot
+                            slot as ArgumentCompleter.ShouldContinue
+                            return@combine ArgumentCompleter.ShouldContinue(invertion.input + slot.input)
+                        },
+                        {
+                            completeIntegerRange(listOf(InvertibleIntegerRange(min = 0, max = 8)), CompletionItemKind.Value)
+                        }
+                    )
                 },
-                "quantity" to {
-                    val invertion = it.completeChar(listOf('!'), CompletionItemKind.Keyword, optional = true)
-                    completer.skipWhitespaceAndComments()
-                    if (invertion is ArgumentCompleter.ShouldComplete) return@to invertion
-                    invertion as ArgumentCompleter.ShouldContinue
-                    val quantity = it.completeUnquotedString(emptyList(), CompletionItemKind.Value)
-                    completer.skipWhitespaceAndComments()
-                    if (quantity is ArgumentCompleter.ShouldComplete) return@to quantity
-                    quantity as ArgumentCompleter.ShouldContinue
-                    return@to ArgumentCompleter.ShouldContinue(invertion.input + quantity.input)
+                "quantity" to { completer ->
+                    completer.combine(
+                        {
+                            val invertion = completeChar(listOf('!'), CompletionItemKind.Keyword)
+                            skipWhitespaceAndComments()
+                            if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                            invertion as ArgumentCompleter.ShouldContinue
+                            val slot = completeIntegerRange(listOf(InvertibleIntegerRange.ZERO), CompletionItemKind.Value)
+                            skipWhitespaceAndComments()
+                            if (slot is ArgumentCompleter.ShouldComplete) return@combine slot
+                            slot as ArgumentCompleter.ShouldContinue
+                            return@combine ArgumentCompleter.ShouldContinue(invertion.input + slot.input)
+                        },
+                        {
+                            completeIntegerRange(listOf(InvertibleIntegerRange.ZERO), CompletionItemKind.Value)
+                        }
+                    )
                 },
-                "data" to { it.completeUnquotedString(emptyList(), CompletionItemKind.Value) }
+                "data" to { it.completeInteger(listOf(0), CompletionItemKind.Value) }
             )
         )
     }
@@ -1313,10 +1328,22 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeGameMode(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
-        return completer.completeUnquotedString(
-            GameMode.entries.flatMap { it.getNames().flatMap { s -> listOf(s, "!$s") } },
-            CompletionItemKind.EnumMember,
-            prefixable = setOf('!')
+        return completer.combine(
+            {
+                val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
+                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                invertion as ArgumentCompleter.ShouldContinue
+                completeUnquotedString(
+                    GameMode.entries.flatMap { it.getNames() },
+                    CompletionItemKind.EnumMember
+                )
+            },
+            {
+                completeUnquotedString(
+                    GameMode.entries.flatMap { it.getNames() },
+                    CompletionItemKind.EnumMember
+                )
+            }
         )
     }
 
@@ -1326,7 +1353,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             if (invertion is ArgumentCompleter.ShouldComplete) return@completeTypedMapLike invertion
             completer.skipWhitespaceAndComments()
             return@completeTypedMapLike completer.completeIntegerRange(
-                ranges = listOf("${Int.MIN_VALUE}..${Int.MAX_VALUE}"),
+                ranges = listOf(InvertibleIntegerRange()),
                 CompletionItemKind.Value
             )
         }
@@ -1349,11 +1376,15 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun completeType(completer: ArgumentCompleter): ArgumentCompleter.ValueCompletionResult {
-        // TODO Conbine
-        return completer.completeUnquotedString(
-            EntityType.IDENTIFIERS.flatMap { listOf(it, "!$it") },
-            CompletionItemKind.EnumMember,
-            setOf('!')
+        return completer.combine(
+            {
+                val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
+                if (invertion is ArgumentCompleter.ShouldComplete) return@combine invertion
+                completeUnquotedString(EntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
+            },
+            {
+                completeUnquotedString(EntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
+            }
         )
     }
 
