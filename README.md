@@ -27,3 +27,4 @@ Minecraft Bedrock Edition用高精度コマンド言語サーバー及びその�
 ### 未特定／未調査
 
 - クォートに囲まれた文字列内で `\` を使用して改行すると semantic highlighting がおかしくなる
+- コマンドラインの改行でシグネチャヘルプが一時的に消える(何故かどうしてもlastSourcePositionの取得だけができない)
