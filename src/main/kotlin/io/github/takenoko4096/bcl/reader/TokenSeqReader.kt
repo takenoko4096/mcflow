@@ -21,7 +21,7 @@ import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-open class TokenSeqReader(val sourceCode: String, protected val tokens: List<Token>, val exceptionConstructor: ExceptionConstructor) {
+open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val exceptionConstructor: ExceptionConstructor) {
     typealias ExceptionConstructor = (String, String, SourceSpan, Throwable?, Boolean) -> BclTokenSeqReadException
 
     var cursor: Int = 0
@@ -532,45 +532,6 @@ open class TokenSeqReader(val sourceCode: String, protected val tokens: List<Tok
 
     fun diagnostic(sourceSpan: SourceSpan, message: String, isWarning: Boolean = false): BclDiagnostic {
         return BclDiagnostic(message, sourceCode, sourceSpan, isWarning)
-    }
-
-    protected fun createCommandLineSubReader(extension: Boolean, semanticTokens: MutableList<BclSemanticToken>): CommandLineReader {
-        val tokens = mutableListOf<Token>()
-        var current: Token
-
-        skipNewLine()
-
-        var lastSourcePosition = if (cursor == 0) SourcePosition.NULL else getPreviousTokenEndPosition()
-
-        fun overwrite(sourcePosition: SourcePosition) {
-            if (lastSourcePosition.index < sourcePosition.index) {
-                lastSourcePosition = sourcePosition
-            }
-        }
-
-        while (!isOver()) {
-            current = peek()
-            val start = getCurrentTokenStartPosition()
-            next()
-            val end = getPreviousTokenEndPosition()
-            overwrite(end)
-
-            if (extension && current `is` Symbol.ESCAPE && !isOver() && peek() `is` Symbol.NEWLINE) {
-                next()
-                overwrite(getCurrentTokenStartPosition())
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
-                continue
-            }
-
-            if (current `is` Symbol.NEWLINE) {
-                overwrite(getCurrentTokenStartPosition())
-                break
-            }
-
-            tokens.add(current)
-        }
-
-        return CommandLineReader(sourceCode, tokens, ::BclParseException, lastSourcePosition)
     }
 
     fun readIntRange(): IntRange {

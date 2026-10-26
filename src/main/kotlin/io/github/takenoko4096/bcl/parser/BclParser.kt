@@ -23,6 +23,7 @@ import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -488,7 +489,7 @@ class BclParser(
     }
 
     private fun command(semanticTokens: MutableList<BclSemanticToken>/*, macros: Map<String, String>*/): CommandLineParseResult {
-        return dispatcher.parse(createCommandLineSubReader(extension, semanticTokens))
+        return dispatcher.parse(CommandLineReader.from(this, extension, semanticTokens))
     }
 
     private fun statement(semanticTokens: MutableList<BclSemanticToken>): Statement {

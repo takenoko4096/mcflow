@@ -252,11 +252,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val result = block.nodes.lastOrNull() ?: return CompletableFuture.completedFuture(null)
         result as CommandLineParseResult
 
-        System.err.println("last:"+result.lastSourcePosition)
-
-        if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
+        /*if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
             return CompletableFuture.completedFuture(null)
-        }
+        }*/
 
         val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         command as Command
@@ -270,14 +268,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         }
 
         return CompletableFuture.completedFuture(SignatureHelp(
-            route.run {
-                children.map { child ->
-                    SignatureInformation(
-                        joinToString(" ") { it.toString() } + ' ' + child.toString(),
-                        "",
-                        map { ParameterInformation(it.toString()) } + ParameterInformation(child.toString())
-                    )
-                }
+            children.map { child ->
+                SignatureInformation(
+                    route.joinToString(" ") { it.toString() } + ' ' + child.toString(),
+                    "",
+                    route.map { ParameterInformation(it.toString()) } + ParameterInformation(child.toString())
+                )
             },
             0,
             route.size
