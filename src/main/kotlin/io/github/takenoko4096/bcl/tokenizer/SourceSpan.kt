@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import java.util.Objects
 
+// end inclusive
 data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     init {
         if (end.index < start.index) {

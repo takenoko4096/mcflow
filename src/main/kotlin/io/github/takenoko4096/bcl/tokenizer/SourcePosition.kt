@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl.tokenizer
 
 import org.eclipse.lsp4j.Position
 
+// line 1始まり column 0始まり(表示時+1) index sourceCode: Stringのindexそのもの
 data class SourcePosition(val line: Int, val column: Int, val index: Int) {
     operator fun rangeTo(end: SourcePosition): SourceSpan {
         return SourceSpan(this, end)

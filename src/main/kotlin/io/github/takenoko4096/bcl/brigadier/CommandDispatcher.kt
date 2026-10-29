@@ -11,7 +11,6 @@ import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = true) {
     private val root = RootCommandNode(name, mutableMapOf())
@@ -50,7 +49,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
         return register(Command.builder(name, configurator))
     }
 
-    private fun compare(a: RoutePotential, b: RoutePotential): Int {
+    private fun comparePotentials(a: RoutePotential, b: RoutePotential): Int {
         val aNoError = a.diagnostics.none { it.isError }
         val bNoError = b.diagnostics.none { it.isError }
 
@@ -102,8 +101,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             literals = emptyList(),
             arguments = emptyList(),
             route = mutableListOf(),
-            literalCount = 0,
-            noUnfatal = true
+            literalCount = 0
         )
 
         val potentials = dispatch(
@@ -114,10 +112,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
         )
 
         if (potentials.isNotEmpty()) {
-            val bestRoutePotential = potentials.maxWith(::compare)
+            val bestRoutePotential = potentials.maxWith(::comparePotentials)
 
             val completionCandidates = potentials
-                .filter { compare(it, bestRoutePotential) == 0 }
+                .filter { comparePotentials(it, bestRoutePotential) == 0 }
                 .flatMap { it.completionCandidates }
                 .distinct()
 
@@ -226,494 +224,21 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
         )
     }
 
-    /*private fun dispatch(text: String, sender: CommandSender, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
-        val potentials = mutableListOf<RoutePotential>()
-
-        for ((name, node) in effectiveChildren) {
-            val candidateReader = state.reader.clone()
-            val candidateLiterals = state.literals.toMutableList()
-            val candidateArguments = state.arguments.toMutableList()
-            val candidateSemanticTokens = mutableListOf<BclSemanticToken>()
-
-            val nextState = DispatcherParseState(
-                reader = candidateReader,
-                literals = candidateLiterals,
-                arguments = candidateArguments,
-                route = state.route + node,
-                literalCount = state.literalCount + if (state.noUnfatal && node is LiteralCommandNode) 1 else 0,
-                noUnfatal = true
-            )
-
-            val diagnosticsUnfatal = mutableListOf<BclDiagnostic>()
-
-            // 非致命エラーが発生した直後の状態。
-            // 発生しなければ null。
-            var unfatalState: DispatcherParseState? = null
-
-            val completionCandidates = mutableListOf<CompletionCandidate>()
-
-            fun permission(start: SourcePosition, end: SourcePosition) {
-                val context = CommandPermissionCheckContext(text, node, start..end, sender)
-                val result = node.predicate?.invoke(context)
-                if (result is CommandPermissionCheckContext.Failure) {
-                    diagnosticsUnfatal.add(result.diagnostic)
-                }
-            }
-
-            try {
-                when (node) {
-                    is LiteralCommandNode -> {
-                        if (candidateReader.isOver()) {
-                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
-                                completionCandidates.add(
-                                    CompletionCandidate(
-                                        node,
-                                        candidateReader.getOverNextSourceSpan().start,
-                                        null
-                                    )
-                                )
-                            }
-
-                            throw candidateReader.exception(
-                                candidateReader.getOverNextSourceSpan(),
-                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
-                            )
-                        }
-
-                        val cursor = candidateReader.cursor
-                        val start = candidateReader.getCurrentTokenStartPosition()
-                        val literal = candidateReader.readCommandString()
-                        val end = candidateReader.getPreviousTokenEndPosition()
-
-                        candidateSemanticTokens.add(
-                            BclSemanticToken(
-                                if (node is Command) {
-                                    BclSemanticTokenType.COMMAND
-                                }
-                                else {
-                                    BclSemanticTokenType.LITERAL
-                                },
-                                start..end
-                            )
-                        )
-
-                        permission(start, end)
-                        if (diagnosticsUnfatal.isNotEmpty()) {
-                            unfatalState = nextState.copy(
-                                reader = candidateReader.clone(),
-                                literals = candidateLiterals.toList(),
-                                arguments = candidateArguments.toList()
-                            )
-                        }
-
-                        if (literal != name) {
-                            completionCandidates.add(
-                                CompletionCandidate(
-                                    node,
-                                    start,
-                                    start..end
-                                )
-                            )
-
-                            val furthestCursor = candidateReader.cursor
-
-                            candidateReader.cursor = cursor
-
-                            potentials += RoutePotential(
-                                state = nextState.copy(
-                                    literalCount = state.literalCount,
-                                    route = state.route
-                                ),
-                                diagnostics = diagnosticsUnfatal + listOf(
-                                    BclDiagnostic(
-                                        """
-                                        ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
-                                        ${
-                                                if (effectiveChildren.size == 1) {
-                                                    effectiveChildren.values.first()
-                                                        .toString() + " が期待されています"
-                                                }
-                                                else {
-                                                    effectiveChildren.values.joinToString(
-                                                        " | ",
-                                                        postfix = " のいずれかが期待されています"
-                                                    )
-                                                }
-                                            }
-                                        """.trimIndent(),
-                                        text,
-                                        start..end
-                                    )
-                                ),
-                                completionCandidates = completionCandidates.toList(),
-                                semanticTokens = candidateSemanticTokens.toList(),
-                                furthestCursor = furthestCursor
-                            )
-
-                            continue
-                        }
-
-                        candidateLiterals.add(node to start..end)
-                    }
-
-                    is ArgumentCommandNode<*> -> {
-                        if (candidateReader.isOver()) {
-                            if (candidateReader.sourceCode.getOrNull(candidateReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
-                                completionCandidates.add(
-                                    CompletionCandidate(
-                                        node,
-                                        candidateReader.getOverNextSourceSpan().start,
-                                        null
-                                    )
-                                )
-                            }
-
-                            throw candidateReader.exception(
-                                candidateReader.getOverNextSourceSpan(),
-                                "${state.route.last()} の次の引数が要求されていますが、引数が不足しています"
-                            )
-                        }
-
-                        val start = candidateReader.getCurrentTokenStartPosition()
-
-                        val argumentParseResult = try {
-                            node.type.parse(candidateReader, diagnosticsUnfatal, candidateSemanticTokens)
-                        }
-                        catch (error: BclTokenSeqReadException) {
-                            var end = candidateReader.getPreviousTokenEndPosition()
-
-                            if (start.index > end.index) {
-                                end = start
-                            }
-
-                            // TODO これやるか迷い
-                            /*candidateSemanticTokens.add(BclSemanticToken(
-                                BclSemanticTokenType.ERROR,
-                                start..end
-                            ))*/
-
-                            permission(start, end)
-
-                            completionCandidates.add(CompletionCandidate(node, start, start..end))
-
-                            throw error
-                        }
-
-                        var end = candidateReader.getPreviousTokenEndPosition()
-
-                        if (end.index < start.index) {
-                            end = start
-                        }
-
-                        permission(start, end)
-
-                        if (argumentParseResult is NoValuedArgument) {
-                            completionCandidates.add(CompletionCandidate(node, start, start..end))
-                        }
-
-                        candidateArguments.add(node to argumentParseResult)
-
-                        if (diagnosticsUnfatal.isNotEmpty()) {
-                            /*
-                             * parse() が非致命エラーを返した時点の
-                             * candidateReader.cursor を保存する。
-                             *
-                             * route には node が既に追加されているので、
-                             * [foo, ArgumentNode<Int>] になる。
-                             *
-                             * その後の解析では candidateReader をそのまま
-                             * 使ってよいが、最終的な RoutePotential には
-                             * この状態を使う。
-                             */
-                            unfatalState = nextState.copy(
-                                reader = candidateReader.clone(),
-                                literals = candidateLiterals.toList(),
-                                arguments = candidateArguments.toList()
-                            )
-                        }
-                    }
-
-                    else -> throw IllegalStateException("NEVER HAPPENS")
-                }
-            }
-            catch (error: BclTokenSeqReadException) {
-                if (detailedOutput) {
-                    error.printStackTrace(System.err)
-                }
-
-                potentials += RoutePotential(
-                    nextState.copy(literalCount = state.literalCount, route = state.route),
-                    diagnosticsUnfatal + listOf(
-                        BclDiagnostic(
-                            """
-                            ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
-                            ${
-                                    if (effectiveChildren.size == 1) {
-                                        effectiveChildren.values.first().toString() +
-                                            " が期待されています"
-                                    }
-                                    else {
-                                        effectiveChildren.values.joinToString(
-                                            " | ",
-                                            postfix = " のいずれかが期待されています"
-                                        )
-                                    }
-                                }
-                            """.trimIndent(),
-                            text,
-                            error.sourceSpan
-                        )
-                    ),
-                    completionCandidates = completionCandidates.toList(),
-                    semanticTokens = candidateSemanticTokens.toList()
-                )
-
-                continue
-            }
-
-            /*
-             * 非致命エラーがなければ、今まで通り nextState が
-             * 「ここまで正常に解析できた状態」。
-             *
-             * 非致命エラーがあれば、解析を続けるための state は
-             * nextState のまま、最終候補として使う state は
-             * unfatalState にする。
-             */
-            val resultState = unfatalState ?: nextState
-
-            // node自身で終了する可能性
-            if (node.executor != null) {
-                val diagnostics = if (unfatalState != null) {
-                    diagnosticsUnfatal
-                }
-                else {
-                    emptyList()
-                }
-
-                potentials += RoutePotential(
-                    resultState,
-                    if (candidateReader.isOver()) {
-                        diagnostics
-                    }
-                    else {
-                        val efC = node.getEffectiveChildren()
-
-                        val additional = if (efC.isEmpty()) {
-                            ""
-                        }
-                        else if (efC.size == 1) {
-                            "; ${efC.values.first()} が期待されています"
-                        }
-                        else {
-                            efC.values.joinToString(
-                                prefix = "; ",
-                                separator = " | ",
-                                postfix = " のいずれかが期待されています"
-                            )
-                        }
-
-                        diagnostics + BclDiagnostic(
-                            "予期しない引数です: " +
-                                "'${candidateReader.getRemainingSourceSpan()
-                                    .getStringFromSourceCode(candidateReader.sourceCode)}'" +
-                                additional,
-                            candidateReader.sourceCode,
-                            candidateReader.getRemainingSourceSpan()
-                        )
-                    },
-                    completionCandidates = completionCandidates.toList() + if (node.getEffectiveChildren().isEmpty()) {
-                        emptyList()
-                    }
-                    else {
-                        node.getEffectiveChildren().map { (_, value) ->
-                            CompletionCandidate(value, candidateReader.getOverNextSourceSpan().start, null)
-                        }
-                    },
-                    semanticTokens = candidateSemanticTokens.toList()
-                )
-            }
-
-            // さらに子へ進む可能性
-            if (node.getEffectiveChildren().isNotEmpty()) {
-                val childrenAndRedirectsOfCurrent = node.getEffectiveChildren()
-
-                /*
-                 * ここでは必ず nextState を渡す。
-                 *
-                 * つまり非致命エラーがあっても、
-                 * candidateReader の現在位置から先を解析する。
-                 */
-                val childPotentials = dispatch(
-                    text,
-                    sender,
-                    nextState,
-                    childrenAndRedirectsOfCurrent
-                )
-
-                if (childPotentials.isNotEmpty()) {
-                    potentials += childPotentials.map { potential ->
-                        potential.copy(
-                            state = unfatalState ?: potential.state,
-                            diagnostics =
-                                if (unfatalState != null) {
-                                    diagnosticsUnfatal + potential.diagnostics
-                                }
-                                else {
-                                    potential.diagnostics
-                                },
-                            furthestCursor = potential.furthestCursor,
-                            completionCandidates = completionCandidates + potential.completionCandidates,
-
-                            /*
-                             * 現在の node が生成した token と、
-                             * 子側の route が生成した token を結合する。
-                             *
-                             * 別 route の token はここには入ってこない。
-                             */
-                            semanticTokens = candidateSemanticTokens + potential.semanticTokens
-                        )
-                    }
-                }
-                else {
-                    val diagnostics = if (unfatalState != null) {
-                        diagnosticsUnfatal
-                    }
-                    else {
-                        emptyList()
-                    }
-
-                    potentials += RoutePotential(
-                        resultState,
-                        diagnostics + BclDiagnostic(
-                            if (childrenAndRedirectsOfCurrent.size == 1) {
-                                "予期しない引数です: " +
-                                    "${childrenAndRedirectsOfCurrent.values.first()} が期待されています"
-                            }
-                            else {
-                                childrenAndRedirectsOfCurrent.values.joinToString(
-                                    prefix = "予期しない引数です: ",
-                                    separator = " | ",
-                                    postfix = " のいずれかが期待されています"
-                                )
-                            },
-                            text,
-                            candidateReader.peek().sourceSpan
-                        ),
-                        completionCandidates = completionCandidates.toList(),
-                        semanticTokens = candidateSemanticTokens.toList()
-                    )
-                }
-            }
-        }
-
-        return potentials
-    }*/
-
     fun evaluate(sourceCode: String): List<CommandLineParseResult> {
         val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
         val block = BclParser(sourceCode, tokens, this, CommandSender(extension = false)).parse()
         return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
 
-    private data class NodeParseContext(
-        val sourceCode: String,
-        val sender: CommandSender,
-        val parentState: DispatcherParseState,
-        val current: CommandNode,
-        val nodeCandidates: Map<String, CommandNode>
-    ) {
-        val commandLineReader: CommandLineReader = parentState.reader.clone()
-        val literals = parentState.literals.toMutableList()
-        val arguments = parentState.arguments.toMutableList()
-        val semanticTokens = mutableListOf<BclSemanticToken>()
-        val diagnostics = mutableListOf<BclDiagnostic>()
-        val completionCandidates = mutableListOf<CompletionCandidate>()
-
-        /*
-         * 非致命エラーが発生した直後の state
-         */
-        var unfatalState: DispatcherParseState? = null
-
-        val nextState: DispatcherParseState
-            get() = DispatcherParseState(
-                reader = commandLineReader,
-                literals = literals,
-                arguments = arguments,
-                route = parentState.route + current,
-                literalCount = parentState.literalCount + if (parentState.noUnfatal && current is LiteralCommandNode) 1 else 0,
-                noUnfatal = true
-            )
-
-        /*
-         * 非致命エラーが発生した時点の state を保存する
-         */
-        fun saveUnfatalState() {
-            unfatalState = nextState.copy(
-                reader = commandLineReader.clone(),
-                literals = literals.toList(),
-                arguments = arguments.toList()
-            )
-        }
-
-        /*
-         * 最終的な RoutePotential に使う state
-         */
-        fun resultState(): DispatcherParseState {
-            return unfatalState ?: nextState
-        }
-
-        /*
-         * 権限チェック。
-         *
-         * 元コードの permission() と同じ処理。
-         */
-        fun checkPermission(start: SourcePosition, end: SourcePosition) {
-            val context = CommandPermissionCheckContext(
-                sourceCode,
-                current,
-                start..end,
-                sender
-            )
-
-            val result = current.predicate?.invoke(context)
-
-            if (result is CommandPermissionCheckContext.Failure) {
-                diagnostics += result.diagnostic
-            }
-        }
-
-        /*
-         * 引数不足時の completion candidate を追加する
-         */
-        fun addMissingArgumentCompletion() {
-            if (commandLineReader.sourceCode.getOrNull(commandLineReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
-                completionCandidates += CompletionCandidate(
-                    current,
-                    commandLineReader.getOverNextSourceSpan().start,
-                    null
-                )
-            }
-        }
-    }
-
     /*
-     * node の解析結果。
-     *
-     * 通常は Success。
-     *
-     * Literal が一致しなかった場合だけ Rejected になり、
-     * その時点で RoutePotential を生成して dispatch() に返す。
-     *
-     * これは元コードの
-     *
-     * potentials += RoutePotential(...)
-     * continue
-     *
-     * を、例外などを使わずにそのまま表現するためのもの。
+     * node の解析結果
+     * 通常は Success
+     * Literal が一致しなかった場合だけ Failure になり、
+     * その時点で RoutePotential を生成して dispatch() に返す
      */
-    private sealed interface NodeParseResult {
-        data object Successful : NodeParseResult
-        data class Failure(val potential: RoutePotential) : NodeParseResult
+    private sealed interface LiteralParseResult {
+        data object Matched : LiteralParseResult
+        data class Mismatched(val potential: RoutePotential) : LiteralParseResult
     }
 
     private fun dispatch(sourceCode: String, sender: CommandSender, state: DispatcherParseState, children: Map<String, CommandNode>): MutableList<RoutePotential> {
@@ -729,14 +254,23 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             )
 
             val nodeParseResult = try {
-                parseNode(context, name)
+                when (node) {
+                    is LiteralCommandNode -> {
+                        parseLiteral(context, node, name)
+                    }
+                    is ArgumentCommandNode<*> -> {
+                        parseArgument(context, node)
+                        null
+                    }
+                    else -> throw IllegalStateException("NEVER HAPPENS")
+                }
             }
             catch (error: BclTokenSeqReadException) {
                 potentials += createParseErrorPotential(context, error)
                 continue
             }
 
-            if (nodeParseResult is NodeParseResult.Failure) {
+            if (nodeParseResult is LiteralParseResult.Mismatched) {
                 potentials += nodeParseResult.potential
                 continue
             }
@@ -756,33 +290,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
         return potentials
     }
 
-
-    /*
-     * Literal / Argument の実際の解析。
-     */
-    private fun parseNode(context: NodeParseContext, name: String): NodeParseResult {
-        return when (val node = context.current) {
-            is LiteralCommandNode -> {
-                parseLiteral(context, node, name)
-            }
-
-            is ArgumentCommandNode<*> -> {
-                parseArgument(context, node)
-
-                NodeParseResult.Successful
-            }
-
-            else -> {
-                throw IllegalStateException("NEVER HAPPENS")
-            }
-        }
-    }
-
-
     /*
      * LiteralCommandNode の解析。
      */
-    private fun parseLiteral(context: NodeParseContext, node: LiteralCommandNode, name: String): NodeParseResult {
+    private fun parseLiteral(context: NodeParseContext, node: LiteralCommandNode, name: String): LiteralParseResult {
         val reader = context.commandLineReader
 
         if (reader.isOver()) {
@@ -812,9 +323,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
          * permission は Literal が一致しているかどうかに関係なく実行する
          */
         context.checkPermission(start, end)
-        if (context.diagnostics.isNotEmpty()) {
-            context.saveUnfatalState()
-        }
 
         /*
          * Literal 不一致。
@@ -842,7 +350,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             reader.cursor = cursor
 
             // TODO
-            return NodeParseResult.Failure(
+            return LiteralParseResult.Mismatched(
                 RoutePotential(
                     state = context.nextState.copy(
                         literalCount = context.parentState.literalCount,
@@ -851,42 +359,30 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
                     diagnostics =
                         context.diagnostics + BclDiagnostic(
                             """
-                                ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
-                                ${getExpectationMessage(context.nodeCandidates.values)}
-                                """.trimIndent(),
+                            ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
+                            ${getExpectationMessage(context.nodeCandidates.values)}
+                            """.trimIndent(),
                             context.sourceCode,
                             start..end
                         ),
-                    completionCandidates =
-                        context.completionCandidates.toList(),
-                    semanticTokens =
-                        context.semanticTokens.toList(),
+                    completionCandidates = context.completionCandidates.toList(),
+                    semanticTokens = context.semanticTokens.toList(),
                     furthestCursor = furthestCursor
                 )
             )
         }
 
-        /*
-         * Literal が一致した場合だけ literals に追加する。
-         */
         context.literals += node to (start..end)
 
-        return NodeParseResult.Successful
+        return LiteralParseResult.Matched
     }
-
 
     /*
      * ArgumentCommandNode の解析。
      */
-    private fun parseArgument(
-        context: NodeParseContext,
-        node: ArgumentCommandNode<*>
-    ) {
+    private fun parseArgument(context: NodeParseContext, node: ArgumentCommandNode<*>) {
         val reader = context.commandLineReader
 
-        /*
-         * 元コードと同じく、入力が既に終わっている場合。
-         */
         if (reader.isOver()) {
             context.addMissingArgumentCompletion()
 
@@ -898,12 +394,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
 
         val start = reader.getCurrentTokenStartPosition()
 
-        /*
-         * Argument の parse。
-         *
-         * parse() 内で発生した BclTokenSeqReadException は
-         * 元コードと同じくここで一度処理してから再 throw する。
-         */
+        // ArgumentType.parse() が追加した diagnostic のみを検出するために保存
+        val diagnosticCountBeforeParse = context.diagnostics.size
+
         val argumentParseResult = try {
             node.type.parse(
                 reader,
@@ -918,10 +411,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
                 end = start
             }
 
-            /*
-             * 元コードと同じく、
-             * Argument の parse に失敗した場合でも permission を実行する。
-             */
+            // permission failure は state rollback の対象ではない
             context.checkPermission(start, end)
 
             context.completionCandidates += CompletionCandidate(
@@ -939,11 +429,9 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             end = start
         }
 
+        // permission failure は diagnostic として記録するだけ
         context.checkPermission(start, end)
 
-        /*
-         * NoValuedArgument の場合のみ completion candidate を追加。
-         */
         if (argumentParseResult is NoValuedArgument) {
             context.completionCandidates += CompletionCandidate(
                 node,
@@ -952,17 +440,16 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             )
         }
 
-        /*
-         * Argument の解析結果を保存。
-         */
         context.arguments += node to argumentParseResult
 
         /*
-         * parse() または permission() で非致命エラーが発生していれば、
-         * その時点の state を保存。
+         * ArgumentType.parse() 自身が非致命 diagnostic を発生させた場合だけ
+         * その時点の state を保存する。
+         *
+         * permission failure はここでは stateAtDiagnostic にしない。
          */
-        if (context.diagnostics.isNotEmpty()) {
-            context.saveUnfatalState()
+        if (context.diagnostics.size > diagnosticCountBeforeParse) {
+            context.saveStateAtParseError()
         }
     }
 
@@ -1002,7 +489,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             return null
         }
 
-        val diagnostics = if (context.unfatalState == null) emptyList() else context.diagnostics
+        val diagnostics = context.diagnostics
         val reader = context.commandLineReader
 
         val diagnostic =
@@ -1012,7 +499,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             else {
                 BclDiagnostic(
                     "予期しない引数です: '${reader.getRemainingSourceSpan().getStringFromSourceCode(reader.sourceCode)}'"
-                        + getExpectationMessage(context.current.getEffectiveChildren().values),
+                        + if (context.current.getEffectiveChildren().isNotEmpty()) {
+                            getExpectationMessage(context.current.getEffectiveChildren().values)
+                        }
+                        else "",
                     reader.sourceCode,
                     reader.getRemainingSourceSpan()
                 )
@@ -1059,7 +549,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
          * 子が1つも有効な RoutePotential を生成しなかった場合
          */
         if (childPotentials.isEmpty()) {
-            val diagnostics = if (context.unfatalState == null) emptyList() else context.diagnostics
+            val diagnostics = if (context.stateAtParseError == null) emptyList() else context.diagnostics
 
             return listOf(RoutePotential(
                 state = context.resultState(),
@@ -1074,24 +564,10 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
             ))
         }
 
-        // 子側で生成された RoutePotential を現在の node の情報と結合する
         return childPotentials.map { potential ->
             potential.copy(
-                /*
-                 * 非致命エラーがあった場合は、
-                 * 最終的な state を unfatalState に戻す。
-                 *
-                 * ただし、再帰呼び出しには nextState を渡しているので、
-                 * 子の解析自体はそのまま継続されている。
-                 */
-                state = context.unfatalState ?: potential.state,
-                diagnostics =
-                    if (context.unfatalState == null) {
-                        potential.diagnostics
-                    }
-                    else {
-                        context.diagnostics + potential.diagnostics
-                    },
+                state = context.stateAtParseError ?: potential.state,
+                diagnostics = context.diagnostics + potential.diagnostics,
                 completionCandidates = context.completionCandidates + potential.completionCandidates,
                 semanticTokens = context.semanticTokens + potential.semanticTokens
             )
@@ -1101,8 +577,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
     private fun getExpectationMessage(candidates: Collection<CommandNode>): String {
         return when (candidates.size) {
             0 -> ""
-            1 -> "\n${candidates.first()} が期待されています"
-            else -> candidates.joinToString(separator = " | ", prefix = "\n", postfix = " のいずれかが期待されています")
+            1 -> "${candidates.first()} が期待されています"
+            else -> candidates.joinToString(separator = " | ", postfix = " のいずれかが期待されています")
         }
     }
 }

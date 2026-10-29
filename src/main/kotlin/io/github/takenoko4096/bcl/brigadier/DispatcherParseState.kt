@@ -12,6 +12,5 @@ data class DispatcherParseState(
     val literals: List<Pair<LiteralCommandNode, SourceSpan>>,
     val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     val route: List<CommandNode>,
-    val literalCount: Int,
-    val noUnfatal: Boolean
+    val literalCount: Int
 )
