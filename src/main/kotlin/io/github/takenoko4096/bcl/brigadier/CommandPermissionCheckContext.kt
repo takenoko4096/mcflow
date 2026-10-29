@@ -16,11 +16,11 @@ class CommandPermissionCheckContext(
     fun successful() = Successful
 
     fun failure(message: String) = Failure(
-        BclDiagnostic(sourceCode, message, sourceSpan)
+        BclDiagnostic(message, sourceCode, sourceSpan)
     )
 
-    fun requirement(flag: Boolean, message: String): Result {
-        return if (flag) successful() else failure(message)
+    fun requirement(flag: Boolean, error: String): Result {
+        return if (flag) successful() else failure(error)
     }
 
     fun requirePermissionLevel(minimum: CommandPermissionLevel): Result {

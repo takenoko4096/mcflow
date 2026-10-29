@@ -58,5 +58,13 @@ sealed class CommandLineParseResult(
         }
     }
 
+    fun getSourceSpanOf(index: Int): SourceSpan? {
+        return when (val target = route.getOrNull(index)) {
+            is LiteralCommandNode -> literals.find { (node, _) -> node == target }?.second
+            is ArgumentCommandNode<*> -> arguments.find { (node, _) -> node == target }?.second?.sourceSpan
+            else -> null
+        }
+    }
+
     abstract override fun toString(): String
 }

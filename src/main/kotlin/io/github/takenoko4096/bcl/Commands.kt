@@ -1467,6 +1467,10 @@ object Commands {
     }
 
     val RELOAD = Command.builder("reload") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
+
         executes()
 
         "all" {
