@@ -34,6 +34,8 @@ class CommandLineReader(
                 reader.getCurrentTokenStartPosition()
             }
 
+            var lastWasEscapedNewLine = false
+
             while (!reader.isOver()) {
                 current = reader.peek()
                 val start = reader.getCurrentTokenStartPosition()
@@ -42,7 +44,8 @@ class CommandLineReader(
 
                 if (extension && current `is` Symbol.ESCAPE && !reader.isOver() && reader.peek() `is` Symbol.NEWLINE) {
                     reader.next()
-                    lastSourcePosition = (if (reader.isOver()) reader.getOverNextSourceSpan().start else reader.peek().sourceSpan.start)
+                    lastSourcePosition = reader.getOverNextSourceSpan().start
+                    lastWasEscapedNewLine = true
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
                     continue
                 }
@@ -52,11 +55,16 @@ class CommandLineReader(
                 }
 
                 tokens.add(current)
+
+                lastSourcePosition = end
+                lastWasEscapedNewLine = false
             }
 
-            if (lastSourcePosition.index > tokens.last().sourceSpan.end.index) {
+            if (!lastWasEscapedNewLine && tokens.isNotEmpty()) {
                 lastSourcePosition = tokens.last().sourceSpan.end
             }
+
+            System.err.println("lastSourcePosition=$lastSourcePosition")
 
             return CommandLineReader(
                 reader.sourceCode,

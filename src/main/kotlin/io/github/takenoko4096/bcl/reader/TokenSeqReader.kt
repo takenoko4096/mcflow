@@ -308,8 +308,23 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
     }
 
     fun getOverNextSourceSpan(): SourceSpan {
-        val last = tokens.lastOrNull()?.sourceSpan?.end ?: SourcePosition(1, 0, 0)
-        val over = SourcePosition(last.line, last.column + 1, last.index + 1)
+        val last = tokens.lastOrNull()?.sourceSpan?.end
+            ?: return SourcePosition(1, 0, 0)..SourcePosition(1, 0, 0)
+
+        val over = if (tokens.last() `is` Symbol.NEWLINE) {
+            SourcePosition(
+                last.line + 1,
+                0,
+                last.index + 1
+            )
+        } else {
+            SourcePosition(
+                last.line,
+                last.column + 1,
+                last.index + 1
+            )
+        }
+
         return over..over
     }
 

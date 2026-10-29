@@ -79,16 +79,16 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 emptyList(),
                 getCommands()
                     .map {
-                        CompletionCandidate(it, reader.getEntireSourceSpan().start, null)
+                        CompletionCandidate(it, reader.lastSourcePosition, null)
                     },
                 listOf(
                     BclDiagnostic(
-                        "不明なコマンド名です: ''",
+                        "コマンド名を入力してください",
                         reader.sourceCode,
-                        reader.getOverNextSourceSpan()
+                        reader.lastSourcePosition..reader.lastSourcePosition
                     )
                 ),
-                reader.getEntireSourceSpan(),
+                reader.lastSourcePosition..reader.lastSourcePosition,
                 reader.lastSourcePosition,
                 emptyList()
             )

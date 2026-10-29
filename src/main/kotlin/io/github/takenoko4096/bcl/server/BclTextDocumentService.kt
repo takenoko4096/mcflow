@@ -15,6 +15,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.messages.Tuple
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.TextDocumentService
 import java.util.concurrent.CompletableFuture
@@ -252,9 +253,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val result = block.nodes.lastOrNull() ?: return CompletableFuture.completedFuture(null)
         result as CommandLineParseResult
 
-        /*if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
+        if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
             return CompletableFuture.completedFuture(null)
-        }*/
+        }
 
         val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         command as Command
@@ -269,13 +270,26 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         return CompletableFuture.completedFuture(SignatureHelp(
             children.map { child ->
-                SignatureInformation(
-                    route.joinToString(" ") { it.toString() } + ' ' + child.toString(),
-                    "",
-                    route.map { ParameterInformation(it.toString()) } + ParameterInformation(child.toString())
-                )
+                val ranges = mutableListOf<Pair<Tuple.Two<Int, Int>, String>>()
+
+                var i = 0
+                for (node in route + child) {
+                    val string = node.toString()
+                    ranges += Tuple.two(i, i + string.length) to string
+                    i += string.length
+                    i++ // ' ' の分
+                }
+
+                val label = ranges.joinToString(" ") { (_, label) -> label }
+                val parameters = ranges.map { (range, _) ->
+                    val info = ParameterInformation()
+                    info.label = Either.forRight(range)
+                    return@map info
+                }
+
+                SignatureInformation(label, "", parameters)
             },
-            0,
+            null,
             route.size
         ))
     }
