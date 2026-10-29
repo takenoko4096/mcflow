@@ -15,6 +15,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
 
     protected val redirects = mutableSetOf<String>()
 
+    protected var predicate: (CommandPermissionCheckContext.() -> CommandPermissionCheckContext.Result)? = null
+
     protected var completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
 
     init {
@@ -37,6 +39,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
                 executor,
                 map,
                 list,
+               predicate,
                completerOverride
            )
 
@@ -68,6 +71,7 @@ sealed class CommandNodeBuilder(protected val name: String) {
                 executor,
                 map,
                 list,
+                predicate,
                 completerOverride
             )
 
@@ -103,7 +107,8 @@ sealed class CommandNodeBuilder(protected val name: String) {
                 aliases,
                 executor,
                 map,
-                list
+                list,
+                predicate
             )
 
             list.addAll(redirects.map { name ->
@@ -156,6 +161,15 @@ sealed class CommandNodeBuilder(protected val name: String) {
         }
         else {
             throw IllegalArgumentException("実行処理を複数書くことはできません")
+        }
+    }
+
+    fun requires(predicate: CommandPermissionCheckContext.() -> CommandPermissionCheckContext.Result) {
+        if (this.predicate == null) {
+            this.predicate = predicate
+        }
+        else {
+            throw IllegalArgumentException("実行条件を複数書くことはできません")
         }
     }
 

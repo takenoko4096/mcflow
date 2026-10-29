@@ -11,6 +11,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 
 class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
     private val root = RootCommandNode(name, mutableMapOf())
@@ -70,7 +71,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         }
     }
 
-    fun parse(reader: CommandLineReader): CommandLineParseResult {
+    fun parse(reader: CommandLineReader, sender: CommandSender): CommandLineParseResult {
         if (reader.isOver()) {
             return CommandLineParseResult.Failure(
                 null,
@@ -107,6 +108,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
         val potentials = dispatch(
             reader.sourceCode,
+            sender,
             initialState,
             root.children
         )
@@ -152,17 +154,32 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     )
                 }
 
-                CommandLineParseResult.Successful(
-                    bestRoutePotential.state.route.first() as Command,
-                    bestRoutePotential.state.route,
-                    bestRoutePotential.state.literals,
-                    bestRoutePotential.state.arguments,
-                    completionCandidates,
-                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
-                    bestRoutePotential.state.reader.lastSourcePosition,
-                    bestRoutePotential.semanticTokens,
-                    resultValue
-                )
+                if (diagnostics.isEmpty()) {
+                    CommandLineParseResult.Successful(
+                        bestRoutePotential.state.route.first() as Command,
+                        bestRoutePotential.state.route,
+                        bestRoutePotential.state.literals,
+                        bestRoutePotential.state.arguments,
+                        completionCandidates,
+                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                        bestRoutePotential.state.reader.lastSourcePosition,
+                        bestRoutePotential.semanticTokens,
+                        resultValue
+                    )
+                }
+                else {
+                    CommandLineParseResult.Failure(
+                        bestRoutePotential.state.route.firstOrNull() as Command?,
+                        bestRoutePotential.state.route,
+                        bestRoutePotential.state.literals,
+                        bestRoutePotential.state.arguments,
+                        completionCandidates,
+                        diagnostics,
+                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                        bestRoutePotential.state.reader.lastSourcePosition,
+                        bestRoutePotential.semanticTokens
+                    )
+                }
             }
             else {
                 val semanticTokens = bestRoutePotential.semanticTokens.toMutableList()
@@ -209,7 +226,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         )
     }
 
-    private fun dispatch(text: String, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
+    private fun dispatch(text: String, sender: CommandSender, state: DispatcherParseState, effectiveChildren: Map<String, CommandNode>): MutableList<RoutePotential> {
         val potentials = mutableListOf<RoutePotential>()
 
         for ((name, node) in effectiveChildren) {
@@ -227,13 +244,26 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 noUnfatal = true
             )
 
-            val unfatalErrors = mutableListOf<BclDiagnostic>()
+            val diagnosticsUnfatal = mutableListOf<BclDiagnostic>()
 
             // 非致命エラーが発生した直後の状態。
             // 発生しなければ null。
             var unfatalState: DispatcherParseState? = null
 
             val completionCandidates = mutableListOf<CompletionCandidate>()
+
+            fun permission(start: SourcePosition, end: SourcePosition) {
+                val context = CommandPermissionCheckContext(
+                    text,
+                    node,
+                    start..end,
+                    sender
+                )
+                val result = node.predicate?.invoke(context)
+                if (result is CommandPermissionCheckContext.Failure) {
+                    diagnosticsUnfatal.add(result.diagnostic)
+                }
+            }
 
             try {
                 when (node) {
@@ -272,6 +302,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             )
                         )
 
+                        permission(start, end)
+
                         if (literal != name) {
                             completionCandidates.add(
                                 CompletionCandidate(
@@ -290,7 +322,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                     literalCount = state.literalCount,
                                     route = state.route
                                 ),
-                                diagnostics = unfatalErrors + listOf(
+                                diagnostics = diagnosticsUnfatal + listOf(
                                     BclDiagnostic(
                                         """
                                         ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
@@ -343,7 +375,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         val start = candidateReader.getCurrentTokenStartPosition()
 
                         val argumentParseResult = try {
-                            node.type.parse(candidateReader, unfatalErrors, candidateSemanticTokens)
+                            node.type.parse(candidateReader, diagnosticsUnfatal, candidateSemanticTokens)
                         }
                         catch (error: BclTokenSeqReadException) {
                             var end = candidateReader.getPreviousTokenEndPosition()
@@ -358,6 +390,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                                 start..end
                             ))*/
 
+                            permission(start, end)
+
                             completionCandidates.add(CompletionCandidate(node, start, start..end))
 
                             throw error
@@ -369,13 +403,15 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             end = start
                         }
 
+                        permission(start, end)
+
                         if (argumentParseResult is NoValuedArgument) {
                             completionCandidates.add(CompletionCandidate(node, start, start..end))
                         }
 
                         candidateArguments.add(node to argumentParseResult)
 
-                        if (unfatalErrors.isNotEmpty()) {
+                        if (diagnosticsUnfatal.isNotEmpty()) {
                             /*
                              * parse() が非致命エラーを返した時点の
                              * candidateReader.cursor を保存する。
@@ -405,7 +441,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
                 potentials += RoutePotential(
                     nextState.copy(literalCount = state.literalCount, route = state.route),
-                    unfatalErrors + listOf(
+                    diagnosticsUnfatal + listOf(
                         BclDiagnostic(
                             """
                             ${if (state.route.isEmpty()) "コマンド名" else "引数"}が正しくありません (${error.description})
@@ -446,7 +482,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             // node自身で終了する可能性
             if (node.executor != null) {
                 val diagnostics = if (unfatalState != null) {
-                    unfatalErrors
+                    diagnosticsUnfatal
                 }
                 else {
                     emptyList()
@@ -507,6 +543,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                  */
                 val childPotentials = dispatch(
                     text,
+                    sender,
                     nextState,
                     childrenAndRedirectsOfCurrent
                 )
@@ -517,7 +554,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                             state = unfatalState ?: potential.state,
                             diagnostics =
                                 if (unfatalState != null) {
-                                    unfatalErrors + potential.diagnostics
+                                    diagnosticsUnfatal + potential.diagnostics
                                 }
                                 else {
                                     potential.diagnostics
@@ -537,7 +574,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 }
                 else {
                     val diagnostics = if (unfatalState != null) {
-                        unfatalErrors
+                        diagnosticsUnfatal
                     }
                     else {
                         emptyList()
@@ -572,7 +609,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
     fun evaluate(sourceCode: String): List<CommandLineParseResult> {
         val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
-        val block = BclParser(sourceCode, tokens, this, extension = false).parse()
+        val block = BclParser(sourceCode, tokens, this, CommandSender(extension = false)).parse()
         return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
 }

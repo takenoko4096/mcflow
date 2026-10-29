@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
 import io.github.takenoko4096.bcl.brigadier.CommandContext
+import io.github.takenoko4096.bcl.brigadier.CommandPermissionCheckContext
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentType
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import org.eclipse.lsp4j.CompletionItem
@@ -11,8 +12,9 @@ class ArgumentCommandNode<T>(
     executor: (CommandContext.() -> Any?)?,
     children: Map<String, CommandNode>,
     redirects: List<CommandNode>,
+    predicate: (CommandPermissionCheckContext.() -> CommandPermissionCheckContext.Result)?,
     completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
-) : CommandNode(name, executor, children, redirects, completerOverride) {
+) : CommandNode(name, executor, children, redirects, predicate, completerOverride) {
     override fun toString(): String {
         return "<$name: ${type.name}>"
     }

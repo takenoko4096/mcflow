@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.brigadier.Command
+import io.github.takenoko4096.bcl.brigadier.CommandPermissionLevel
 import io.github.takenoko4096.bcl.brigadier.argument.*
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
@@ -14,6 +15,10 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.*
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
         description = "エイムアシストを有効にします。"
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
 
         "players"(EntitySelectorArgumentType.players()) {
             "clear" {
@@ -55,6 +60,10 @@ object Commands {
     }
 
     val CAMERA = Command.builder("camera") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "attach_to_entity" {
                 "target"(EntitySelectorArgumentType()) {
@@ -259,6 +268,10 @@ object Commands {
     }
 
     val CAMERASHAKE = Command.builder("camerashake") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "add" {
             "players"(EntitySelectorArgumentType.players()) {
                 executes()
@@ -287,6 +300,10 @@ object Commands {
     }
 
     val CLEAR = Command.builder("clear") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         executes()
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -307,6 +324,10 @@ object Commands {
     }
 
     val CLEARSPAWNPOINT = Command.builder("clearspawnpoint") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         executes()
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -315,6 +336,10 @@ object Commands {
     }
 
     val CLONE = Command.builder("clone") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "begin"(PositionArgumentType()) {
             "end"(PositionArgumentType()) {
                 "destination"(PositionArgumentType()) {
@@ -341,12 +366,22 @@ object Commands {
     }
 
     val CONNECT = Command.builder("connect") {
+        aliases.add("wsserver")
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
+
         "server_uri"(StringArgumentType.greedy()) {
             executes()
         }
     }
 
     val CONTROLSCHEME = Command.builder("controlscheme") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "clear" {
                 executes()
@@ -361,6 +396,10 @@ object Commands {
     }
 
     val DAMAGE = Command.builder("damage") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "target"(EntitySelectorArgumentType()) {
             "amount"(IntegerArgumentType.integer()) {
                 executes()
@@ -379,6 +418,10 @@ object Commands {
     }
 
     val DAYLOCK = Command.builder("daylock") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         description = "昼夜サイクルを停止及び再開します。"
 
         aliases.add("alwaysday")
@@ -403,9 +446,17 @@ object Commands {
         "player"(EntitySelectorArgumentType.players()) {
             executes()
         }
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
     }
 
     val DIALOGUE = Command.builder("dialogue") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "change" {
             "npc"(EntitySelectorArgumentType()) {
                 "scene_name"(StringArgumentType.isolated()) {
@@ -432,12 +483,20 @@ object Commands {
     }
 
     val DIFFICULTY = Command.builder("difficulty") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "mode"(EnumArgumentType.of<Difficulty>()) {
             executes()
         }
     }
 
     val EFFECT = Command.builder("effect") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType()) {
             "effect_type"(EnumArgumentType.of<Effect>()) {
                 executes()
@@ -478,6 +537,10 @@ object Commands {
     }
 
     val ENCHANT = Command.builder("enchant") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType()) {
             "enchant"(EnumArgumentType.of<Enchant>()) {
                 executes()
@@ -509,6 +572,10 @@ object Commands {
     }
 
     val EVENT = Command.builder("event") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "entity" {
             "targets"(EntitySelectorArgumentType()) {
                 "event_name"(EnumArgumentType.of<EntityEvent>()) {
@@ -519,6 +586,10 @@ object Commands {
     }
 
     val EXECUTE = Command.builder("execute") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "as" {
             "targets"(EntitySelectorArgumentType()) {
                 redirect("execute")
@@ -705,6 +776,10 @@ object Commands {
     }
 
     val FILL = Command.builder("fill") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "from"(PositionArgumentType()) {
             "to"(PositionArgumentType()) {
                 "tile_state"(BlockStateArgumentType.blockState()) {
@@ -727,6 +802,10 @@ object Commands {
     }
 
     val FOG = Command.builder("fog") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "victims"(EntitySelectorArgumentType.players()) {
             "deletion_mode"(EnumArgumentType.of<FogDeleteMode>()) {
                 "user_provider_id"(StringArgumentType.isolated()) {
@@ -745,12 +824,20 @@ object Commands {
     }
 
     val FUNCTION = Command.builder("function") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "name"(FilePathArgumentType(strict = true)) {
             executes()
         }
     }
 
     val GAMEMODE = Command.builder("gamemode") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "game_mode"(EnumArgumentType.of<GameMode>()) {
             executes()
 
@@ -761,6 +848,10 @@ object Commands {
     }
 
     val GAMERULE = Command.builder("gamerule") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "int_game_rule"(EnumArgumentType.of<IntGameRule>()) {
             executes()
 
@@ -792,6 +883,10 @@ object Commands {
     }
 
     val GAMETEST = Command.builder("gametest") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "clearall" {
             executes()
         }
@@ -860,12 +955,20 @@ object Commands {
     }
 
     val GAMETIPS = Command.builder("gametips") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
+
         "status"(EnumArgumentType.of<GameTipsStatus>()) {
             executes()
         }
     }
 
     val GIVE = Command.builder("give") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "item_name"(ItemTypeArgumentType()) {
                 executes()
@@ -892,13 +995,17 @@ object Commands {
 
         executes()
 
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
+
         "page"(IntegerArgumentType.integer()) {
             executes()
         }
 
         "command_name"(StringArgumentType.word()) {
             executes {
-                val arg = getArgument<String>("command_name")
+                /*val arg = getArgument<String>("command_name")
                 val command = getDispatcher().getCommand(arg.value)
                     ?: run {
                         addDiagnostic(
@@ -908,12 +1015,16 @@ object Commands {
                         return@executes null
                     }
 
-                command.getTreeUsage()
+                command.getTreeUsage()*/
             }
         }
     }
 
     val HUD = Command.builder("hud") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "visibility"(EnumArgumentType.of<HudVisibility>()) {
                 executes()
@@ -926,6 +1037,10 @@ object Commands {
     }
 
     val INPUTPERMISSION = Command.builder("inputpermission") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "query" {
             "players"(EntitySelectorArgumentType.players()) {
                 "input_permission"(EnumArgumentType.of<InputPermission>()) {
@@ -950,6 +1065,10 @@ object Commands {
     }
 
     val KICK = Command.builder("kick") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "target"(EntitySelectorArgumentType.players()) {
             executes()
 
@@ -960,6 +1079,10 @@ object Commands {
     }
 
     val KILL = Command.builder("kill") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType()) {
             executes()
         }
@@ -967,9 +1090,17 @@ object Commands {
 
     val LIST = Command.builder("list") {
         executes()
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
     }
 
     val LOCATE = Command.builder("locate") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "biome" {
             "id"(EnumArgumentType.of<Biome>()) {
                 executes()
@@ -988,6 +1119,10 @@ object Commands {
     }
 
     val LOOT = Command.builder("loot") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "give" {
             "players"(EntitySelectorArgumentType.players()) {
                 "kill" {
@@ -1037,9 +1172,17 @@ object Commands {
         "message"(StringArgumentType.greedy()) {
             executes()
         }
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
     }
 
     val MOBEVENT = Command.builder("mobevent") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "event"(EnumArgumentType.of<MobEvent>()) {
             executes()
 
@@ -1050,6 +1193,10 @@ object Commands {
     }
 
     val MUSIC = Command.builder("music") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "play" {
             "track_name"(StringArgumentType.isolated()) {
                 executes()
@@ -1105,6 +1252,10 @@ object Commands {
         "players"(EntitySelectorArgumentType.players()) {
             executes()
         }
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
     }
 
     val PACKSTACK = Command.builder("packstack") {
@@ -1119,9 +1270,17 @@ object Commands {
                 }
             }
         }
+
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
     }
 
     val PARTICLE = Command.builder("particle") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "effect"(ParticleArgumentType()) {
             executes()
 
@@ -1131,7 +1290,13 @@ object Commands {
         }
     }
 
+    /*val PARTY = Command.builder("party") {}*/
+
     val PERMISSION = Command.builder("permission") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.OWNER)
+        }
+
         "set" {
             "players"(EntitySelectorArgumentType.players()) {
                 executes()
@@ -1144,6 +1309,10 @@ object Commands {
     }
 
     val PLACE = Command.builder("place") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
+
         "feature" {
             "feature"(EnumArgumentType.of<Feature>()) {
                 executes()
@@ -1218,6 +1387,10 @@ object Commands {
     }
 
     val PLAYANIMATION = Command.builder("playanimation") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType()) {
             "animation"(StringArgumentType.isolated()) {
                 executes()
@@ -1242,6 +1415,10 @@ object Commands {
     }
 
     val PLAYSOUND = Command.builder("playsound") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "sound"(SoundArgumentType()) {
             executes()
 
@@ -1268,6 +1445,10 @@ object Commands {
     }
 
     val RECIPE = Command.builder("recipe") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "give" {
             "players"(EntitySelectorArgumentType.players()) {
                 "recipe"(RECIPE_ARGUMENT_TYPE) {
@@ -1294,6 +1475,10 @@ object Commands {
     }
 
     val REPLACEITEM = Command.builder("replaceitem") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "block" {
             "position"(PositionArgumentType()) {
                 "slot.container" {
@@ -1380,6 +1565,10 @@ object Commands {
     }
 
     val RIDE = Command.builder("ride") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "riders"(EntitySelectorArgumentType()) {
             "start_riding" {
                 "vehicle"(EntitySelectorArgumentType()) {
@@ -1440,12 +1629,20 @@ object Commands {
     }
 
     val SAY = Command.builder("say") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "message"(StringArgumentType.greedy()) {
             executes()
         }
     }
 
     val SCHEDULE = Command.builder("schedule") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "clear" {
             "function"(FilePathArgumentType(strict = true)) {
                 executes()
@@ -1526,6 +1723,10 @@ object Commands {
     }
 
     val SCOREBOARD = Command.builder("scoreboard") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "objectives" {
             "add" {
                 "objective"(StringArgumentType.isolated()) {
@@ -1653,6 +1854,10 @@ object Commands {
     }
 
     val SCRIPT = Command.builder("script") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.ADMINISTRATOR)
+        }
+
         "debugger" {
             "close" {
                 executes()
@@ -1691,6 +1896,10 @@ object Commands {
     }
 
     val SCRIPTEVENT = Command.builder("scriptevent") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "id"(IdentifierArgumentType.namespaced("namespaced_identifier")) {
             executes {
                 val argument = getArgument<NamespacedIdentifier>("id")
@@ -1711,6 +1920,10 @@ object Commands {
     }
 
     val SETBLOCK = Command.builder("setblock") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "position"(PositionArgumentType()) {
             "block_state"(BlockStateArgumentType.blockState()) {
                 executes()
@@ -1723,12 +1936,20 @@ object Commands {
     }
 
     val SETMAXPLAYERS = Command.builder("setmaxplayers") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.HOST)
+        }
+
         "max_players"(IntegerArgumentType.integer()) {
             executes()
         }
     }
 
     val SETWORLDSPAWN = Command.builder("setworldspawn") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         executes()
 
         "position"(PositionArgumentType()) {
@@ -1737,6 +1958,10 @@ object Commands {
     }
 
     val SPAWNPOINT = Command.builder("spawnpoint") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         executes()
 
         "players"(EntitySelectorArgumentType.players()) {
@@ -1749,6 +1974,10 @@ object Commands {
     }
 
     val SPREADPLAYERS = Command.builder("spreadplayers") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "x"(CoordinateComponentArgumentType()) {
             "z"(CoordinateComponentArgumentType()) {
                 "spread_distance"(FloatArgumentType.nonnegative()) {
@@ -1767,6 +1996,10 @@ object Commands {
     }
 
     val STOPSOUND = Command.builder("stopsound") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             executes()
 
@@ -1777,6 +2010,10 @@ object Commands {
     }
 
     val STRUCTURE = Command.builder("structure") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "delete" {
             "name"(IdentifierArgumentType.unstrict("structure_id", "mystructure")) {
                 executes()
@@ -1875,6 +2112,10 @@ object Commands {
     }
 
     val SUMMON = Command.builder("summon") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "entity_type"(EntityTypeArgumentType.summonableOnly()) {
             executes()
 
@@ -1935,6 +2176,10 @@ object Commands {
     }
 
     val TAG = Command.builder("tag") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType()) {
             inline("add", "remove") {
                 "name"(StringArgumentType.isolated()) {
@@ -1949,6 +2194,10 @@ object Commands {
     }
 
     val TELEPORT = Command.builder("teleport") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         aliases.add("tp")
 
         "destination_entity"(EntitySelectorArgumentType()) {
@@ -2074,6 +2323,10 @@ object Commands {
         aliases.add("msg")
         aliases.add("w")
 
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
+
         "target"(EntitySelectorArgumentType.players()) {
             "message"(StringArgumentType.greedy()) {
                 executes()
@@ -2082,6 +2335,10 @@ object Commands {
     }
 
     val TELLRAW = Command.builder("tellraw") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "targets"(EntitySelectorArgumentType.players()) {
             "message"(RawTextComponentArgumentType()) {
                 executes()
@@ -2090,12 +2347,20 @@ object Commands {
     }
 
     val TESTFOR = Command.builder("testfor") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "victim"(EntitySelectorArgumentType()) {
             executes()
         }
     }
 
     val TESTFORBLOCK = Command.builder("testforblock") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "position"(PositionArgumentType()) {
             "block_state"(BlockStateArgumentType.blockState()) {
                 executes()
@@ -2104,6 +2369,10 @@ object Commands {
     }
 
     val TESTFORBLOCKS = Command.builder("testforblocks") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "begin"(PositionArgumentType()) {
             "end"(PositionArgumentType()) {
                 "destination"(PositionArgumentType()) {
@@ -2118,6 +2387,10 @@ object Commands {
     }
 
     val TICKINGAREA = Command.builder("tickingarea") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "add" {
             "from"(PositionArgumentType()) {
                 "to"(PositionArgumentType()) {
@@ -2177,6 +2450,10 @@ object Commands {
     }
 
     val TIME = Command.builder("time") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "add" {
             "amount"(IntegerArgumentType.integer()) {
                 executes()
@@ -2201,6 +2478,10 @@ object Commands {
     }
 
     val TITLE = Command.builder("title") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "title_location"(EnumArgumentType.of<TitleLocation>()) {
                 "title_text"(StringArgumentType.greedy()) {
@@ -2229,6 +2510,10 @@ object Commands {
     }
 
     val TITLERAW = Command.builder("titleraw") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "players"(EntitySelectorArgumentType.players()) {
             "title_location"(EnumArgumentType.of<TitleLocation>()) {
                 "raw_json_title_text"(RawTextComponentArgumentType()) {
@@ -2257,10 +2542,18 @@ object Commands {
     }
 
     val TOGGLEDOWNFALL = Command.builder("toggledownfall") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         executes()
     }
 
     val WEATHER = Command.builder("weather") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "weather_type"(EnumArgumentType.of<WeatherType>()) {
             executes()
 
@@ -2271,6 +2564,10 @@ object Commands {
     }
 
     val XP = Command.builder("xp") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
+        }
+
         "amount"(ExperienceAmountArgumentType()) {
             executes()
 
@@ -2280,7 +2577,7 @@ object Commands {
         }
     }
 
-    // TODO: requires { ... }, CommandPermissionLevel, Education, BDS
+    // TODO: Education, BDS
     fun getAllVanillaCommandBuilders() = listOf(
         AIMASSIST,
         CAMERA,

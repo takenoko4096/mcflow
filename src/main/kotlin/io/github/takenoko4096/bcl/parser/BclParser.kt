@@ -23,6 +23,7 @@ import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
@@ -39,8 +40,7 @@ class BclParser(
     sourceCode: String,
     tokens: List<Token>,
     private val dispatcher: CommandDispatcher,
-    private val extension: Boolean,
-    private val betaFeatures: Boolean = false
+    private val sender: CommandSender
 ) : TokenSeqReader(sourceCode, tokens, ::BclParseException) {
     private fun expression(): Expression {
         skipNewLine()
@@ -489,7 +489,7 @@ class BclParser(
     }
 
     private fun command(semanticTokens: MutableList<BclSemanticToken>/*, macros: Map<String, String>*/): CommandLineParseResult {
-        return dispatcher.parse(CommandLineReader.from(this, extension, semanticTokens))
+        return dispatcher.parse(CommandLineReader.from(this, sender.extension, semanticTokens), sender)
     }
 
     private fun statement(semanticTokens: MutableList<BclSemanticToken>): Statement {
@@ -696,10 +696,10 @@ class BclParser(
         }
 
         // TODO betaFeatures
-        val node = if (betaFeatures && extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
+        val node = if (sender.beta && sender.extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
             statement(semanticTokens)
         }
-        else if (extension && peekIgnoreNewLine() `is` Symbol.DIVIDE) {
+        else if (sender.extension && peekIgnoreNewLine() `is` Symbol.DIVIDE) {
             val start = getCurrentTokenStartPosition()
             nextIgnoreNewLine()
             val end = getPreviousTokenEndPosition()

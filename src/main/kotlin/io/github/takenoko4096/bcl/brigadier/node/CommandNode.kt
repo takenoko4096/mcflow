@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
 import io.github.takenoko4096.bcl.brigadier.CommandContext
+import io.github.takenoko4096.bcl.brigadier.CommandPermissionCheckContext
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import org.eclipse.lsp4j.CompletionItem
 
@@ -9,6 +10,7 @@ sealed class CommandNode(
     val executor: (CommandContext.() -> Any?)?,
     val children: Map<String, CommandNode>,
     val redirects: List<CommandNode>,
+    val predicate: (CommandPermissionCheckContext.() -> CommandPermissionCheckContext.Result)?,
     val completerOverride: ((BclCompletionContext) -> List<CompletionItem>)? = null
 ) {
     fun getEffectiveChildren(): Map<String, CommandNode> {

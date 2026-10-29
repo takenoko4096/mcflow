@@ -64,8 +64,6 @@ class CommandLineReader(
                 lastSourcePosition = tokens.last().sourceSpan.end
             }
 
-            System.err.println("lastSourcePosition=$lastSourcePosition")
-
             return CommandLineReader(
                 reader.sourceCode,
                 tokens,

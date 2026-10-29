@@ -9,8 +9,9 @@ class Command(
     val aliases: Set<String>,
     executor: (CommandContext.() -> Any?)?,
     children: Map<String, CommandNode>,
-    redirects: List<CommandNode> = listOf()
-) : LiteralCommandNode(name, executor, children, redirects) {
+    redirects: List<CommandNode> = listOf(),
+    predicate: (CommandPermissionCheckContext.() -> CommandPermissionCheckContext.Result)?
+) : LiteralCommandNode(name, executor, children, redirects, predicate) {
     fun getAllUsages(): List<String> {
         return getAllUsages("/$name" + if (aliases.isEmpty()) "" else aliases.joinToString(", ", "[", "]"))
     }

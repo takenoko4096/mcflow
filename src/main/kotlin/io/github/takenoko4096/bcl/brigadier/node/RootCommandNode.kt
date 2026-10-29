@@ -5,7 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.Command
 class RootCommandNode(
     name: String,
     val commands: MutableMap<String, Command>
-) : CommandNode(name, null, commands, listOf()) {
+) : CommandNode(name, null, commands, listOf(), null) {
     override fun toString(): String {
         return name
     }

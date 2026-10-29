@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
@@ -36,7 +37,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val uriComments = mutableListOf<SourceSpan>()
         val tokenizer = BclTokenizer(text, extension, uriComments)
         val tokens = tokenizer.tokenize()
-        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, extension)
+
+        val sender = CommandSender(extension = extension)
+
+        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, sender)
         val semanticTokens = mutableListOf<BclSemanticToken>()
         semanticTokens.addAll(uriComments.map { sourceSpan ->
             BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
