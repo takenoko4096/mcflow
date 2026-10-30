@@ -359,7 +359,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
                     diagnostics =
                         context.diagnostics + BclDiagnostic(
                             """
-                            ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません
+                            ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません: '$literal'
                             ${getExpectationMessage(context.nodeCandidates.values)}
                             """.trimIndent(),
                             context.sourceCode,
@@ -419,8 +419,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
                 start,
                 start..end
             )
-
-            //TODO: System.err.println("debug: $node, ${context.completionCandidates}")
 
             throw error
         }

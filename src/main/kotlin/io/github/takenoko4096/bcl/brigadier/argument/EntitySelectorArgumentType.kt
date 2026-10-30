@@ -890,8 +890,6 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val string = reader.readCommandString(prefixable = charArrayOf(KeyChar.AT))
         val end = reader.getPreviousTokenEndPosition()
 
-        System.err.println("selector type string: $string, ${reader.cursor}, ${reader.peekSafely(-1)}, ${start..end}")
-
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SELECTOR_TYPE, start..end))
 
         for (type in SelectorType.entries) {
