@@ -529,7 +529,17 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 }
             }
 
+            val end = getSourcePositionAtBack()
+
+            if (isOver() || peek() in KeyChar.COMMAND_WORD_TERMINATORS) {
+                return tokenOf(TokenType.WORD, Symbol.AT.value, start, end)
+            }
+
             val word = word()
+            if (word is Token.Invalid) {
+                return invalid(start..word.sourceSpan.end, TokenType.WORD, word.message)
+            }
+
             return tokenOf(TokenType.WORD, "${Symbol.AT.value}${word.value}", start, getSourcePositionAtBack())
         }
 

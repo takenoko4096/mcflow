@@ -1086,6 +1086,8 @@ object Commands {
         "targets"(EntitySelectorArgumentType()) {
             executes()
         }
+
+        executes()
     }
 
     val LIST = Command.builder("list") {

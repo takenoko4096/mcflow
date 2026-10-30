@@ -132,23 +132,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val items = mutableListOf<CompletionItem>()
 
         for (candidate in result.completionCandidates) {
-            System.err.println(
-                result.completionCandidates.joinToString("\n") {
-                    "node=${it.node}, start=${it.startPosition}, span=${it.inputSourceSpan}"
-                }
-            )
-            System.err.println("ROUTE = ${result.route}")
-            // result に state はなく、 reader がない
-
-            result.completionCandidates.forEach {
-                System.err.println(
-                    "candidate: node=${it.node} " +
-                        "start=${it.startPosition} " +
-                        "span=${it.inputSourceSpan} " +
-                        "text=${it.inputSourceSpan?.getStringFromSourceCode(text)}"
-                )
-            }
-
             when (candidate.node) {
                 is LiteralCommandNode -> {
                     val item = CompletionItem(candidate.node.name)

@@ -75,7 +75,7 @@ data class NodeParseContext(
      * 引数不足時の completion candidate を追加する
      */
     fun addMissingArgumentCompletion() {
-        if (commandLineReader.sourceCode.getOrNull(commandLineReader.getEntireSourceSpan().end.index + 1)?.isWhitespace() == true) {
+        if (commandLineReader.hasSeparatorBeforeCursor()) {
             completionCandidates += CompletionCandidate(
                 current,
                 commandLineReader.getOverNextSourceSpan().start,

@@ -10,7 +10,6 @@ import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeDuration
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeUnit
-import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.Keyword
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -892,7 +891,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         else ReadResult.Successful(value, start..end)
     }
 
-    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, nonTerminators: CharArray = charArrayOf()): String {
+    fun readCommandString(allowFloat: Boolean = false, allowSingleSignOnly: Boolean = false, prefixable: CharArray = charArrayOf()): String {
         if (isOver()) {
             throw exception(getOverNextSourceSpan(), "文字列の解析に失敗しました: 入力が不足しています")
         }
@@ -908,6 +907,9 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         var index = startIndex
 
         when (firstChar) {
+            in prefixable.toSet() -> {
+                index++
+            }
             KeyChar.COLON -> {
                 next()
                 val end = getPreviousTokenEndPosition()
@@ -936,7 +938,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
             }
         }
 
-        if (index < sourceCode.length) while (sourceCode[index] !in (KeyChar.COMMAND_WORD_TERMINATORS.filter { it !in nonTerminators })) {
+        if (index < sourceCode.length) while (sourceCode[index] !in KeyChar.COMMAND_WORD_TERMINATORS) {
             index++
             if (index >= sourceCode.length) break
         }
@@ -951,8 +953,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
 
         val end = getPreviousTokenEndPosition()
 
-        val invalids = tokens.filter { it.sourceSpan.start.index >= startIndex && it.sourceSpan.end.index <= index }
-            .filterIsInstance<Token.Invalid>()
+        val invalids = tokens.filter { it.sourceSpan.start.index >= startIndex && it.sourceSpan.end.index <= index }.filterIsInstance<Token.Invalid>()
         val invalid = invalids.firstOrNull()
         if (invalid != null) {
             val span = invalids.first().sourceSpan.start..invalids.last().sourceSpan.end
@@ -1169,5 +1170,15 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         val start = tokens.first().sourceSpan.start
         val end = tokens.last().sourceSpan.end
         return start..end
+    }
+
+    fun hasSeparatorBeforeCursor(): Boolean {
+        val nextIndex = getPreviousTokenEndPosition().index + 1
+
+        if (nextIndex >= sourceCode.length) {
+            return false
+        }
+
+        return sourceCode[nextIndex] in KeyChar.COMMAND_WORD_TERMINATORS
     }
 }

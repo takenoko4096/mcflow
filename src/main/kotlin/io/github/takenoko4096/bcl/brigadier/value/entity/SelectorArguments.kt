@@ -172,6 +172,8 @@ data class SelectorArguments(
                 fun parse(name: String): PermissionState? {
                     return entries.find { it.getString() == name }
                 }
+
+                val strings = entries.map { it.getString() }
             }
         }
 

@@ -420,6 +420,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
                 start..end
             )
 
+            //TODO: System.err.println("debug: $node, ${context.completionCandidates}")
+
             throw error
         }
 
@@ -511,7 +513,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
         val children = context.current.getEffectiveChildren()
 
         val completions = context.completionCandidates +
-            if (children.isEmpty()) {
+            if (children.isEmpty() || !reader.hasSeparatorBeforeCursor()) {
                 emptyList()
             }
             else {

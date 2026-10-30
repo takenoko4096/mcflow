@@ -887,8 +887,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return SelectorType.PLAYER
         }
 
-        val string = reader.readCommandString(nonTerminators = charArrayOf('@'))
+        val string = reader.readCommandString(prefixable = charArrayOf(KeyChar.AT))
         val end = reader.getPreviousTokenEndPosition()
+
+        System.err.println("selector type string: $string, ${reader.cursor}, ${reader.peekSafely(-1)}, ${start..end}")
+
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SELECTOR_TYPE, start..end))
 
         for (type in SelectorType.entries) {
@@ -901,7 +904,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return SelectorType.PLAYER
         }
 
-        if ('@' in string) {
+        if (string.startsWith(KeyChar.AT)) {
             diagnostics.add(reader.diagnostic(start..end, "セレクターの読み取りに失敗しました: 不明なセレクタータイプです: '$string'"))
             return null
         }
@@ -1101,7 +1104,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     private fun completeHasPermission(completer: BclCompleter): BclCompleter.ValueCompletionResult {
         return completeMapLike(completer, SelectorArguments.HasPermission.Permission.strings) { completer, _ ->
             completer.completeUnquotedString(
-                SelectorArguments.HasPermission.Permission.strings,
+                SelectorArguments.HasPermission.PermissionState.strings,
                 CompletionItemKind.EnumMember
             )
         }
