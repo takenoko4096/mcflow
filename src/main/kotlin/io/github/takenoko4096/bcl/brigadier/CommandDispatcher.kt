@@ -12,7 +12,7 @@ import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
-class CommandDispatcher(name: String, private val detailedOutput: Boolean = true) {
+class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
     private val root = RootCommandNode(name, mutableMapOf())
 
     fun getCommand(name: String): Command? {
@@ -349,7 +349,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = true
              */
             reader.cursor = cursor
 
-            // TODO
             return LiteralParseResult.Mismatched(
                 RoutePotential(
                     state = context.nextState.copy(

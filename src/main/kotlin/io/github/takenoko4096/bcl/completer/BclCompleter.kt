@@ -15,7 +15,7 @@ import kotlin.collections.contains
 import kotlin.text.plus
 import kotlin.text.startsWith
 
-class BclCompleter(private val context: BclCompletionContext) {
+class BclCompleter(val context: BclCompletionContext) {
     private var cursor: Int = 0
 
     private var line: Int = 0

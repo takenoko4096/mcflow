@@ -12,11 +12,11 @@ object KeyChar {
 
     const val UNSIGNED = 'u'
 
-    const val CHAR_QUOTE = '\''
     const val STRING_QUOTE = '"'
     const val SPECIAL_STRING_QUOTE = '`'
     const val ESCAPE = '\\'
     const val SLASH = '/'
+    const val HASH = '#'
 
     val WHITESPACE_CHARS = setOf(SPACE, TAB, LINEBREAK)
     val QUOTE_CHARS = setOf(STRING_QUOTE, SPECIAL_STRING_QUOTE)
@@ -25,6 +25,7 @@ object KeyChar {
     const val LINE_COMMENT_SEQUENCE = "#"
     const val BLOCK_COMMENT_START_SEQUENCE = "#::"
     const val BLOCK_COMMENT_END_SEQUENCE = "::#"
+    const val COMMENT_COMMAND_PREFIX_SEQUENCE = "$HASH$SLASH"
 
     const val WINDOWS_LINE_SEPARATOR_SEQUENCE = "$CARRIAGE_RETURN$LINEBREAK"
     const val MAC_LINE_SEPARATOR = CARRIAGE_RETURN
@@ -32,10 +33,10 @@ object KeyChar {
     val NUMBER_REGEX = "^-?\\d+(?:\\.\\d+)?$".toRegex()
 
     val CONTROL_CHARS = mapOf(
-        'r' to '\r',
-        'n' to '\n',
-        't' to '\t',
-        '\\' to '\\'
+        'r' to CARRIAGE_RETURN,
+        'n' to LINEBREAK,
+        't' to TAB,
+        ESCAPE to ESCAPE
     )
 
     const val COORDINATE_RELATIVE = '~'

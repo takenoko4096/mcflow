@@ -1,6 +1,8 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-class BclTokenizer(text: String, private val extension: Boolean, private val comments: MutableList<SourceSpan> = mutableListOf()) {
+import io.github.takenoko4096.bcl.brigadier.BclComment
+
+class BclTokenizer(text: String, private val extension: Boolean, private val comments: MutableList<BclComment>? = mutableListOf()) {
     val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
@@ -343,19 +345,24 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
     }
 
     private fun skipComment(): Boolean {
+        // コメントを解釈しないという意味になる
+        if (comments == null) {
+            return false
+        }
+
         if (isOver()) return false
 
-        val start0 = getCurrentSourcePosition()
+        val start = getCurrentSourcePosition()
 
         if (extension && testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
             var count = 1
-            var start = start0
+            var start = start
             var end: SourcePosition
             while (true) {
                 if (isOver()) {
                     end = getSourcePositionAtBack()
                     if (end.index >= start.index) {
-                        comments.add(start..end)
+                        comments.add(BclComment.Multiline(start..end))
                     }
                     break
                 }
@@ -368,7 +375,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 else if (peek() == KeyChar.LINEBREAK) {
                     end = getSourcePositionAtBack()
                     next()
-                    if (end.index >= start.index) comments.add(start..end)
+                    if (end.index >= start.index) comments.add(BclComment.Multiline(start..end))
                     start = getCurrentSourcePosition()
                     continue
                 }
@@ -378,7 +385,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
                 if (count == 0) {
                     end = getSourcePositionAtBack()
-                    comments.add(start..end)
+                    comments.add(BclComment.Multiline(start..end))
                     break
                 }
             }
@@ -387,14 +394,13 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
         }
         else if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
             while (!isOver()) {
-                if (peek() == KeyChar.LINEBREAK) {
-                    break
-                }
+                if (peek() == KeyChar.LINEBREAK) break
                 next()
             }
 
             val end = getSourcePositionAtBack()
-            comments.add(start0..end)
+            val sourceSpan = start..end
+            comments.add(BclComment.newCommentCommandLine(sourceCode, sourceSpan) ?: BclComment.Line(sourceSpan))
 
             return true
         }

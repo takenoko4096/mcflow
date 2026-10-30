@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.Commands
+import io.github.takenoko4096.bcl.CommentCommands
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -20,6 +21,10 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
 
     val dispatcher = CommandDispatcher("root", detailedOutput = false).apply {
         Commands.getAllVanillaCommandBuilders().forEach(::register)
+    }
+
+    val commentCommandDispatcher = CommandDispatcher("root").apply {
+        CommentCommands.getAllCommentCommandBuilders().forEach(::register)
     }
 
     override fun connect(client: LanguageClient) {

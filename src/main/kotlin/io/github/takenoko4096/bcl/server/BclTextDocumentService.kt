@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
+import io.github.takenoko4096.bcl.brigadier.BclComment
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.Command
@@ -13,7 +14,6 @@ import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.Tuple
@@ -22,62 +22,78 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import java.util.concurrent.CompletableFuture
 
 class BclTextDocumentService(private val server: BedrockCommandLanguageServer) : TextDocumentService {
-    private val documents = mutableMapOf<String, String>()
-
-    private val blocks = mutableMapOf<String, Block>()
-
-    private val comments = mutableMapOf<String, List<SourceSpan>>()
-
-    private val extraSemanticTokens = mutableMapOf<String, List<BclSemanticToken>>()
+    private val files = mutableMapOf<String, CommandDocumentFile>()
 
     private val client: LanguageClient
         get() = server.client
 
     private fun parse(uri: String?, text: String, extension: Boolean): Block {
-        val uriComments = mutableListOf<SourceSpan>()
-        val tokenizer = BclTokenizer(text, extension, uriComments)
+        val comments = mutableListOf<BclComment>()
+        val tokenizer = BclTokenizer(text, extension, comments)
         val tokens = tokenizer.tokenize()
 
         val sender = CommandSender(extension = extension)
-
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, sender)
-        val semanticTokens = mutableListOf<BclSemanticToken>()
-        semanticTokens.addAll(uriComments.map { sourceSpan ->
-            BclSemanticToken(BclSemanticTokenType.COMMENT, sourceSpan)
-        })
-        val block = parser.parse(semanticTokens)
-        if (uri != null) {
-            blocks[uri] = block
-            comments[uri] = uriComments
-            extraSemanticTokens[uri] = semanticTokens
-            documents[uri] = tokenizer.sourceCode
+        val commandLineExclusiveSemanticTokens = mutableListOf<BclSemanticToken>()
+        val commentCommandParseResults = mutableListOf<CommandLineParseResult>()
+
+        for (comment in comments) {
+            if (comment is BclComment.CommentCommandLine) {
+                commentCommandParseResults.add(server.commentCommandDispatcher.parse(comment.reader, sender))
+            }
+            else {
+                val semanticToken = BclSemanticToken(BclSemanticTokenType.COMMENT, comment.sourceSpan)
+                commandLineExclusiveSemanticTokens.add(semanticToken)
+            }
         }
+
+        val block = parser.parse(commandLineExclusiveSemanticTokens)
+
+        if (uri != null) {
+            files[uri] = CommandDocumentFile(
+                sourceCode = tokenizer.sourceCode,
+                block = block,
+                comments = comments,
+                commentCommandParseResults = commentCommandParseResults,
+                commandLineExclusiveSemanticTokens = commandLineExclusiveSemanticTokens
+            )
+        }
+
         return block
     }
 
-    private fun publishDiagnostics(uri: String, block: Block) {
+    private fun publishDiagnostics(uri: String, block: Block, commentCommandParseResults: List<CommandLineParseResult>) {
         client.publishDiagnostics(PublishDiagnosticsParams(
             uri,
-            block.nodes
-                .filterIsInstance<CommandLineParseResult.Failure>()
+            (block.nodes.filterIsInstance<CommandLineParseResult.Failure>() + commentCommandParseResults.filterIsInstance<CommandLineParseResult.Failure>())
                 .flatMap {
                     it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic)
                 }
         ))
     }
 
+    private fun getLastLineParseResult(block: Block, commentCommandParseResults: List<CommandLineParseResult>): CommandLineParseResult? {
+        val commandLineParseResults = block.nodes.filterIsInstance<CommandLineParseResult>()
+        val results = (commandLineParseResults + commentCommandParseResults).sortedBy { it.sourceSpan.start.index }
+        return results.lastOrNull()
+    }
+
     override fun didOpen(params: DidOpenTextDocumentParams) {
-        val document = params.textDocument
-        val block = parse(document.uri, document.text, extension = document.uri.endsWith(".mcflow"))
-        blocks[document.uri] = block
-        publishDiagnostics(document.uri, block)
+        parse(
+            params.textDocument.uri,
+            params.textDocument.text,
+            extension = params.textDocument.uri.endsWith(".mcflow")
+        )
+        val file = files[params.textDocument.uri]!!
+        publishDiagnostics(params.textDocument.uri, file.block, file.commentCommandParseResults)
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         val uri = params.textDocument.uri
         val text = params.contentChanges.last().text
-        val block = parse(uri, text, extension = uri.endsWith(".mcflow"))
-        publishDiagnostics(uri, block)
+        parse(uri, text, extension = uri.endsWith(".mcflow"))
+        val file = files[uri]!!
+        publishDiagnostics(uri, file.block, file.commentCommandParseResults)
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {}
@@ -86,11 +102,12 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     override fun inlayHint(params: InlayHintParams): CompletableFuture<List<InlayHint>> {
         val document = params.textDocument
-        val block = blocks[document.uri]!!
+        val file = files[document.uri]!!
+        val block = file.block
 
         val hints = mutableListOf<InlayHint>()
 
-        for (result in block.nodes.filterIsInstance<CommandLineParseResult>()) {
+        for (result in block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults) {
             for ((node, argument) in result.arguments) {
                 if (!argument.type.hasInlayHint) continue
 
@@ -112,22 +129,22 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val position = params.position
         val empty = CompletableFuture.completedFuture(Either.forLeft<List<CompletionItem>, CompletionList>(emptyList()))
 
-        val sourceCode = documents[uri] ?: return empty
+        val file = files[uri] ?: return empty
+        val sourceCode = file.sourceCode
 
-        val uriComments = comments[uri]!!
-        if (uriComments.any { it.contains(position) }) return empty
+        val comments = file.comments.filterNot { it is BclComment.CommentCommandLine }
+        if (comments.any { it.sourceSpan.contains(position) }) return empty
 
         val sourcePosition = SourcePosition.from(sourceCode, position)
         val cursor = sourcePosition.index
 
-        val text = sourceCode.substring(0, cursor)
+        val subSourceCode = sourceCode.substring(0, cursor)
             .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
-        val block = parse(null, text, extension = uri.endsWith(".mcflow"))
-        val result = block.nodes.lastOrNull() ?: return empty
 
-        // always passes
-        result as CommandLineParseResult
+        val block = parse(null, subSourceCode, extension = uri.endsWith(".mcflow"))
+
+        val result = getLastLineParseResult(block, file.commentCommandParseResults) ?: return empty
 
         val items = mutableListOf<CompletionItem>()
 
@@ -150,7 +167,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                     val string = candidate.inputSourceSpan
                         ?.run {
                             try {
-                                getStringFromSourceCode(text)
+                                getStringFromSourceCode(subSourceCode)
                             }
                             catch (_: Throwable) {
                                 ""
@@ -191,12 +208,15 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
         val semanticTokens = SemanticTokens()
 
-        val block = blocks[params.textDocument.uri]!!
-        val extra = extraSemanticTokens[params.textDocument.uri]!!
+        val file = files[params.textDocument.uri]!!
 
-        val tokens = (block.nodes
-            .filterIsInstance<CommandLineParseResult>()
-            .flatMap { it.semanticTokens } + extra)
+        val block = file.block
+        val commandLineExclusiveSemanticTokens = file.commandLineExclusiveSemanticTokens
+
+        val tokens = (
+            (block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults)
+            .flatMap { it.semanticTokens } + commandLineExclusiveSemanticTokens
+            )
             .sortedBy { it.sourceSpan.start.index }
             .toList()
 
@@ -240,10 +260,11 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> {
         val textDocument = params.textDocument
-        val sourceCode = documents[textDocument.uri]!!
+        val file = files[textDocument.uri]!!
+        val sourceCode = file.sourceCode
 
-        val uriComments = comments[textDocument.uri] ?: emptyList()
-        if (uriComments.any { it.contains(params.position) }) {
+        val comments = file.comments.filterNot { it is BclComment.CommentCommandLine }
+        if (comments.any { it.sourceSpan.contains(params.position) }) {
             return CompletableFuture.completedFuture(null)
         }
 
@@ -254,8 +275,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
         val block = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
-        val result = block.nodes.lastOrNull() ?: return CompletableFuture.completedFuture(null)
-        result as CommandLineParseResult
+        val result = getLastLineParseResult(block, file.commentCommandParseResults) ?: return CompletableFuture.completedFuture(null)
 
         if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
             return CompletableFuture.completedFuture(null)
@@ -278,7 +298,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
                 var i = 0
                 for (node in route + child) {
-                    val string = node.toString()
+                    val string = if (node == child && tail.executor != null) "[$node]" else node.toString()
                     ranges += Tuple.two(i, i + string.length) to string
                     i += string.length
                     i++ // ' ' の分

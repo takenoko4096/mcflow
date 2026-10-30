@@ -869,6 +869,8 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
     }
 
     private fun unknown(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+        if (reader.isOver()) return
+        reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
         reader.readQuotableCommandString(allowFloat = true)
         val end = reader.getPreviousTokenEndPosition()

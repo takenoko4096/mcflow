@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl
 import io.github.takenoko4096.bcl.ast.Node
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.*
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
@@ -116,7 +117,7 @@ fun main() {
         text,
         BclTokenizer(text, extension = false).tokenize(),
         dispatcher,
-        true
+        sender = CommandSender(extension = true)
     ).parse()
 
     for (node in parseResult.nodes.filterIsInstance<CommandLineParseResult>()) {
