@@ -16,16 +16,16 @@ abstract class BclComment(val sourceSpan: SourceSpan) {
     companion object {
         fun newCommentCommandLine(sourceCode: String, sourceSpan: SourceSpan): CommentCommandLine? {
             val string = sourceSpan.getStringFromSourceCode(sourceCode)
-            if (!string.startsWith(KeyChar.COMMENT_COMMAND_PREFIX_SEQUENCE) || string.length <= 2) return null
-            val command = string.substring(2)
+            if (!string.startsWith(KeyChar.COMMENT_COMMAND_PREFIX_SEQUENCE)) return null
 
             val offset = sourceSpan.start
 
-            val tokenizer = BclTokenizer(command, extension = false, comments = null)
+            val tokenizer = BclTokenizer(string, extension = false, comments = null)
             val tokens = tokenizer.tokenize().map {
                 val (start, end) = it.sourceSpan
                 val newSourceSpan = (start + offset)..(end + offset)
-                Token(it.id, it.type, it.value, newSourceSpan)
+                if (it is Token.Invalid) Token.Invalid(it.id, it.type, it.message, newSourceSpan)
+                else Token(it.id, it.type, it.value, newSourceSpan)
             }
 
             if (tokens.isEmpty()) {
@@ -38,6 +38,9 @@ abstract class BclComment(val sourceSpan: SourceSpan) {
                 exceptionConstructor = ::BclParseException,
                 lastSourcePosition = tokens.last().sourceSpan.end
             )
+
+            reader.expect(Symbol.HASH)
+            reader.expect(Symbol.DIVIDE)
 
             return CommentCommandLine(sourceSpan, reader)
         }

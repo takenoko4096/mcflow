@@ -54,6 +54,14 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
             }
     }
 
+    fun getSourceCodeFirstPosition(): SourcePosition {
+        if (tokens.isEmpty()) {
+            throw exception(getOverNextSourceSpan(), "sourceCode が空です")
+        }
+
+        return tokens.first().sourceSpan.start
+    }
+
     fun isOver(): Boolean {
         return cursor >= tokens.size
     }

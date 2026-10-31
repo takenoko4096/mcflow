@@ -195,7 +195,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.arguments,
                     completionCandidates,
                     bestRoutePotential.diagnostics,
-                    start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
+                    start..cloned.getPreviousTokenEndPosition(),
                     bestRoutePotential.state.reader.lastSourcePosition,
                     semanticTokens
                 )
@@ -338,6 +338,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
              * 元コードと同じく、
              * Literal を読み終わった位置を furthestCursor とする。
              */
+            // TODO: furthestCursor と reader.cursor の役割を入れ替える？
             val furthestCursor = reader.cursor
 
             /*
@@ -499,7 +500,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 BclDiagnostic(
                     "予期しない引数です: '${reader.getRemainingSourceSpan().getStringFromSourceCode(reader.sourceCode)}'"
                         + if (context.current.getEffectiveChildren().isNotEmpty()) {
-                            getExpectationMessage(context.current.getEffectiveChildren().values)
+                            '\n' + getExpectationMessage(context.current.getEffectiveChildren().values)
                         }
                         else "",
                     reader.sourceCode,

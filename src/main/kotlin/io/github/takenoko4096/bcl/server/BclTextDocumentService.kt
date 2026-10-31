@@ -39,6 +39,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         for (comment in comments) {
             if (comment is BclComment.CommentCommandLine) {
+                val prefixSourceSpan = comment.reader.getSourceCodeFirstPosition()..comment.reader.getPreviousTokenEndPosition()
+                commandLineExclusiveSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.COMMENT, prefixSourceSpan))
                 commentCommandParseResults.add(server.commentCommandDispatcher.parse(comment.reader, sender))
             }
             else {
