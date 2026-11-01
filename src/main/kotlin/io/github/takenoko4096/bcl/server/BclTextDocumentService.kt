@@ -28,37 +28,42 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         get() = server.client
 
     private fun parse(uri: String?, text: String, extension: Boolean): Block {
+        val sender = uri?.run { files[this] }?.sender ?: CommandSender()
+        sender.extension = extension
+
         val comments = mutableListOf<BclComment>()
         val tokenizer = BclTokenizer(text, extension, comments)
         val tokens = tokenizer.tokenize()
 
-        val sender = CommandSender(extension = extension)
         val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, sender)
-        val commandLineExclusiveSemanticTokens = mutableListOf<BclSemanticToken>()
         val commentCommandParseResults = mutableListOf<CommandLineParseResult>()
 
         for (comment in comments) {
-            if (comment is BclComment.CommentCommandLine) {
-                val prefixSourceSpan = comment.reader.getFirstPosition()..comment.reader.getPreviousTokenEndPosition()
-                commandLineExclusiveSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.COMMENT, prefixSourceSpan))
-                commentCommandParseResults.add(server.commentCommandDispatcher.parse(comment.reader, sender))
-            }
-            else {
-                val semanticToken = BclSemanticToken(BclSemanticTokenType.COMMENT, comment.sourceSpan)
-                commandLineExclusiveSemanticTokens.add(semanticToken)
+            if (comment is BclComment.CommandLine) {
+                val result = server.commentCommandDispatcher.parse(comment.reader, sender)
+                commentCommandParseResults += result
             }
         }
 
-        val block = parser.parse(commandLineExclusiveSemanticTokens)
+        val block = parser.parse()
 
         if (uri != null) {
-            files[uri] = CommandDocumentFile(
-                sourceCode = tokenizer.sourceCode,
-                block = block,
-                comments = comments,
-                commentCommandParseResults = commentCommandParseResults,
-                commandLineExclusiveSemanticTokens = commandLineExclusiveSemanticTokens
-            )
+            if (uri in files) {
+                val file = files[uri]!!
+                file.sourceCode = tokenizer.sourceCode
+                file.block = block
+                file.comments = comments
+                file.commentCommandParseResults = commentCommandParseResults
+            }
+            else {
+                files[uri] = CommandDocumentFile(
+                    sourceCode = tokenizer.sourceCode,
+                    block = block,
+                    comments = comments,
+                    commentCommandParseResults = commentCommandParseResults,
+                    sender = sender
+                )
+            }
         }
 
         return block
@@ -147,7 +152,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val file = files[uri] ?: return empty
         val sourceCode = file.sourceCode
 
-        val comments = file.comments.filterNot { it is BclComment.CommentCommandLine }
+        val comments = file.comments.filterNot { it is BclComment.CommandLine }
         if (comments.any { it.sourceSpan.contains(position) }) return empty
 
         val sourcePosition = SourcePosition.from(sourceCode, position)
@@ -220,18 +225,21 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         return CompletableFuture.completedFuture(Either.forLeft(completionItems))
     }
 
+    /*override fun semanticTokensRange(params: SemanticTokensRangeParams): CompletableFuture<SemanticTokens?> {
+        return super.semanticTokensRange(params)
+    }*/
+
     override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens> {
         val semanticTokens = SemanticTokens()
 
         val file = files[params.textDocument.uri]!!
 
         val block = file.block
-        val commandLineExclusiveSemanticTokens = file.commandLineExclusiveSemanticTokens
 
-        val tokens = (
-            (block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults)
-            .flatMap { it.semanticTokens } + commandLineExclusiveSemanticTokens
-            )
+        val commandLineParseResults = block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults
+        val commentSemanticTokens = file.comments.map { BclSemanticToken(BclSemanticTokenType.COMMENT, it.sourceSpan) }
+
+        val tokens = (commandLineParseResults.flatMap { it.semanticTokens } + commentSemanticTokens)
             .sortedBy { it.sourceSpan.start.index }
             .toList()
 
@@ -278,7 +286,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val file = files[textDocument.uri]!!
         val sourceCode = file.sourceCode
 
-        val comments = file.comments.filterNot { it is BclComment.CommentCommandLine }
+        val comments = file.comments.filterNot { it is BclComment.CommandLine }
         if (comments.any { it.sourceSpan.contains(params.position) }) {
             return CompletableFuture.completedFuture(null)
         }

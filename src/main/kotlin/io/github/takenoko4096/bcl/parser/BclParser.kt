@@ -21,15 +21,12 @@ import io.github.takenoko4096.bcl.ast.statement.ReturnStatement
 import io.github.takenoko4096.bcl.ast.statement.SetStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
-import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
-import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.`!is`
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
@@ -488,24 +485,24 @@ class BclParser(
         }
     }
 
-    private fun command(semanticTokens: MutableList<BclSemanticToken>/*, macros: Map<String, String>*/): CommandLineParseResult {
-        return dispatcher.parse(CommandLineReader.from(this, sender.extension, semanticTokens), sender)
+    private fun command(reader: CommandLineReader, /*macros: Map<String, String>*/): CommandLineParseResult {
+        return dispatcher.parse(reader, sender)
     }
 
-    private fun statement(semanticTokens: MutableList<BclSemanticToken>): Statement {
+    private fun statement(): Statement {
         val start = getCurrentTokenStartPosition()
 
         if (isOverIgnoreNewLine()) {
             throw exception(getOverNextSourceSpan(), "ステートメントを読み取れませんでした: 入力が不足しています")
         }
 
-        return if (peekIgnoreNewLine() `is` Keyword.IF) ifElse(semanticTokens)
-        else if (peekIgnoreNewLine() `is` Keyword.SET) set(semanticTokens)
+        return if (peekIgnoreNewLine() `is` Keyword.IF) ifElse()
+        else if (peekIgnoreNewLine() `is` Keyword.SET) set()
         else if (peekIgnoreNewLine() `is` Keyword.RETURN) `return`()
         else if (peekIgnoreNewLine() `is` Keyword.CONTINUE) `continue`()
         else if (peekIgnoreNewLine() `is` Keyword.BREAK) `break`()
-        else if (peekIgnoreNewLine() `is` Keyword.WHILE) `while`(semanticTokens)
-        else if (peekIgnoreNewLine() `is` Keyword.DO) doWhile(semanticTokens)
+        else if (peekIgnoreNewLine() `is` Keyword.WHILE) `while`()
+        else if (peekIgnoreNewLine() `is` Keyword.DO) doWhile()
         else throw exception(start, "ステートメントを読み取れませんでした: ${peekIgnoreNewLine()} はステートメントとして無効なトークンです")
     }
 
@@ -527,8 +524,10 @@ class BclParser(
         }
     }
 
-    private fun ifElse(semanticTokens: MutableList<BclSemanticToken>): IfElseStatement {
-        val s = getCurrentTokenStartPosition()
+    private fun ifElse(): IfElseStatement {
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.IF)
 
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
@@ -536,35 +535,51 @@ class BclParser(
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
 
         val thenBlock = if (peekIgnoreNewLine() `is` Symbol.BRACE_START) {
-            block(true, semanticTokens)
+            block(true)
         }
         else {
             val s2 = getCurrentTokenStartPosition()
-            val node = node(semanticTokens)
+            val node = node()
             Block(s2..getPreviousTokenEndPosition(), listOf(node))
         }
 
         if (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Keyword.ELSE) {
             nextIgnoreNewLine()
             val elseBlock = if (peekIgnoreNewLine() `is` Symbol.BRACE_START) {
-                block(true, semanticTokens)
+                block(true)
             }
             else {
-                val s2 = getCurrentTokenStartPosition()
-                val node = node(semanticTokens)
-                Block(s2..getPreviousTokenEndPosition(), listOf(node))
+                val startOfNode = getCurrentTokenStartPosition()
+                val node = node()
+                val endOfNode = getPreviousTokenEndPosition()
+                Block(startOfNode..endOfNode, listOf(node))
             }
-            return IfElseStatement(s..getPreviousTokenEndPosition(), cond, thenBlock, elseBlock)
+            val end = getPreviousTokenEndPosition()
+            return IfElseStatement(
+                start..end,
+                semanticTokens,
+                cond,
+                thenBlock,
+                elseBlock
+            )
         }
 
-        return IfElseStatement(s..getPreviousTokenEndPosition(), cond, thenBlock, null)
+        val end = getPreviousTokenEndPosition()
+
+        return IfElseStatement(
+            start..end,
+            semanticTokens,
+            cond,
+            thenBlock,
+            null
+        )
     }
 
-    private fun set(semanticTokens: MutableList<BclSemanticToken>): SetStatement {
+    private fun set(): SetStatement {
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
         val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.SET)
-        val end1 = getPreviousTokenEndPosition()
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.LITERAL, start..end1))
 
         val identifier = readIgnoreNewLine(TokenType.WORD)
 
@@ -582,56 +597,98 @@ class BclParser(
             expectIgnoreNewLine(Symbol.PARENTHESIS_END)
         }
 
-        val end2 = getPreviousTokenEndPosition()
+        val end = getPreviousTokenEndPosition()
 
-        return SetStatement(start..end2, identifier, parameters, block(true, semanticTokens))
+        return SetStatement(
+            start..end,
+            semanticTokens,
+            identifier,
+            parameters,
+            block(true)
+        )
     }
 
     private fun `return`(): ReturnStatement {
-        val s = getCurrentTokenStartPosition()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.RETURN)
 
         if (peekIgnoreNewLine() `is` Symbol.SEMICOLON) {
+            val end = getPreviousTokenEndPosition()
             nextIgnoreNewLine()
-            return ReturnStatement(s..getPreviousTokenEndPosition(), null)
+            return ReturnStatement(
+                start..end,
+                semanticTokens,
+                null
+            )
         }
         else if (peek() `is` Symbol.NEWLINE) {
+            val end = getPreviousTokenEndPosition()
             next()
-            return ReturnStatement(s..getPreviousTokenEndPosition(), null)
+            return ReturnStatement(
+                start..end,
+                semanticTokens,
+                null
+            )
         }
         else if (peek().type != TokenType.SYMBOL || peek().value in Symbol.getExpressionStartableSymbols().map(Symbol::value)) {
             val expr = expression()
+            val end = getPreviousTokenEndPosition()
             if (peekIgnoreNewLine() `is` Symbol.SEMICOLON) nextIgnoreNewLine()
-            return ReturnStatement(s..getPreviousTokenEndPosition(), expr)
+            return ReturnStatement(
+                start..end,
+                semanticTokens,
+                expr
+            )
         }
-        else {
-            return ReturnStatement(s..getPreviousTokenEndPosition(), null)
-        }
+
+        val end = getPreviousTokenEndPosition()
+
+        throw exception(start..end, "invalid return statement")
     }
 
-    private fun `while`(semanticTokens: MutableList<BclSemanticToken>): WhileStatement {
-        val s = getCurrentTokenStartPosition()
+    private fun `while`(): WhileStatement {
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.WHILE)
         val label = labelNullable()
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
         val condition = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
+        val end = getPreviousTokenEndPosition()
 
-        return WhileStatement(s..getPreviousTokenEndPosition(), false, label, condition, block(true, semanticTokens))
+        return WhileStatement(
+            start..end,
+            semanticTokens,
+            false,
+            label,
+            condition,
+            block(true)
+        )
     }
 
-    private fun doWhile(semanticTokens: MutableList<BclSemanticToken>): WhileStatement {
-        val s = getCurrentTokenStartPosition()
+    private fun doWhile(): WhileStatement {
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.DO)
         val label = labelNullable()
-        val block = block(true, semanticTokens)
+        val block = block(true)
         expectIgnoreNewLine(Keyword.WHILE)
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
         val condition = expression()
         expectIgnoreNewLine(Symbol.PARENTHESIS_END)
+        val end = getPreviousTokenEndPosition()
         requireSeparator()
 
-        return WhileStatement(s..getPreviousTokenEndPosition(), true, label, condition, block)
+        return WhileStatement(
+            start..end,
+            semanticTokens,
+            true,
+            label,
+            condition,
+            block
+        )
     }
 
     private fun labelNullable(): Label? {
@@ -647,22 +704,34 @@ class BclParser(
     }
 
     private fun `continue`(): ContinueStatement {
-        val s = getCurrentTokenStartPosition()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.CONTINUE)
         val label = labelNullable()
+        val end = getPreviousTokenEndPosition()
         requireSeparator()
-        return ContinueStatement(s..getPreviousTokenEndPosition(), label)
+        return ContinueStatement(
+            start..end,
+            semanticTokens,
+            label
+        )
     }
 
     private fun `break`(): BreakStatement {
-        val s = getCurrentTokenStartPosition()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+        val start = getCurrentTokenStartPosition()
         expectIgnoreNewLine(Keyword.BREAK)
         val label = labelNullable()
+        val end = getPreviousTokenEndPosition()
         requireSeparator()
-        return BreakStatement(s..getPreviousTokenEndPosition(), label)
+        return BreakStatement(
+            start..end,
+            semanticTokens,
+            label
+        )
     }
 
-    private fun block(requireBraces: Boolean, semanticTokens: MutableList<BclSemanticToken>): Block {
+    private fun block(requireBraces: Boolean): Block {
         if (isOverIgnoreNewLine()) {
             throw exception(getOverNextSourceSpan(), "ブロックが期待されましたが、入力が不足しています")
         }
@@ -682,7 +751,7 @@ class BclParser(
                 break
             }
 
-            nodes.add(node(semanticTokens))
+            nodes.add(node())
         }
 
         val end = getPreviousTokenEndPosition()
@@ -690,24 +759,17 @@ class BclParser(
         return Block(start..end, nodes)
     }
 
-    private fun node(semanticTokens: MutableList<BclSemanticToken>): Node {
+    private fun node(): Node {
         if (isOver()) {
             throw exception(getOverNextSourceSpan(), "命令のパースに失敗しました: 入力が不足しています")
         }
 
         // TODO betaFeatures
         val node = if (sender.beta && sender.extension && peekIgnoreNewLine().value.startsWith(Symbol.AT.value)) {
-            statement(semanticTokens)
-        }
-        else if (sender.extension && peekIgnoreNewLine() `is` Symbol.DIVIDE) {
-            val start = getCurrentTokenStartPosition()
-            nextIgnoreNewLine()
-            val end = getPreviousTokenEndPosition()
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
-            command(semanticTokens)
+            statement()
         }
         else {
-            command(semanticTokens)
+            command(CommandLineReader.normal(this, sender.extension))
         }
 
         while (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.SEMICOLON) {
@@ -717,7 +779,7 @@ class BclParser(
         return node
     }
 
-    fun parse(semanticTokens: MutableList<BclSemanticToken> = mutableListOf()): Block {
+    fun parse(): Block {
         // val diagnostics = mutableListOf<BclDiagnostic>()
 
         if (isOverIgnoreNewLine()) {
@@ -725,7 +787,7 @@ class BclParser(
         }
 
         try {
-            return block(false, semanticTokens)
+            return block(false)
         }
         finally {
             cursor = 0

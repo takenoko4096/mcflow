@@ -1,6 +1,7 @@
 package io.github.takenoko4096.bcl.tokenizer
 
 import io.github.takenoko4096.bcl.brigadier.BclComment
+import io.github.takenoko4096.bcl.reader.CommandLineReader
 
 class BclTokenizer(text: String, private val extension: Boolean, private val comments: MutableList<BclComment>? = mutableListOf()) {
     val sourceCode: String = text
@@ -400,7 +401,14 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
             val end = getSourcePositionAtBack()
             val sourceSpan = start..end
-            comments.add(BclComment.commentCommandLine(sourceCode, sourceSpan) ?: BclComment.Line(sourceSpan))
+
+            val commandLineReader = CommandLineReader.comment(sourceCode, sourceSpan)
+            comments.add(if (commandLineReader == null) {
+                BclComment.Line(sourceSpan)
+            }
+            else {
+                BclComment.CommandLine(sourceSpan, commandLineReader)
+            })
 
             return true
         }

@@ -90,7 +90,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                 ),
                 reader.lastSourcePosition..reader.lastSourcePosition,
                 reader.lastSourcePosition,
-                emptyList()
+                reader.preprocessedSemanticTokens
             )
         }
 
@@ -127,7 +127,8 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     this,
                     bestRoutePotential.state.route,
                     bestRoutePotential.state.arguments,
-                    diagnostics
+                    diagnostics,
+                    sender
                 )
 
                 val resultValue = try {
@@ -148,7 +149,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         ),
                         start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                         bestRoutePotential.state.reader.lastSourcePosition,
-                        bestRoutePotential.semanticTokens
+                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens
                     )
                 }
 
@@ -161,7 +162,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         completionCandidates,
                         start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                         bestRoutePotential.state.reader.lastSourcePosition,
-                        bestRoutePotential.semanticTokens,
+                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens,
                         resultValue
                     )
                 }
@@ -175,16 +176,18 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                         diagnostics,
                         start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
                         bestRoutePotential.state.reader.lastSourcePosition,
-                        bestRoutePotential.semanticTokens
+                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens
                     )
                 }
             }
             else {
-                val semanticTokens = bestRoutePotential.semanticTokens.toMutableList()
+                val semanticTokens = (reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens).toMutableList()
 
-                val cloned = bestRoutePotential.state.reader.clone()
-                cloned.cursor = bestRoutePotential.furthestCursor
-                cloned.getSourceSpansOfRemainingLines().forEach {
+                val furthestReader = bestRoutePotential.state.reader
+                    .clone()
+                    .apply { cursor = bestRoutePotential.furthestCursor }
+
+                furthestReader.getSourceSpansOfRemainingLines().forEach {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, it))
                 }
 
@@ -195,7 +198,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
                     bestRoutePotential.state.arguments,
                     completionCandidates,
                     bestRoutePotential.diagnostics,
-                    start..cloned.getPreviousTokenEndPosition(),
+                    start..furthestReader.getPreviousTokenEndPosition(),
                     bestRoutePotential.state.reader.lastSourcePosition,
                     semanticTokens
                 )
@@ -220,7 +223,7 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
             ),
             sourceSpan,
             reader.lastSourcePosition,
-            emptyList()
+            reader.preprocessedSemanticTokens
         )
     }
 

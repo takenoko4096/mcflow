@@ -13,7 +13,8 @@ class CommandContext(
     private val dispatcher: CommandDispatcher,
     private val route: List<CommandNode>,
     private val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
-    private val diagnostics: MutableList<BclDiagnostic>
+    private val diagnostics: MutableList<BclDiagnostic>,
+    val sender: CommandSender
 ) {
     fun addDiagnostic(sourceSpan: SourceSpan, message: String) {
         diagnostics.add(BclDiagnostic(message, sourceCode, sourceSpan))
