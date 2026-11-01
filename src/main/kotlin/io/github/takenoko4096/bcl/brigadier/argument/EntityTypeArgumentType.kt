@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -15,7 +16,11 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType<EntityType>("entity_type") {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntityType> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<EntityType> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val start = reader.getCurrentTokenStartPosition()
         val identifier = reader.readNamespacedIdentifier()
         val end = reader.getPreviousTokenEndPosition()

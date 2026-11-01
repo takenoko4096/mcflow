@@ -27,61 +27,59 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     private val client: LanguageClient
         get() = server.client
 
-    private fun parse(uri: String?, text: String, extension: Boolean): Block {
-        val sender = uri?.run { files[this] }?.sender ?: CommandSender()
+    private fun parse(uri: String?, text: String, extension: Boolean): CommandDocumentFile {
+        val sender = CommandSender()
         sender.extension = extension
 
         val comments = mutableListOf<BclComment>()
         val tokenizer = BclTokenizer(text, extension, comments)
         val tokens = tokenizer.tokenize()
 
-        val parser = BclParser(tokenizer.sourceCode, tokens, server.dispatcher, sender)
-        val commentCommandParseResults = mutableListOf<CommandLineParseResult>()
-
-        for (comment in comments) {
-            if (comment is BclComment.CommandLine) {
-                val result = server.commentCommandDispatcher.parse(comment.reader, sender)
-                commentCommandParseResults += result
-            }
-        }
+        val parser = BclParser(
+            tokenizer.sourceCode,
+            tokens,
+            server.dispatcher,
+            server.commentCommandDispatcher,
+            sender
+        )
 
         val block = parser.parse()
 
-        if (uri != null) {
-            if (uri in files) {
-                val file = files[uri]!!
-                file.sourceCode = tokenizer.sourceCode
-                file.block = block
-                file.comments = comments
-                file.commentCommandParseResults = commentCommandParseResults
+        val file: CommandDocumentFile = if (uri in files) {
+            val file = files[uri]!!
+            file.sourceCode = tokenizer.sourceCode
+            file.block = block
+            file.comments = comments
+            file
+        }
+        else {
+            val file = CommandDocumentFile(
+                sourceCode = tokenizer.sourceCode,
+                block = block,
+                comments = comments
+            )
+
+            if (uri != null) {
+                files[uri] = file
             }
-            else {
-                files[uri] = CommandDocumentFile(
-                    sourceCode = tokenizer.sourceCode,
-                    block = block,
-                    comments = comments,
-                    commentCommandParseResults = commentCommandParseResults,
-                    sender = sender
-                )
-            }
+
+            file
         }
 
-        return block
+        return file
     }
 
-    private fun publishDiagnostics(uri: String, block: Block, commentCommandParseResults: List<CommandLineParseResult>) {
+    private fun publishDiagnostics(uri: String, block: Block) {
         client.publishDiagnostics(PublishDiagnosticsParams(
             uri,
-            (block.nodes.filterIsInstance<CommandLineParseResult.Failure>() + commentCommandParseResults.filterIsInstance<CommandLineParseResult.Failure>())
-                .flatMap {
-                    it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic)
-                }
+            block.nodes.filterIsInstance<CommandLineParseResult.Failure>()
+                .flatMap { it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic) }
         ))
     }
 
-    private fun getLastLineParseResult(block: Block, commentCommandParseResults: List<CommandLineParseResult>): CommandLineParseResult? {
+    private fun getLastLineParseResult(block: Block): CommandLineParseResult? {
         val commandLineParseResults = block.nodes.filterIsInstance<CommandLineParseResult>()
-        val results = (commandLineParseResults + commentCommandParseResults).sortedBy { it.sourceSpan.start.index }
+        val results = commandLineParseResults.sortedBy { it.sourceSpan.start.index }
         return results.lastOrNull()
     }
 
@@ -92,7 +90,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             extension = params.textDocument.uri.endsWith(".mcflow")
         )
         val file = files[params.textDocument.uri]!!
-        publishDiagnostics(params.textDocument.uri, file.block, file.commentCommandParseResults)
+        publishDiagnostics(params.textDocument.uri, file.block)
     }
 
     override fun didChange(params: DidChangeTextDocumentParams) {
@@ -113,7 +111,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         parse(uri, sourceCode, extension = uri.endsWith(".mcflow"))
         val file = files[uri]!!
-        publishDiagnostics(uri, file.block, file.commentCommandParseResults)
+        publishDiagnostics(uri, file.block)
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {}
@@ -127,7 +125,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val hints = mutableListOf<InlayHint>()
 
-        for (result in block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults) {
+        for (result in block.nodes.filterIsInstance<CommandLineParseResult>()) {
             for ((node, argument) in result.arguments) {
                 if (!argument.type.hasInlayHint) continue
 
@@ -162,9 +160,9 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
-        val block = parse(null, subSourceCode, extension = uri.endsWith(".mcflow"))
+        val fakeFile = parse(null, subSourceCode, uri.endsWith(".mcflow"))
 
-        val result = getLastLineParseResult(block, file.commentCommandParseResults) ?: return empty
+        val result = getLastLineParseResult(fakeFile.block) ?: return empty
 
         val items = mutableListOf<CompletionItem>()
 
@@ -236,7 +234,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val block = file.block
 
-        val commandLineParseResults = block.nodes.filterIsInstance<CommandLineParseResult>() + file.commentCommandParseResults
+        val commandLineParseResults = block.nodes.filterIsInstance<CommandLineParseResult>()
         val commentSemanticTokens = file.comments.map { BclSemanticToken(BclSemanticTokenType.COMMENT, it.sourceSpan) }
 
         val tokens = (commandLineParseResults.flatMap { it.semanticTokens } + commentSemanticTokens)
@@ -297,8 +295,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
-        val block = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
-        val result = getLastLineParseResult(block, file.commentCommandParseResults) ?: return CompletableFuture.completedFuture(null)
+        val fakeFile = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
+        val result = getLastLineParseResult(fakeFile.block) ?: return CompletableFuture.completedFuture(null)
 
         if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
             return CompletableFuture.completedFuture(null)

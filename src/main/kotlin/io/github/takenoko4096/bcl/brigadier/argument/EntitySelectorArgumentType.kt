@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
@@ -978,7 +979,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<EntitySelector> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<EntitySelector> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val arguments = SelectorArguments()
 
         if (reader.isOver()) {

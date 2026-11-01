@@ -19,11 +19,11 @@ class BedrockCommandLanguageServer : LanguageServer, LanguageClientAware {
 
     lateinit var client: LanguageClient
 
-    val dispatcher = CommandDispatcher("root", detailedOutput = false).apply {
+    val dispatcher = CommandDispatcher("root").apply {
         Commands.getAllVanillaCommandBuilders().forEach(::register)
     }
 
-    val commentCommandDispatcher = CommandDispatcher("root").apply {
+    val commentCommandDispatcher = CommandDispatcher("root", BclSemanticTokenType.COMMENT_COMMAND).apply {
         CommentCommands.getAllCommentCommandBuilders().forEach(::register)
     }
 

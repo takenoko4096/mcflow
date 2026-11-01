@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.misc.PARTICLES
@@ -15,14 +16,25 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class ParticleArgumentType : IdentifierArgumentType("particle", defaultNamespace = NamespacedIdentifier.DEFAULT_NAMESPACE) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<NamespacedIdentifier> {
-        val result = super.parse(reader, diagnostics, semanticTokens)
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<NamespacedIdentifier> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        // val semanticTokens = context.semanticTokens
+
+        val result = super.parse(context)
         if (result is Argument) {
             if (result.value.toString() in PARTICLES) {
                 return result
             }
+            else if (context.sender.resourceUnvanillaReport == null) {
+                return result
+            }
             else {
-                diagnostics.add(reader.diagnostic(result.sourceSpan, "パーティクル名の解析に失敗しました: 不明なパーティクルです: '${result.value}'"))
+                diagnostics.add(reader.diagnostic(
+                    result.sourceSpan,
+                    "パーティクル名の解析に失敗しました: 不明なパーティクルです: '${result.value}'",
+                    context.sender.resourceUnvanillaReport!!
+                ))
                 return NoValuedArgument(this, result.sourceSpan, diagnostics)
             }
         }

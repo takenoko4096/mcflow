@@ -106,6 +106,10 @@
                 "description": "A comment"
             },
             {
+                "id": "mcflow_comment_command",
+                "description": "A comment command"
+            },
+            {
                 "id": "mcflow_error",
                 "description": "An error"
             }
@@ -133,7 +137,8 @@
                     "mcflow_error": "#f44747",
                     "mcflow_enum": "#4fc1ff",
                     "mcflow_comment": "#699859",
-                    "mcflow_identifier": "#e6e6aa"
+                    "mcflow_identifier": "#e6e6aa",
+                    "mcflow_comment_command": "#93a629"
                 }
             }
         }

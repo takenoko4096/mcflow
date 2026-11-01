@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
@@ -15,7 +16,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 
 class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Coordinate> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<Coordinate> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val startX = reader.getCurrentTokenStartPosition()
         val x = reader.readCoordinateComponent(blockCenterCorrection = true)
         val endX = reader.getPreviousTokenEndPosition()

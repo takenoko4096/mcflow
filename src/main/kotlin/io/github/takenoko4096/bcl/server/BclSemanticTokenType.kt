@@ -15,6 +15,7 @@ enum class BclSemanticTokenType : StringRepresentable {
     SYMBOL,
     ENUM,
     COMMENT,
+    COMMENT_COMMAND,
 
     ERROR;
 

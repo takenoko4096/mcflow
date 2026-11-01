@@ -393,6 +393,9 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
             return true
         }
+        else if (test(KeyChar.COMMENT_COMMAND_PREFIX_SEQUENCE)) {
+            return false
+        }
         else if (testThenAdvance(KeyChar.LINE_COMMENT_SEQUENCE)) {
             while (!isOver()) {
                 if (peek() == KeyChar.LINEBREAK) break
@@ -401,14 +404,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
             val end = getSourcePositionAtBack()
             val sourceSpan = start..end
-
-            val commandLineReader = CommandLineReader.comment(sourceCode, sourceSpan)
-            comments.add(if (commandLineReader == null) {
-                BclComment.Line(sourceSpan)
-            }
-            else {
-                BclComment.CommandLine(sourceSpan, commandLineReader)
-            })
+            comments.add(BclComment.Line(sourceSpan))
 
             return true
         }

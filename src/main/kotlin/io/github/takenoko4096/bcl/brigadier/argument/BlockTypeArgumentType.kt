@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -15,7 +16,11 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<BlockType> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<BlockType> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
 
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
@@ -30,6 +35,7 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
             }
         }
 
+        // TODO unvanilla
         diagnostics.add(reader.diagnostic(identifier.sourceSpan, "不明なブロックタイプです: ${identifier.value}"))
         return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
     }

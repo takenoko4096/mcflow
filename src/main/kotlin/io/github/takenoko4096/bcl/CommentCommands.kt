@@ -23,6 +23,7 @@ object CommentCommands {
     }
 
     fun getAllCommentCommandBuilders() = listOf(
+        PERMISSION_LEVEL,
         UNVANILLA
     )
 }

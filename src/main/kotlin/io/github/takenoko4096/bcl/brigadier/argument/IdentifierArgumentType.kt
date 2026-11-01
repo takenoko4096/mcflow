@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -15,7 +16,11 @@ open class IdentifierArgumentType(
     private val quotable: Boolean = true,
     private val strict: Boolean = true
 ) : ArgumentType<NamespacedIdentifier>(name) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<NamespacedIdentifier> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<NamespacedIdentifier> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val identifier = reader.unfatalize(diagnostics) {
             readNamespacedIdentifier(defaultNamespace, quotable, strict)
         }

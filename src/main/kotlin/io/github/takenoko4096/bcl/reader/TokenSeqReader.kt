@@ -552,8 +552,8 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause, unfatalizable)
     }
 
-    fun diagnostic(sourceSpan: SourceSpan, message: String, isWarning: Boolean = false): BclDiagnostic {
-        return BclDiagnostic(message, sourceCode, sourceSpan, isWarning)
+    fun diagnostic(sourceSpan: SourceSpan, message: String, severity: BclDiagnostic.Severity = BclDiagnostic.Severity.ERROR): BclDiagnostic {
+        return BclDiagnostic(message, sourceCode, sourceSpan, severity)
     }
 
     fun readIntRange(): IntRange {

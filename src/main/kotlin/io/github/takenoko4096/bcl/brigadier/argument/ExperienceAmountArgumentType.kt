@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.ExperienceAmount
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -10,7 +11,11 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 
 class ExperienceAmountArgumentType : ArgumentType<ExperienceAmount>("experience_amount") {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<ExperienceAmount> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<ExperienceAmount> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val start = reader.getCurrentTokenStartPosition()
         val amount = reader.readExperienceAmount()
         val end = reader.getPreviousTokenEndPosition()

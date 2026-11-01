@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
@@ -12,7 +13,11 @@ class IntegerArgumentType(
     private val allowExtendedNotation: Boolean,
     private val range: IntRange?
 ) : ArgumentType<Int>("integer", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Int> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<Int> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val start = reader.getCurrentTokenStartPosition()
         val i = reader.readInteger(allowExtendedNotation)
         val end = reader.getPreviousTokenEndPosition()

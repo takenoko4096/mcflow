@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
@@ -21,11 +22,15 @@ class BlockStateArgumentType(
     private val blockTypeArgumentType: BlockTypeArgumentType,
     private val blockPropertiesArgumentType: BlockPropertiesArgumentType
 ) : ArgumentType<BlockState>("block_state") {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<BlockState> {
-        val blockTypeParseResult = blockTypeArgumentType.parse(reader, diagnostics, semanticTokens)
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<BlockState> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        // val semanticTokens = context.semanticTokens
+
+        val blockTypeParseResult = blockTypeArgumentType.parse(context)
 
         val blockPropertiesParseResult = if (!reader.isOver() && reader.peek() `is` Symbol.ARRAY_START) {
-            blockPropertiesArgumentType.parse(reader, diagnostics, semanticTokens)
+            blockPropertiesArgumentType.parse(context)
         }
         else null
 
@@ -39,6 +44,7 @@ class BlockStateArgumentType(
                     val properties = blockPropertiesParseResult.value
                     for (entry in properties) {
                         if (entry.property !in blockTypeParseResult.value) {
+                            // TODO unvanilla
                             diagnostics.add(reader.diagnostic(blockPropertiesParseResult.sourceSpan, "プロパティ '${entry.property.name}' はブロック '${blockType.identifier}' に存在しません"))
                         }
                     }

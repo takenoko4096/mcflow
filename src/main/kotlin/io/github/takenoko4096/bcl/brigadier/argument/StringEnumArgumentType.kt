@@ -5,6 +5,7 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -13,7 +14,11 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 
 class StringEnumArgumentType(name: String, private val entries: Array<String>) : ArgumentType<String>(name) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<String> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<String> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val start = reader.getCurrentTokenStartPosition()
         val string = reader.readQuotableCommandString()
         val end = reader.getPreviousTokenEndPosition()

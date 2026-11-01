@@ -12,7 +12,10 @@ import io.github.takenoko4096.bcl.completer.CompletionCandidate
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
-class CommandDispatcher(name: String, private val detailedOutput: Boolean = false) {
+class CommandDispatcher(
+    name: String,
+    private val commandSemanticTokenType: BclSemanticTokenType = BclSemanticTokenType.COMMAND
+) {
     private val root = RootCommandNode(name, mutableMapOf())
 
     fun getCommand(name: String): Command? {
@@ -229,7 +232,13 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
 
     fun evaluate(sourceCode: String): List<CommandLineParseResult> {
         val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
-        val block = BclParser(sourceCode, tokens, this, CommandSender(extension = false)).parse()
+        val block = BclParser(
+            sourceCode,
+            tokens,
+            this,
+            CommandDispatcher("root"),
+            CommandSender(extension = false)
+        ).parse()
         return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
 
@@ -318,7 +327,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         val end = reader.getPreviousTokenEndPosition()
 
         context.semanticTokens += BclSemanticToken(
-            if (node is Command) BclSemanticTokenType.COMMAND else BclSemanticTokenType.LITERAL,
+            if (node is Command) {
+                commandSemanticTokenType
+            }
+            else {
+                BclSemanticTokenType.LITERAL
+            },
             start..end
         )
 
@@ -401,11 +415,12 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
         val diagnosticCountBeforeParse = context.diagnostics.size
 
         val argumentParseResult = try {
-            node.type.parse(
+            node.type.parse(CommandArgumentParseContext(
                 reader,
+                context.sender,
                 context.diagnostics,
                 context.semanticTokens
-            )
+            ))
         }
         catch (error: BclTokenSeqReadException) {
             var end = reader.getPreviousTokenEndPosition()
@@ -461,10 +476,6 @@ class CommandDispatcher(name: String, private val detailedOutput: Boolean = fals
      * 元 dispatch() の catch ブロックに対応する。
      */
     private fun createParseErrorPotential(context: NodeParseContext, error: BclTokenSeqReadException): RoutePotential {
-        if (detailedOutput) {
-            error.printStackTrace(System.err)
-        }
-
         return RoutePotential(
             state = context.nextState.copy(
                 literalCount = context.parentState.literalCount,

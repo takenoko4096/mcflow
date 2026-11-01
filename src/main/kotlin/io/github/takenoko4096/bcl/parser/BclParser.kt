@@ -37,6 +37,7 @@ class BclParser(
     sourceCode: String,
     tokens: List<Token>,
     private val dispatcher: CommandDispatcher,
+    private val commentCommandDispatcher: CommandDispatcher,
     private val sender: CommandSender
 ) : TokenSeqReader(sourceCode, tokens, ::BclParseException) {
     private fun expression(): Expression {
@@ -486,7 +487,7 @@ class BclParser(
     }
 
     private fun command(reader: CommandLineReader, /*macros: Map<String, String>*/): CommandLineParseResult {
-        return dispatcher.parse(reader, sender)
+        return (if (reader.isCommentCommand) commentCommandDispatcher else dispatcher).parse(reader, sender)
     }
 
     private fun statement(): Statement {
@@ -769,7 +770,7 @@ class BclParser(
             statement()
         }
         else {
-            command(CommandLineReader.normal(this, sender.extension))
+            command(CommandLineReader.of(this, sender.extension))
         }
 
         while (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.SEMICOLON) {

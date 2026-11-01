@@ -4,6 +4,7 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.OpenableFloatRange
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -12,7 +13,11 @@ import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 class FloatArgumentType(
     private val range: OpenableFloatRange?
 ) : ArgumentType<Float>("float", hasInlayHint = true) {
-    override fun parse(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): ArgumentParseResult<Float> {
+    override fun parse(context: CommandArgumentParseContext): ArgumentParseResult<Float> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
         val start = reader.getCurrentTokenStartPosition()
         val f = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
