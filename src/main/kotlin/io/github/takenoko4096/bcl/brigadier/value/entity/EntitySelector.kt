@@ -4,6 +4,8 @@ import io.github.takenoko4096.bcl.brigadier.Argument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.argument.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.parser.BclParseException
@@ -54,7 +56,12 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             val start = reader.getCurrentTokenStartPosition()
 
             val selector = try {
-                type.parse(reader, dummyDiags, dummySemcs)
+                type.parse(CommandArgumentParseContext(
+                    reader,
+                    sender = CommandSender(),
+                    dummyDiags,
+                    dummySemcs
+                ))
             }
             catch (error: BclTokenSeqReadException) {
                 dummyDiags.add(reader.diagnostic(error.sourceSpan, error.description))
