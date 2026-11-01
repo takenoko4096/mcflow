@@ -400,7 +400,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
 
             val end = getSourcePositionAtBack()
             val sourceSpan = start..end
-            comments.add(BclComment.newCommentCommandLine(sourceCode, sourceSpan) ?: BclComment.Line(sourceSpan))
+            comments.add(BclComment.commentCommandLine(sourceCode, sourceSpan) ?: BclComment.Line(sourceSpan))
 
             return true
         }

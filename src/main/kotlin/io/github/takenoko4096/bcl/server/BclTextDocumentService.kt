@@ -39,7 +39,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         for (comment in comments) {
             if (comment is BclComment.CommentCommandLine) {
-                val prefixSourceSpan = comment.reader.getSourceCodeFirstPosition()..comment.reader.getPreviousTokenEndPosition()
+                val prefixSourceSpan = comment.reader.getFirstPosition()..comment.reader.getPreviousTokenEndPosition()
                 commandLineExclusiveSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.COMMENT, prefixSourceSpan))
                 commentCommandParseResults.add(server.commentCommandDispatcher.parse(comment.reader, sender))
             }
@@ -92,8 +92,21 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
     override fun didChange(params: DidChangeTextDocumentParams) {
         val uri = params.textDocument.uri
-        val text = params.contentChanges.last().text
-        parse(uri, text, extension = uri.endsWith(".mcflow"))
+
+        var sourceCode = files[uri]!!.sourceCode
+        for (change in params.contentChanges) {
+            val range = change.range
+            val text = change.text
+            val start = SourcePosition.from(sourceCode, range.start)
+            val end = SourcePosition.from(sourceCode, range.end)
+            sourceCode = buildString {
+                append(sourceCode.slice(0..<start.index))
+                append(text)
+                append(sourceCode.slice(end.index..sourceCode.lastIndex))
+            }
+        }
+
+        parse(uri, sourceCode, extension = uri.endsWith(".mcflow"))
         val file = files[uri]!!
         publishDiagnostics(uri, file.block, file.commentCommandParseResults)
     }

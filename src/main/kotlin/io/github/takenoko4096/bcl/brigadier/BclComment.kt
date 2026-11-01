@@ -14,7 +14,7 @@ abstract class BclComment(val sourceSpan: SourceSpan) {
     class CommentCommandLine(sourceSpan: SourceSpan, val reader: CommandLineReader) : BclComment(sourceSpan)
 
     companion object {
-        fun newCommentCommandLine(sourceCode: String, sourceSpan: SourceSpan): CommentCommandLine? {
+        fun commentCommandLine(sourceCode: String, sourceSpan: SourceSpan): CommentCommandLine? {
             val string = sourceSpan.getStringFromSourceCode(sourceCode)
             if (!string.startsWith(KeyChar.COMMENT_COMMAND_PREFIX_SEQUENCE)) return null
 
