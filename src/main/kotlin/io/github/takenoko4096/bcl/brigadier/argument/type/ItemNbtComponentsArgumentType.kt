@@ -2,7 +2,9 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
@@ -81,7 +83,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
 
     override fun getSchema() = components
 
-    override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
+    override fun interpret(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
         val result = components.validate(obj, reader.sourceCode, diagnostics)
 
         if (!result) {
@@ -91,12 +93,12 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
         val map = mutableMapOf<NamespacedIdentifier, ItemNbtComponent>()
 
         val canPlaceOnObjects = obj.getWrappers("minecraft:can_place_on", CommandJsonObject::class) + obj.getWrappers("can_place_on", CommandJsonObject::class)
-        getBlockTypes(reader, diagnostics, semanticTokens, canPlaceOnObjects)?.run {
+        getBlockTypes(sender, reader, diagnostics, semanticTokens, canPlaceOnObjects)?.run {
             map[ItemNbtComponents.CAN_PLACE_ON] = ItemNbtComponent.CanPlaceOn(second, first)
         }
 
         val canDestroyObjects = obj.getWrappers("minecraft:can_destroy", CommandJsonObject::class) + obj.getWrappers("can_destroy", CommandJsonObject::class)
-        getBlockTypes(reader, diagnostics, semanticTokens, canDestroyObjects)?.run {
+        getBlockTypes(sender, reader, diagnostics, semanticTokens, canDestroyObjects)?.run {
             map[ItemNbtComponents.CAN_DESTROY] = ItemNbtComponent.CanDestroy(second, first)
         }
 
@@ -113,7 +115,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
         return ItemNbtComponents(map)
     }
 
-    private fun getBlockTypes(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, List<VanillaBlockType>>? {
+    private fun getBlockTypes(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, List<BlockType>>? {
         return objects
             .mapNotNull {
                 val blockTypes = it.getWrappers("blocks", CommandJsonArray::class)
@@ -128,10 +130,18 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                                 return@mapNotNull null
                             }
 
-                            VanillaBlockType.get(id) ?: run {
-                                diagnostics.add(reader.diagnostic(element.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 不明なブロックタイプです: '$string'"))
-                                return@mapNotNull null
-                            }
+                            VanillaBlockType.get(id)
+                                ?.toBlockType()
+                                ?: run {
+                                    if (sender.behaviorUnvanillaReport != null) {
+                                        diagnostics.add(reader.diagnostic(
+                                            element.sourceSpan,
+                                            "アイテムNBTコンポーネントの読み取りに失敗しました: 不明なブロックタイプです: '$string'",
+                                            sender.behaviorUnvanillaReport!!
+                                        ))
+                                    }
+                                    return@mapNotNull BlockType(id, setOf(), isVanilla = false)
+                                }
                         }
                     }
                     .firstOrNull()

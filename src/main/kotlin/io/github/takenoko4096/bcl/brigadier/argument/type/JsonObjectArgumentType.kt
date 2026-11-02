@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
@@ -36,7 +37,7 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         }
 
         val result = try {
-            val value = interpret(reader, diagnostics, semanticTokens, obj)
+            val value = interpret(context.sender, reader, diagnostics, semanticTokens, obj)
             Argument(this, value, obj.sourceSpan)
         }
         catch (error: BclTokenSeqReadException) {
@@ -90,5 +91,5 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         }
     }
 
-    protected abstract fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): T
+    protected abstract fun interpret(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): T
 }

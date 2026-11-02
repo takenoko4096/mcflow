@@ -33,7 +33,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
-        fun parse(string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
+        fun parse(sender: CommandSender, string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
             val dummyDiags = mutableListOf<BclDiagnostic>()
             val dummySemcs = mutableListOf<BclSemanticToken>()
 
@@ -58,7 +58,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             val selector = try {
                 type.parse(ArgumentParseContext(
                     reader,
-                    sender = CommandSender(),
+                    sender = sender,
                     dummyDiags,
                     dummySemcs
                 ))
@@ -84,7 +84,8 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
                     BclDiagnostic(
                         diag.message,
                         diag.sourceCode,
-                        (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset)
+                        (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset),
+                        diag.severity
                     )
                 }
             )

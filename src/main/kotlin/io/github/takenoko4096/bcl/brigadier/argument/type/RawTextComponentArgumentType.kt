@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
@@ -81,7 +82,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
 
     override fun getSchema() = root
 
-    override fun interpret(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): RawText {
+    override fun interpret(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): RawText {
         if (!root.validate(obj, reader.sourceCode, diagnostics)) {
             return RawText(emptyList(), obj)
         }
@@ -90,7 +91,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
             .map { array ->
                 array.list.map { element ->
                     element as CommandJsonObject
-                    toComponent(reader, diagnostics, semanticTokens, element)
+                    toComponent(sender, reader, diagnostics, semanticTokens, element)
                 }
             }
 
@@ -99,7 +100,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
         return RawText(components, obj)
     }
 
-    private fun toComponent(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): AbstractTextComponent {
+    private fun toComponent(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): AbstractTextComponent {
         // To be valid, an object must contain one content tag: [String] text, [String] translate, [NBT Compound / JSON Object] score, or [String] selector. Having more than one is allowed, but only one is used.[note 4]
         var component: AbstractTextComponent = AbstractTextComponent.Empty(obj)
 
@@ -112,7 +113,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
 
                 val selectors = names.mapNotNull { name ->
                     val offset = name.sourceSpan.trimEdge()?.start
-                    val result = EntitySelector.parse(name.value, diagnostics, semanticTokens, offset, name.sourceSpan)
+                    val result = EntitySelector.parse(sender, name.value, diagnostics, semanticTokens, offset, name.sourceSpan)
                     if (result is Argument) {
                         name to result.value
                     }
@@ -142,7 +143,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
 
             val selectorComponents = selectors.mapNotNull { string ->
                 val offset = string.sourceSpan.trimEdge()?.start
-                val v = when (val selectorParseResult = EntitySelector.parse(string.value, diagnostics, semanticTokens, offset, string.sourceSpan)) {
+                val v = when (val selectorParseResult = EntitySelector.parse(sender, string.value, diagnostics, semanticTokens, offset, string.sourceSpan)) {
                     is Argument<EntitySelector> -> {
                         SelectorComponent(
                             WithSpan(selectorParseResult.value, string.sourceSpan),
@@ -189,7 +190,7 @@ class RawTextComponentArgumentType : JsonObjectArgumentType<RawText>("rawtext") 
             }
 
             val withRawTexts = withs.filterIsInstance<CommandJsonObject>().map {
-                interpret(reader, diagnostics, semanticTokens, it)
+                interpret(sender, reader, diagnostics, semanticTokens, it)
             }
 
             when (val with = withs.first()) {
