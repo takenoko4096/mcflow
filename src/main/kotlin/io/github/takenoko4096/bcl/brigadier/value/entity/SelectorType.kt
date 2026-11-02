@@ -35,7 +35,7 @@ enum class SelectorType(
         defaultSortOrder = SelectorSortOrder.RANDOM,
         defaultArguments = SelectorArguments(
             c = WithSpan.builtin(1),
-            type = mutableListOf(InvertibleValue.uninverted(EntityType.PLAYER, SourceSpan.NULL))
+            type = mutableListOf(InvertibleValue.uninverted(VanillaEntityType.PLAYER.toEntityType(), SourceSpan.NULL))
         ),
         argumentsOverridable = true
     ),

@@ -7,6 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.argument.type.EntitySelectorArgumentType
+import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -19,7 +20,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     private val c = if (type.argumentsOverridable) arguments.c ?: type.defaultArguments.c else type.defaultArguments.c
 
-    val isPlayer = type.isPlayer || arguments.type.any { !it.inverted && it.value == EntityType.PLAYER }
+    val isPlayer = type.isPlayer || arguments.type.any { !it.inverted && it.value == VanillaEntityType.PLAYER.toEntityType() }
 
     val isSingle = c?.value == 1 || c?.value == -1
 

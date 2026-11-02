@@ -144,8 +144,12 @@ class CommandDispatcher(
                     sender
                 )
 
+                val executor = bestRoutePotential.state.route.last().executor ?: throw IllegalStateException(
+                    bestRoutePotential.toString()
+                )
+
                 val resultValue = try {
-                    bestRoutePotential.state.route.last().executor!!(context)
+                    context.executor()
                 }
                 catch (error: Throwable) {
                     return CommandLineParseResult.Failure(
@@ -155,7 +159,7 @@ class CommandDispatcher(
                         bestRoutePotential.state.arguments,
                         completionCandidates,
                         diagnosticsOnExecution + BclDiagnostic(
-                            error.message ?: error::class.java.name,
+                            error.message ?: "This is probably a bug. An error occurred in execution phase (caused by: ${bestRoutePotential.state.route})\n${error.stackTraceToString()}",
                             reader.sourceCode,
                             // TODO linebreak 対策
                             bestRoutePotential.state.reader.getEntireSourceSpan()
@@ -422,7 +426,7 @@ class CommandDispatcher(
         val start = reader.getCurrentTokenStartPosition()
 
         // ArgumentType.parse() が追加した diagnostic のみを検出するために保存
-        val diagnosticCountBeforeParse = context.diagnostics.size
+        val diagnosticCountBeforeParse = context.diagnostics.count { it.isError }
 
         val argumentParseResult = try {
             node.type.parse(
@@ -478,7 +482,7 @@ class CommandDispatcher(
          *
          * permission failure はここでは stateAtDiagnostic にしない。
          */
-        if (context.diagnostics.size > diagnosticCountBeforeParse) {
+        if (context.diagnostics.count { it.isError } > diagnosticCountBeforeParse) {
             context.saveStateAtParseError()
         }
     }

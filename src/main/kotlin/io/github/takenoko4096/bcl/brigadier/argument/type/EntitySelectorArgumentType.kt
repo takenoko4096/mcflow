@@ -14,6 +14,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.ActorProperty
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityContainerSlotType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntityType
+import io.github.takenoko4096.bcl.brigadier.value.entity.VanillaEntityType
 import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
@@ -32,7 +33,7 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
 
 class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntitySelector, SourceSpan, MutableList<BclDiagnostic>) -> Unit)? = null) : ArgumentType<EntitySelector>("entity_selector") {
-    private val parsers: Map<String, TokenSeqReader.(SelectorArguments, MutableList<BclDiagnostic>, MutableList<BclSemanticToken>, SourceSpan) -> Unit> = mapOf(
+    private val parsers: Map<String, (ArgumentParseContext, TokenSeqReader, SelectorArguments, MutableList<BclDiagnostic>, MutableList<BclSemanticToken>, SourceSpan) -> Unit> = mapOf(
         "c" to ::c,
         "dx" to ::dx,
         "dy" to ::dy,
@@ -85,7 +86,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         else false
     }
 
-    private fun c(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun c(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val c = reader.readInteger()
         val end = reader.getPreviousTokenEndPosition()
@@ -112,7 +113,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    private fun dx(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun dx(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val dx = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -127,7 +128,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.dx = WithSpan(dx, start..end)
     }
 
-    private fun dy(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun dy(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val dy = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -142,7 +143,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.dy = WithSpan(dy, start..end)
     }
 
-    private fun dz(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun dz(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val dz = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -157,7 +158,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.dz = WithSpan(dz, start..end)
     }
 
-    private fun family(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun family(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val inverted = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
         val string = reader.readQuotableCommandString()
@@ -168,7 +169,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.family.add(InvertibleValue(inverted, string, start..end))
     }
 
-    private fun hasPermission(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun hasPermission(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         reader.expect(Symbol.BRACE_START)
 
@@ -244,7 +245,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.hasPermission = hasPermission
     }
 
-    private fun hasProperty(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun hasProperty(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
 
         val properties = mutableListOf<InvertibleValue<NamespacedIdentifier>>()
@@ -470,7 +471,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return SelectorArguments.HasItem(item, location, slot, quantity, data, startG..endG)
     }
 
-    private fun hasItem(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun hasItem(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val list = mutableListOf<SelectorArguments.HasItem>()
 
         val start = reader.getCurrentTokenStartPosition()
@@ -500,7 +501,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.hasItem.addAll(list)
     }
 
-    private fun l(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun l(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val l = reader.readInteger()
         val end = reader.getPreviousTokenEndPosition()
@@ -520,7 +521,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.l = l
     }
 
-    private fun lm(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun lm(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val lm = reader.readInteger()
         val end = reader.getPreviousTokenEndPosition()
@@ -540,7 +541,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.lm = lm
     }
 
-    private fun m(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun m(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val inv = reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
         val s = reader.readCommandString(allowFloat = true)
@@ -562,7 +563,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.m = InvertibleValue(inv, gameMode, start..end)
     }
 
-    private fun name(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun name(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val inverted = reader.readIsInverted()
 
         val start = reader.getCurrentTokenStartPosition()
@@ -594,7 +595,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.name.add(InvertibleValue(inverted, name.value, start..end))
     }
 
-    private fun r(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun r(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val r = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -614,7 +615,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.r = r
     }
 
-    private fun rm(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun rm(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val rm = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -634,7 +635,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.rm = rm
     }
 
-    private fun rx(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun rx(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val rx = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -654,7 +655,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.rx = rx
     }
 
-    private fun rxm(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun rxm(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val rxm = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -674,7 +675,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.rxm = rxm
     }
 
-    private fun ry(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun ry(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val ry = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -694,7 +695,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.ry = ry
     }
 
-    private fun rym(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun rym(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val rym = reader.readFloat()
         val end = reader.getPreviousTokenEndPosition()
@@ -714,7 +715,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.rym = rym
     }
 
-    private fun scores(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun scores(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         reader.expect(Symbol.BRACE_START)
 
@@ -789,7 +790,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         if (!failure) arguments.scores = scores
     }
 
-    private fun tag(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun tag(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         if (reader.peek() `is` Symbol.ARRAY_END || reader.peek() `is` Symbol.COMMA) {
             arguments.tag.add(InvertibleValue.uninverted(null, SourceSpan.NULL))
             return
@@ -813,7 +814,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
     }
 
-    private fun type(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun type(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val inverted = reader.readIsInverted()
         val identifier = reader.readNamespacedIdentifier()
@@ -825,16 +826,24 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             diagnostics.add(reader.diagnostic(sourceSpan, "セレクタ引数 type は否定でない限り重複できません"))
         }
 
-        val entityType = EntityType.get(identifier)
+        val entityType = VanillaEntityType.get(identifier)
+            ?.toEntityType()
             ?: run {
-                diagnostics.add(reader.diagnostic(start..end, "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier"))
-                return
+                // unvanilla
+                if (context.sender.behaviorUnvanillaReport != null) {
+                    diagnostics.add(reader.diagnostic(
+                        start..end,
+                        "セレクタ引数 'type' の読み取りに失敗しました: 不明なエンティティタイプです: $identifier",
+                        context.sender.behaviorUnvanillaReport!!
+                    ))
+                }
+                EntityType(identifier, isSummonable = true, isVanilla = false)
             }
 
         arguments.type.add(InvertibleValue(inverted, entityType, start..end))
     }
 
-    private fun x(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun x(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val x = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
@@ -849,7 +858,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.x = x
     }
 
-    private fun y(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun y(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val y = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
@@ -864,7 +873,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.y = y
     }
 
-    private fun z(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun z(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         val start = reader.getCurrentTokenStartPosition()
         val z = reader.readCoordinateComponent(allowLocal = false)
         val end = reader.getPreviousTokenEndPosition()
@@ -879,7 +888,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         arguments.z = z
     }
 
-    private fun unknown(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
+    private fun unknown(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         if (reader.isOver()) return
         reader.readIsInverted()
         val start = reader.getCurrentTokenStartPosition()
@@ -923,7 +932,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         return SelectorType.PLAYER
     }
 
-    private fun parseSelectorArguments(reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
+    private fun parseSelectorArguments(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>) {
         val start = reader.getCurrentTokenStartPosition()
         if (reader.peek() `is` Symbol.ARRAY_START) {
             reader.next()
@@ -967,7 +976,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
             val keySpan = start2..end2
 
-            parser(reader, arguments, diagnostics, semanticTokens, keySpan)
+            parser(context, reader, arguments, diagnostics, semanticTokens, keySpan)
 
             val start4 = reader.getCurrentTokenStartPosition()
             if (reader.isOver()) {
@@ -1010,7 +1019,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
 
         if (!reader.isOver()) {
-            parseSelectorArguments(reader, arguments, diagnostics, semanticTokens)
+            parseSelectorArguments(context, reader, arguments, diagnostics, semanticTokens)
         }
 
         val end = reader.getPreviousTokenEndPosition()
@@ -1397,10 +1406,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             {
                 val invertion = completeChar(listOf(KeyChar.EXCLAMATION), CompletionItemKind.Keyword)
                 if (invertion is BclCompleter.ShouldComplete) return@combine invertion
-                completeUnquotedString(EntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
+                completeUnquotedString(VanillaEntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
             },
             {
-                completeUnquotedString(EntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
+                completeUnquotedString(VanillaEntityType.IDENTIFIERS, CompletionItemKind.EnumMember)
             }
         )
     }
