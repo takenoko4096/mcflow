@@ -2,7 +2,9 @@ package io.github.takenoko4096.bcl.brigadier
 
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.ast.Node
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
+import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
@@ -14,6 +16,7 @@ sealed class CommandLineParseResult(
     val literals: List<Pair<LiteralCommandNode, SourceSpan>>,
     val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     val completionCandidates: List<CompletionCandidate>,
+    val diagnostics: List<BclDiagnostic>,
     sourceSpan: SourceSpan,
     val lastSourcePosition: SourcePosition,
     val semanticTokens: List<BclSemanticToken>
@@ -24,11 +27,12 @@ sealed class CommandLineParseResult(
         literals: List<Pair<LiteralCommandNode, SourceSpan>>,
         arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
         completionCandidates: List<CompletionCandidate>,
+        diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan,
         lastSourcePosition: SourcePosition,
         semanticTokens: List<BclSemanticToken>,
         val resultValue: Any?
-    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, lastSourcePosition, semanticTokens) {
+    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, diagnostics, sourceSpan, lastSourcePosition, semanticTokens) {
         override fun toString(): String {
             return "Successful<${route.joinToString(" ") { it.toString() }}> $arguments"
         }
@@ -40,11 +44,11 @@ sealed class CommandLineParseResult(
         literals: List<Pair<LiteralCommandNode, SourceSpan>>,
         arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
         completionCandidates: List<CompletionCandidate>,
-        val diagnostics: List<BclDiagnostic>,
+        diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan,
         lastSourcePosition: SourcePosition,
         semanticTokens: List<BclSemanticToken>
-    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, sourceSpan, lastSourcePosition, semanticTokens) {
+    ) : CommandLineParseResult(route, literals, arguments, completionCandidates, diagnostics, sourceSpan, lastSourcePosition, semanticTokens) {
         override fun toString(): String {
             return if (command == null) {
                 "Failure<UNKNOWN COMMAND> $arguments;\n${diagnostics.joinToString("; ")}"

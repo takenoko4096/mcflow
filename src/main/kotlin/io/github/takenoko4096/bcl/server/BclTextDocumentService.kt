@@ -1,10 +1,10 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
-import io.github.takenoko4096.bcl.brigadier.BclComment
+import io.github.takenoko4096.bcl.ast.BclComment
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.Command
+import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
@@ -70,11 +70,11 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
     }
 
     private fun publishDiagnostics(uri: String, block: Block) {
-        client.publishDiagnostics(PublishDiagnosticsParams(
-            uri,
-            block.nodes.filterIsInstance<CommandLineParseResult.Failure>()
-                .flatMap { it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic) }
-        ))
+        val diagnostics = block.nodes
+            .filterIsInstance<CommandLineParseResult>()
+            .flatMap { it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic) }
+        System.err.println(diagnostics.map { it.severity })
+        client.publishDiagnostics(PublishDiagnosticsParams(uri, diagnostics))
     }
 
     private fun getLastLineParseResult(block: Block): CommandLineParseResult? {

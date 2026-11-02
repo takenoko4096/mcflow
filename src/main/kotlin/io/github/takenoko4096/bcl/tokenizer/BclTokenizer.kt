@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.tokenizer
 
-import io.github.takenoko4096.bcl.brigadier.BclComment
+import io.github.takenoko4096.bcl.ast.BclComment
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 
 class BclTokenizer(text: String, private val extension: Boolean, private val comments: MutableList<BclComment>? = mutableListOf()) {

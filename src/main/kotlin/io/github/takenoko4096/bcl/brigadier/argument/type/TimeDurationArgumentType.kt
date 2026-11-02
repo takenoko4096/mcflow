@@ -1,0 +1,30 @@
+package io.github.takenoko4096.bcl.brigadier.argument.type
+
+import io.github.takenoko4096.bcl.brigadier.argument.Argument
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
+import io.github.takenoko4096.bcl.server.BclSemanticToken
+import io.github.takenoko4096.bcl.brigadier.value.misc.TimeDuration
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+
+class TimeDurationArgumentType : ArgumentType<TimeDuration>("time_duration", hasInlayHint = true) {
+    override fun parse(context: ArgumentParseContext): ArgumentParseResult<TimeDuration> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
+        val start = reader.getCurrentTokenStartPosition()
+        val duration = reader.readTimeDuration()
+        val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+
+        if (duration.value < 0) {
+            diagnostics.add(reader.diagnostic(start..end, "時間の読み取りに失敗しました: 負の時間は無効です: '$duration'"))
+            return NoValuedArgument(this, start..end, diagnostics)
+        }
+
+        return Argument(this, duration, start..end)
+    }
+}

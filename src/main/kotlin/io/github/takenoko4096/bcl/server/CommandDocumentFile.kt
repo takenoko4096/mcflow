@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.ast.Block
-import io.github.takenoko4096.bcl.brigadier.BclComment
+import io.github.takenoko4096.bcl.ast.BclComment
 
 class CommandDocumentFile(
     var sourceCode: String,

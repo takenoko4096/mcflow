@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.node
 
-import io.github.takenoko4096.bcl.brigadier.Command
+import io.github.takenoko4096.bcl.brigadier.node.Command
 
 class RootCommandNode(
     name: String,

@@ -1,0 +1,68 @@
+package io.github.takenoko4096.bcl.brigadier.argument.type
+
+import io.github.takenoko4096.bcl.brigadier.argument.Argument
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
+import io.github.takenoko4096.bcl.server.BclSemanticToken
+import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
+import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
+import io.github.takenoko4096.bcl.completer.BclCompleter
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+
+class PositionArgumentType : ArgumentType<Coordinate>("position", hasInlayHint = true) {
+    override fun parse(context: ArgumentParseContext): ArgumentParseResult<Coordinate> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
+        val startX = reader.getCurrentTokenStartPosition()
+        val x = reader.readCoordinateComponent(blockCenterCorrection = true)
+        val endX = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, startX..endX))
+        val startY = reader.getCurrentTokenStartPosition()
+        val y = reader.readCoordinateComponent()
+        val endY = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, startY..endY))
+        val startZ = reader.getCurrentTokenStartPosition()
+        val z = reader.readCoordinateComponent(blockCenterCorrection = true)
+        val endZ = reader.getPreviousTokenEndPosition()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, startZ..endZ))
+
+        val coordinate = Coordinate.from(x, y, z)
+            ?: run {
+                diagnostics.add(reader.diagnostic(startX..endZ, "ワールド座標系とローカル座標系を混在させることはできません"))
+                return NoValuedArgument(this, startX..endZ, diagnostics)
+            }
+
+        return Argument(this, coordinate, startX..endZ)
+    }
+
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = BclCompleter(context)
+        val res = completer.completeCoordinate(listOf(
+            Coordinate.from(
+                CoordinateComponent.Absolute.ZERO,
+                CoordinateComponent.Absolute.ZERO,
+                CoordinateComponent.Absolute.ZERO
+            )!!,
+            Coordinate.from(
+                CoordinateComponent.Relative.ZERO,
+                CoordinateComponent.Relative.ZERO,
+                CoordinateComponent.Relative.ZERO
+            )!!,
+            Coordinate.from(
+                CoordinateComponent.Local.ZERO,
+                CoordinateComponent.Local.ZERO,
+                CoordinateComponent.Local.ZERO
+            )!!
+        ).map(Coordinate::toString), CompletionItemKind.Value)
+        if (res is BclCompleter.ShouldComplete) {
+            return res.items
+        }
+        return emptyList()
+    }
+}

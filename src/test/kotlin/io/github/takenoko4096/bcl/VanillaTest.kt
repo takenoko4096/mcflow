@@ -1,6 +1,6 @@
 package io.github.takenoko4096.bcl
 
-import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import java.io.PrintStream
 

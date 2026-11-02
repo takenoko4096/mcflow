@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.server
 
 import io.github.takenoko4096.bcl.Commands
 import io.github.takenoko4096.bcl.CommentCommands
-import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient

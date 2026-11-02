@@ -21,7 +21,7 @@ import io.github.takenoko4096.bcl.ast.statement.ReturnStatement
 import io.github.takenoko4096.bcl.ast.statement.SetStatement
 import io.github.takenoko4096.bcl.ast.statement.Statement
 import io.github.takenoko4096.bcl.ast.statement.WhileStatement
-import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.reader.TokenSeqReader

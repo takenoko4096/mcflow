@@ -1,0 +1,67 @@
+package io.github.takenoko4096.bcl.brigadier.argument.type
+
+import io.github.takenoko4096.bcl.brigadier.argument.Argument
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
+import io.github.takenoko4096.bcl.server.BclSemanticToken
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
+import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
+import kotlin.enums.EnumEntries
+import kotlin.enums.enumEntries
+
+class EnumArgumentType<E>(name: String, private val entries: EnumEntries<E>) : ArgumentType<E>(name) where E : Enum<E>, E : CommandEnumerable {
+    override fun parse(context: ArgumentParseContext): ArgumentParseResult<E> {
+        val reader = context.reader
+        val diagnostics = context.diagnostics
+        val semanticTokens = context.semanticTokens
+
+        val start = reader.getCurrentTokenStartPosition()
+        val string = reader.readCommandString(allowFloat = true)
+        val end = reader.getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, start..end))
+
+        for (entry in entries) {
+            if (entry.getNames().contains(string)) {
+                return if (diagnostics.isEmpty()) {
+                    Argument(this, entry, start..end)
+                }
+                else {
+                    NoValuedArgument(this, start..end, diagnostics)
+                }
+            }
+        }
+
+        diagnostics.add(reader.diagnostic(start..end, "不明なエントリです: '$string'"))
+        return NoValuedArgument(this, start..end, diagnostics)
+    }
+
+    override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        return entries
+            .flatMap { it.getNames() }
+            .filter { it.startsWith(context.string) }
+            .map {
+                CompletionItem(it).apply {
+                    textEdit = context.sourceSpan?.run {
+                        Either.forLeft(TextEdit(toLsp4jRange(), it))
+                    }
+                    kind = CompletionItemKind.EnumMember
+                }
+            }
+    }
+
+    companion object {
+        inline fun <reified E> of(): EnumArgumentType<E> where E : Enum<E>, E : CommandEnumerable {
+            val className = E::class.simpleName ?: throw IllegalArgumentException("無名クラスを EnumArgumentType に使用することはできません")
+            val name = className.replace("([a-z])([A-Z]+)".toRegex(), "$1_$2").lowercase()
+            val entries = enumEntries<E>()
+            return EnumArgumentType(name, entries)
+        }
+    }
+}

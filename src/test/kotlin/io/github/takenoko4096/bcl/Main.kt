@@ -1,10 +1,17 @@
 package io.github.takenoko4096.bcl
 
 import io.github.takenoko4096.bcl.ast.Node
-import io.github.takenoko4096.bcl.brigadier.CommandDispatcher
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandSender
-import io.github.takenoko4096.bcl.brigadier.argument.*
+import io.github.takenoko4096.bcl.brigadier.argument.type.BlockPropertiesArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.BlockTypeArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.BooleanArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.EntitySelectorArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.FloatArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.IntegerArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.PositionArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector

@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl.reader
 
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
+import io.github.takenoko4096.bcl.brigadier.BclSeverity
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.ExperienceAmount
@@ -552,7 +553,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return exceptionConstructor(message, sourceCode, start..getPreviousTokenEndPosition(), cause, unfatalizable)
     }
 
-    fun diagnostic(sourceSpan: SourceSpan, message: String, severity: BclDiagnostic.Severity = BclDiagnostic.Severity.ERROR): BclDiagnostic {
+    fun diagnostic(sourceSpan: SourceSpan, message: String, severity: BclSeverity = BclSeverity.ERROR): BclDiagnostic {
         return BclDiagnostic(message, sourceCode, sourceSpan, severity)
     }
 
@@ -566,7 +567,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
             throw exception(start..end, "整数範囲の読み取りに失敗しました: 無効なトークンです: ${t.message}")
         }
 
-        return if (t `is` Symbol.RANGE) {
+        val range = if (t `is` Symbol.RANGE) {
             next()
             val min = Int.MIN_VALUE
             val max = readInteger()
@@ -597,6 +598,14 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
             val end = getPreviousTokenEndPosition()
             throw exception(start..end, "整数範囲の読み取りに失敗しました: 不明なトークンです: $t")
         }
+
+        val end = getPreviousTokenEndPosition()
+
+        if (range.first > range.last) {
+            throw exception(start..end, "整数範囲の読み取りに失敗しました: 範囲の最小値が最大値を上回っています", unfatalizable = true)
+        }
+
+        return range
     }
 
     fun <V> readList(prefix: Symbol, postfix: Symbol, elementParser: TokenSeqReader.() -> V?): List<V> {
