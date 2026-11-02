@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.argument.type
 
+import io.github.takenoko4096.bcl.brigadier.BclSeverity
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
@@ -7,6 +8,7 @@ import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import org.eclipse.lsp4j.CompletionItem
@@ -28,19 +30,27 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
             return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
         }
 
-        for (entry in BlockType.entries) {
+        for (entry in VanillaBlockType.entries) {
             if (identifier.value == entry.identifier) {
-                return Argument(this, entry, identifier.sourceSpan)
+                return Argument(this, entry.toBlockType(), identifier.sourceSpan)
             }
         }
 
-        // TODO unvanilla
-        diagnostics.add(reader.diagnostic(identifier.sourceSpan, "不明なブロックタイプです: ${identifier.value}"))
-        return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
+        if (context.sender.behaviorUnvanillaReport != null) {
+            diagnostics.add(reader.diagnostic(
+                identifier.sourceSpan,
+                "不明なブロックタイプです: ${identifier.value}",
+                context.sender.behaviorUnvanillaReport!!
+            ))
+            return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.sourceSpan)
+        }
+
+        // unvanilla
+        return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.sourceSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
-        return BlockType.IDENTIFIERS
+        return VanillaBlockType.IDENTIFIERS
             .filter { it.startsWith(context.string) }
             .map {
                 CompletionItem(it).apply {

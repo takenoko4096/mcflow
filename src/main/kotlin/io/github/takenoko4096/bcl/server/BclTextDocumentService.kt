@@ -22,12 +22,12 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import java.util.concurrent.CompletableFuture
 
 class BclTextDocumentService(private val server: BedrockCommandLanguageServer) : TextDocumentService {
-    private val files = mutableMapOf<String, CommandDocumentFile>()
+    private val files = mutableMapOf<String, CommandDocument>()
 
     private val client: LanguageClient
         get() = server.client
 
-    private fun parse(uri: String?, text: String, extension: Boolean): CommandDocumentFile {
+    private fun parse(uri: String?, text: String, extension: Boolean): CommandDocument {
         val sender = CommandSender()
         sender.extension = extension
 
@@ -45,7 +45,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val block = parser.parse()
 
-        val file: CommandDocumentFile = if (uri in files) {
+        val file: CommandDocument = if (uri in files) {
             val file = files[uri]!!
             file.sourceCode = tokenizer.sourceCode
             file.block = block
@@ -53,7 +53,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             file
         }
         else {
-            val file = CommandDocumentFile(
+            val file = CommandDocument(
                 sourceCode = tokenizer.sourceCode,
                 block = block,
                 comments = comments

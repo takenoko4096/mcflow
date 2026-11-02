@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
-import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
 import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
@@ -26,7 +26,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                 property("blocks") {
                     duplicatable = true
                     appendArray(createString { completer ->
-                        when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                        when (val result = completer.completeQuotedString(VanillaBlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
                             is BclCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
                             is BclCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
@@ -44,7 +44,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                 property("blocks") {
                     duplicatable = true
                     appendArray(createString { completer ->
-                        when (val result = completer.completeQuotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
+                        when (val result = completer.completeQuotedString(VanillaBlockType.IDENTIFIERS, CompletionItemKind.EnumMember)) {
                             is BclCompleter.ShouldContinue -> CommandJsonSchema.JsonCompletionResult.Continue
                             is BclCompleter.ShouldComplete -> CommandJsonSchema.JsonCompletionResult.Complete(result.items)
                         }
@@ -113,7 +113,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
         return ItemNbtComponents(map)
     }
 
-    private fun getBlockTypes(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, List<BlockType>>? {
+    private fun getBlockTypes(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, objects: List<CommandJsonObject>): Pair<CommandJsonObject, List<VanillaBlockType>>? {
         return objects
             .mapNotNull {
                 val blockTypes = it.getWrappers("blocks", CommandJsonArray::class)
@@ -128,7 +128,7 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
                                 return@mapNotNull null
                             }
 
-                            BlockType.get(id) ?: run {
+                            VanillaBlockType.get(id) ?: run {
                                 diagnostics.add(reader.diagnostic(element.sourceSpan, "アイテムNBTコンポーネントの読み取りに失敗しました: 不明なブロックタイプです: '$string'"))
                                 return@mapNotNull null
                             }

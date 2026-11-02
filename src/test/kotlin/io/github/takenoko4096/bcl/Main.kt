@@ -13,7 +13,7 @@ import io.github.takenoko4096.bcl.brigadier.argument.type.IntegerArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.PositionArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
-import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
 import io.github.takenoko4096.bcl.brigadier.value.location.Coordinate
 import io.github.takenoko4096.bcl.parser.BclParser
@@ -71,12 +71,12 @@ fun main() {
         "position"(PositionArgumentType()) {
             "name"(BlockTypeArgumentType()) {
                 executes {
-                    "${getValue<Coordinate>("position")} に ${getValue<BlockType>("name")} を設置"
+                    "${getValue<Coordinate>("position")} に ${getValue<VanillaBlockType>("name")} を設置"
                 }
 
                 "properties"(BlockPropertiesArgumentType()) {
                     executes {
-                        val blockType = getValue<BlockType>("name")
+                        val blockType = getValue<VanillaBlockType>("name")
                         val properties = getArgument<BlockProperties>("properties")
 
                         for ((property, _) in properties.value) {

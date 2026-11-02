@@ -2,6 +2,7 @@ package io.github.takenoko4096.bcl.parser
 
 enum class Keyword(val value: String) {
     CONST("@const"),
+    LET("@let"),
     SET("@set"),
     RETURN("@return"),
     IF("@if"),
@@ -9,7 +10,5 @@ enum class Keyword(val value: String) {
     WHILE("@while"),
     DO("@do"),
     CONTINUE("@continue"),
-    BREAK("@break"),
-    TRUE("true"),
-    FALSE("false")
+    BREAK("@break")
 }

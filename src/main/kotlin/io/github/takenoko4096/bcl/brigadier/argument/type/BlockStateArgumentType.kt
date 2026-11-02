@@ -9,59 +9,52 @@ import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockState
-import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
+import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.completer.BclCompleter
+import io.github.takenoko4096.bcl.tokenizer.`!is`
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 
-class BlockStateArgumentType(
-    private val blockTypeArgumentType: BlockTypeArgumentType,
-    private val blockPropertiesArgumentType: BlockPropertiesArgumentType
-) : ArgumentType<BlockState>("block_state") {
+class BlockStateArgumentType : ArgumentType<BlockState>("block_state") {
     override fun parse(context: ArgumentParseContext): ArgumentParseResult<BlockState> {
         val reader = context.reader
         val diagnostics = context.diagnostics
         // val semanticTokens = context.semanticTokens
 
+        val blockTypeArgumentType = BlockTypeArgumentType()
+
         val blockTypeParseResult = blockTypeArgumentType.parse(context)
 
-        val blockPropertiesParseResult = if (!reader.isOver() && reader.peek() `is` Symbol.ARRAY_START) {
-            blockPropertiesArgumentType.parse(context)
-        }
-        else null
-
-        val mergedSpan = blockTypeParseResult.sourceSpan.start..(blockPropertiesParseResult?.sourceSpan?.end ?: blockTypeParseResult.sourceSpan.end)
-
-        if (blockTypeParseResult is Argument) {
-            val blockType = blockTypeParseResult.value
-
-            return when (blockPropertiesParseResult) {
-                is Argument -> {
-                    val properties = blockPropertiesParseResult.value
-                    for (entry in properties) {
-                        if (entry.property !in blockTypeParseResult.value) {
-                            // TODO unvanilla
-                            diagnostics.add(reader.diagnostic(blockPropertiesParseResult.sourceSpan, "プロパティ '${entry.property.name}' はブロック '${blockType.identifier}' に存在しません"))
-                        }
-                    }
-                    Argument(this, BlockState(blockType, properties), mergedSpan)
-                }
-                null -> Argument(this, BlockState(blockType, BlockProperties()), mergedSpan)
-                else -> {
-                    blockPropertiesParseResult as NoValuedArgument
-                    NoValuedArgument(this, mergedSpan, diagnostics)
-                }
-            }
+        if (blockTypeParseResult !is Argument) {
+            return NoValuedArgument(this,blockTypeParseResult.sourceSpan, diagnostics)
         }
 
-        return NoValuedArgument(this,mergedSpan, diagnostics)
+        val blockType = blockTypeParseResult.value
+
+        val blockPropertiesArgumentType = BlockPropertiesArgumentType(blockType)
+
+        if (reader.isOver() || reader.peek() `!is` Symbol.ARRAY_START) {
+            return Argument(this, BlockState(blockType, BlockProperties()), blockTypeParseResult.sourceSpan)
+        }
+
+        val blockPropertiesParseResult = blockPropertiesArgumentType.parse(context)
+
+        val mergedSpan = blockTypeParseResult.sourceSpan.start..blockPropertiesParseResult.sourceSpan.end
+
+        if (blockPropertiesParseResult !is Argument) {
+            return NoValuedArgument(this, mergedSpan, diagnostics)
+        }
+
+        val blockProperties = blockPropertiesParseResult.value
+
+        return Argument(this, BlockState(blockType, blockProperties), mergedSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
         val completer = BclCompleter(context)
 
-        val blockTypeCompleteResult = completer.completeUnquotedString(BlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
+        val blockTypeCompleteResult = completer.completeUnquotedString(VanillaBlockType.IDENTIFIERS, CompletionItemKind.EnumMember)
         if (blockTypeCompleteResult is BclCompleter.ShouldComplete) {
             return blockTypeCompleteResult.items
         }
@@ -74,7 +67,7 @@ class BlockStateArgumentType(
         }
         completer.skipWhitespaceAndComments()
 
-        val blockType = NamespacedIdentifier.parse(blockTypeCompleteResult.input)?. run(BlockType::get)
+        val blockType = NamespacedIdentifier.parse(blockTypeCompleteResult.input)?. run(VanillaBlockType::get)
         val properties = blockType?.properties ?: emptySet()
 
         while (true) {
@@ -85,7 +78,7 @@ class BlockStateArgumentType(
             propertyNameCompletionResult as BclCompleter.ShouldContinue
             completer.skipWhitespaceAndComments()
 
-            val property = BlockProperties.getProperty(propertyNameCompletionResult.input)
+            val property = BlockProperties.getVanillaProperty(propertyNameCompletionResult.input)
 
             (completer.completeChar(
                 listOf('='),
@@ -95,8 +88,8 @@ class BlockStateArgumentType(
             }
             completer.skipWhitespaceAndComments()
 
-            val propertyValueCompletionResult = if (property is BlockProperty.EnumProperty<*>) {
-                completer.completeQuotedString(property.values.map { it.getString() }, CompletionItemKind.Value)
+            val propertyValueCompletionResult = if (property is BlockProperty.EnumProperty) {
+                completer.completeQuotedString(property.values, CompletionItemKind.Value)
             }
             else {
                 completer.completeUnquotedString(property?.strings?.values?.toList() ?: emptyList(), CompletionItemKind.Value)
@@ -123,6 +116,6 @@ class BlockStateArgumentType(
     }
 
     companion object {
-        fun blockState() = BlockStateArgumentType(BlockTypeArgumentType(), BlockPropertiesArgumentType())
+        fun blockState() = BlockStateArgumentType()
     }
 }

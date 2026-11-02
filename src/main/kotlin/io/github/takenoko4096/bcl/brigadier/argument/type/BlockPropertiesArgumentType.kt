@@ -6,12 +6,14 @@ import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperties
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockProperty
+import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_properties") {
+class BlockPropertiesArgumentType(private val blockType: BlockType) : ArgumentType<BlockProperties>("block_properties") {
     override fun parse(context: ArgumentParseContext): ArgumentParseResult<BlockProperties> {
         val reader = context.reader
         val diagnostics = context.diagnostics
@@ -35,11 +37,32 @@ class BlockPropertiesArgumentType : ArgumentType<BlockProperties>("block_propert
         val properties = BlockProperties()
 
         for ((key, data) in map) {
-            val property = BlockProperties.getProperty(key.value)
-                ?: run {
-                    diagnostics.add(reader.diagnostic(key.sourceSpan, "プロパティの読み取りに失敗しました: 不明なプロパティです: '${key.value}'"))
-                    continue
+            val property = if (blockType.isVanilla) {
+                BlockProperties.getVanillaProperty(key.value)
+                    ?.apply {
+                        if (this !in blockType.properties) {
+                            diagnostics.add(reader.diagnostic(
+                                key.sourceSpan,
+                                "プロパティ '$name' はブロック '${blockType.identifier}' に存在しません"
+                            ))
+                        }
+                    }
+                    ?: run {
+                        diagnostics.add(reader.diagnostic(key.sourceSpan, "プロパティの読み取りに失敗しました: 不明なプロパティです: '${key.value}'"))
+                        continue
+                    }
+            }
+            else {
+                BlockProperty.unvanilla(key.value, data.value).apply {
+                    if (context.sender.behaviorUnvanillaReport != null) {
+                        diagnostics.add(reader.diagnostic(
+                            key.sourceSpan,
+                            "プロパティ '$name' がブロック '${blockType.identifier}' に存在しない可能性があります",
+                            context.sender.behaviorUnvanillaReport!!
+                        ))
+                    }
                 }
+            }
 
             val value = property.toValue(data.value)
 

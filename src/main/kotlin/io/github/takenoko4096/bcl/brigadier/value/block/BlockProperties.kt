@@ -185,8 +185,8 @@ class BlockProperties : Iterable<BlockProperty.Value<*>> {
         val WEIRDO_DIRECTION = BlockProperty.integer("weirdo_direction", 0..3)
         val WOOD_TYPE = BlockProperty.enum<WoodType>("wood_type")
 
-        fun getProperty(name: String): BlockProperty<*>? {
-            return BlockType.properties.find { it.name == name }
+        fun getVanillaProperty(name: String): BlockProperty<*>? {
+            return VanillaBlockType.properties.find { it.name == name }
         }
     }
 }
