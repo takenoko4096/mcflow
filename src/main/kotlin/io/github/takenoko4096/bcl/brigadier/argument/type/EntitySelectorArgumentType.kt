@@ -400,22 +400,32 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     }
                 },
                 "slot" to { inv ->
-                    val start = getCurrentTokenStartPosition()
-                    val v = readIntRange()
-                    val end = getPreviousTokenEndPosition()
+                    val result = unfatalize(diagnostics) { readIntRange() }
 
-                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+                    if (result.nonnull) {
+                        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, result.sourceSpan))
+                    }
 
-                    slot = InvertibleValue(inv.value, v, start..end)
+                    if (result is TokenSeqReader.ReadResult.Successful) {
+                        slot = InvertibleValue(inv.value, result.value, result.sourceSpan)
+                    }
+                    else {
+                        return@to
+                    }
                 },
                 "quantity" to { inv ->
-                    val start = getCurrentTokenStartPosition()
-                    val v = readIntRange()
-                    val end = getPreviousTokenEndPosition()
+                    val result = unfatalize(diagnostics) { readIntRange() }
 
-                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
+                    if (result.nonnull) {
+                        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, result.sourceSpan))
+                    }
 
-                    quantity = InvertibleValue(inv.value, v, start..end)
+                    if (result is TokenSeqReader.ReadResult.Successful) {
+                        quantity = InvertibleValue(inv.value, result.value, result.sourceSpan)
+                    }
+                    else {
+                        return@to
+                    }
                 },
                 "location" to { inv ->
                     if (inv.value) {
@@ -729,16 +739,16 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             reader.expect(Symbol.ASSIGN)
             val inverted = reader.readIsInverted()
 
-            val start3 = reader.getCurrentTokenStartPosition()
-            val range = reader.readIntRange()
-            val end3 = reader.getPreviousTokenEndPosition()
+            val range = reader.unfatalize(diagnostics) { readIntRange() }
 
-            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start3..end3))
+            if (range.nonnull) {
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, range.sourceSpan))
+            }
 
-            if (objective is TokenSeqReader.ReadResult.Successful) {
+            if (objective is TokenSeqReader.ReadResult.Successful && range is TokenSeqReader.ReadResult.Successful) {
                 scores.add(
                     WithSpan(objective.value, start2..end2),
-                    InvertibleValue(inverted, range, start3..end3)
+                    InvertibleValue(inverted, range.value, range.sourceSpan)
                 )
             }
             else {

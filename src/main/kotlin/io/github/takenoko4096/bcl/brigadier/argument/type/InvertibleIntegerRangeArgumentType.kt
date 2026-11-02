@@ -3,9 +3,11 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import org.eclipse.lsp4j.CompletionItem
@@ -27,15 +29,20 @@ class InvertibleIntegerRangeArgumentType : ArgumentType<InvertibleIntegerRange>(
         }
         else false
 
-        val start2 = reader.getCurrentTokenStartPosition()
+        val range = reader.unfatalize(context.diagnostics) { readIntRange() }
 
-        val range = reader.readIntRange()
+        if (range.nonnull) {
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, range.sourceSpan))
+        }
 
-        val end = reader.getPreviousTokenEndPosition()
+        val wholeSourceSpan = start..range.sourceSpan.end
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start2..end))
-
-        return Argument(this, InvertibleIntegerRange(inv, range), start..end)
+        return if (range is TokenSeqReader.ReadResult.Successful) {
+            Argument(this, InvertibleIntegerRange(inv, range.value), wholeSourceSpan)
+        }
+        else {
+            NoValuedArgument(this, wholeSourceSpan, context.diagnostics)
+        }
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
