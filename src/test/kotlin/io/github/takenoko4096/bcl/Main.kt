@@ -67,29 +67,6 @@ fun main() {
         }
     }
 
-    dispatcher.register("setblock") {
-        "position"(PositionArgumentType()) {
-            "name"(BlockTypeArgumentType()) {
-                executes {
-                    "${getValue<Coordinate>("position")} に ${getValue<VanillaBlockType>("name")} を設置"
-                }
-
-                "properties"(BlockPropertiesArgumentType()) {
-                    executes {
-                        val blockType = getValue<VanillaBlockType>("name")
-                        val properties = getArgument<BlockProperties>("properties")
-
-                        for ((property, _) in properties.value) {
-                            if (property !in blockType) {
-                                addDiagnostic(properties.sourceSpan, "プロパティ '${property.name}' はブロック '${blockType.identifier}' に存在しません")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     dispatcher.register("sel") {
         "selc"(EntitySelectorArgumentType()) {
             executes {
@@ -124,6 +101,7 @@ fun main() {
         text,
         BclTokenizer(text, extension = false).tokenize(),
         dispatcher,
+        CommandDispatcher("comment-root"),
         sender = CommandSender(extension = true)
     ).parse()
 
