@@ -557,25 +557,18 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return BclDiagnostic(message, sourceCode, sourceSpan, severity)
     }
 
-    fun readIntRange(): IntRange {
+    fun readIntRange(allowExtendedNotation: Boolean = false): IntRange {
         val start = getCurrentTokenStartPosition()
         val t = peek()
-
-        if (t is Token.Invalid) {
-            next()
-            val end = getPreviousTokenEndPosition()
-            throw exception(start..end, "整数範囲の読み取りに失敗しました: 無効なトークンです: ${t.message}")
-        }
 
         val range = if (t `is` Symbol.RANGE) {
             next()
             val min = Int.MIN_VALUE
-            val max = readInteger()
+            val max = readInteger(allowExtendedNotation)
             min..max
         }
         else if (t.type == TokenType.INT) {
-            next()
-            val min = t.value.toInt()
+            val min = readInteger(allowExtendedNotation)
             val max = if (!isOver() && peek() `is` Symbol.RANGE) {
                 next()
                 if (isOver()) {
@@ -584,8 +577,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
                 else {
                     val t = peek()
                     if (t.type == TokenType.INT) {
-                        next()
-                        t.value.toInt()
+                        readInteger(allowExtendedNotation)
                     }
                     else Int.MAX_VALUE
                 }

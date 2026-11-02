@@ -179,6 +179,14 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
             return invalid(start..end, radix.apply(true), "数字を含まない数値リテラルは無効です")
         }
 
+        try {
+            intPart.toInt()
+        }
+        catch (_: NumberFormatException) {
+            val end = getSourcePositionAtBack()
+            return invalid(start..end, radix.apply(true), "無効な整数です: '$intPart'")
+        }
+
         sb.append(intPart)
 
         // ([0] == 小数点 or 指数指定 'e') and 10進 and ([1] <: 基数)
@@ -202,7 +210,15 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
                 TokenType.FLOAT
             }
 
-            return tokenOf(tokenType, sb.toString(), start, end)
+            val str = sb.toString()
+            try {
+                str.toFloat()
+            }
+            catch (_: NumberFormatException) {
+                return invalid(start..end, tokenType, "無効な浮動小数点数です: '$str'")
+            }
+
+            return tokenOf(tokenType, str, start, end)
         }
 
         var end = getSourcePositionAtBack()

@@ -73,7 +73,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val diagnostics = block.nodes
             .filterIsInstance<CommandLineParseResult>()
             .flatMap { it.diagnostics.map(BclDiagnostic::toLsp4jDiagnostic) }
-        System.err.println(diagnostics.map { it.severity })
         client.publishDiagnostics(PublishDiagnosticsParams(uri, diagnostics))
     }
 
