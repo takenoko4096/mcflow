@@ -1316,9 +1316,19 @@ object Commands {
         }
     }
 
-    /*val PARTY = Command.builder("party") {}*/
+    val PARTY = Command.builder("party") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.MEMBER)
+        }
+
+        "message"(StringArgumentType.greedy()) {
+            executes()
+        }
+    }
 
     val PERMISSION = Command.builder("permission") {
+        aliases.add("ops")
+
         requires {
             requirePermissionLevel(CommandPermissionLevel.OWNER)
         }
@@ -1502,6 +1512,14 @@ object Commands {
         "all" {
             executes()
         }
+    }
+
+    val RELOADCONFIG = Command.builder("reloadconfig") {
+        requires {
+            requirePermissionLevel(CommandPermissionLevel.OWNER)
+        }
+
+        executes()
     }
 
     val REPLACEITEM = Command.builder("replaceitem") {
@@ -2648,12 +2666,14 @@ object Commands {
         OP,
         PACKSTACK,
         PARTICLE,
+        PARTY,
         PERMISSION,
         PLACE,
         PLAYANIMATION,
         PLAYSOUND,
         RECIPE,
         RELOAD,
+        RELOADCONFIG,
         REPLACEITEM,
         RIDE,
         SAY,
@@ -2684,4 +2704,6 @@ object Commands {
         WEATHER,
         XP
     )
+
+    // allowlist, changesetting, dedicatedwsserver, editor-allowlist, immutableworld, project, reloadpacketlimitconfig, save, sendshowstoreoffer, ...
 }
