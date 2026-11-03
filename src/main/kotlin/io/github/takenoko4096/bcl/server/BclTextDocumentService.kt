@@ -167,6 +167,20 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         for (candidate in result.completionCandidates) {
             when (candidate.node) {
+                is Command -> {
+                    val names = candidate.node.aliases + candidate.node.name
+                    items.addAll(names.map {
+                        CompletionItem(it).apply {
+                            kind = CompletionItemKind.Function
+                            candidate.inputSourceSpan?.run {
+                                textEdit = Either.forLeft(TextEdit(
+                                    toLsp4jRange(),
+                                    it
+                                ))
+                            }
+                        }
+                    })
+                }
                 is LiteralCommandNode -> {
                     val item = CompletionItem(candidate.node.name)
                     item.kind = CompletionItemKind.Function
@@ -183,12 +197,8 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                 is ArgumentCommandNode<*> -> {
                     val string = candidate.inputSourceSpan
                         ?.run {
-                            try {
-                                getStringFromSourceCode(subSourceCode)
-                            }
-                            catch (_: Throwable) {
-                                ""
-                            }
+                            try { getStringFromSourceCode(subSourceCode) }
+                            catch (_: Throwable) { "" }
                         }
                         ?: ""
 
@@ -196,7 +206,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
                         string,
                         candidate.startPosition,
                         candidate.inputSourceSpan,
-                        sourceCode
+                        sourceCode,
+                        result.sender,
+                        result.dispatcher,
+                        result.route
                     )
 
                     val completionItems = try {

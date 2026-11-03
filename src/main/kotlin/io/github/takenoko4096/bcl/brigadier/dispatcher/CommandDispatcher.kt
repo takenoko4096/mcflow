@@ -59,7 +59,7 @@ class CommandDispatcher(
     }
 
     fun register(name: String, configurator: CommandNodeBuilder.CommandBuilder.() -> Unit): Command {
-        return register(Command.Companion.builder(name, configurator))
+        return register(Command.builder(name, configurator))
     }
 
     private fun comparePotentials(a: RoutePotential, b: RoutePotential): Int {
@@ -87,6 +87,8 @@ class CommandDispatcher(
         if (reader.isOver()) {
             return CommandLineParseResult.Failure(
                 null,
+                sender,
+                this,
                 route = listOf(),
                 emptyList(),
                 emptyList(),
@@ -121,7 +123,7 @@ class CommandDispatcher(
             reader.sourceCode,
             sender,
             initialState,
-            root.children
+            root.getEffectiveChildren()
         )
 
         if (potentials.isNotEmpty()) {
@@ -154,6 +156,8 @@ class CommandDispatcher(
                 catch (error: Throwable) {
                     return CommandLineParseResult.Failure(
                         bestRoutePotential.state.route.firstOrNull() as Command?,
+                        sender,
+                        this,
                         bestRoutePotential.state.route,
                         bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
@@ -173,6 +177,8 @@ class CommandDispatcher(
                 if (diagnosticsOnExecution.none { it.isError }) {
                     CommandLineParseResult.Successful(
                         bestRoutePotential.state.route.first() as Command,
+                        sender,
+                        this,
                         bestRoutePotential.state.route,
                         bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
@@ -187,6 +193,8 @@ class CommandDispatcher(
                 else {
                     CommandLineParseResult.Failure(
                         bestRoutePotential.state.route.firstOrNull() as Command?,
+                        sender,
+                        this,
                         bestRoutePotential.state.route,
                         bestRoutePotential.state.literals,
                         bestRoutePotential.state.arguments,
@@ -211,6 +219,8 @@ class CommandDispatcher(
 
                 CommandLineParseResult.Failure(
                     bestRoutePotential.state.route.firstOrNull() as Command?,
+                    sender,
+                    this,
                     bestRoutePotential.state.route,
                     bestRoutePotential.state.literals,
                     bestRoutePotential.state.arguments,
@@ -228,6 +238,8 @@ class CommandDispatcher(
 
         return CommandLineParseResult.Failure(
             null,
+            sender,
+            this,
             route = listOf(),
             emptyList(),
             emptyList(),
@@ -433,6 +445,7 @@ class CommandDispatcher(
                 ArgumentParseContext(
                     reader,
                     context.sender,
+                    this,
                     context.diagnostics,
                     context.semanticTokens
                 )

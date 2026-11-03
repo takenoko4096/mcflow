@@ -6,7 +6,7 @@ import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.value.misc.CommandPermissionLevel
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
-class CommandRequireContext(
+data class CommandRequireContext(
     val sourceCode: String,
     val node: CommandNode,
     val sourceSpan: SourceSpan,

@@ -42,6 +42,11 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
                 "不明なブロックタイプです: ${identifier.value}",
                 context.sender.behaviorUnvanillaReport!!
             ))
+
+            if (context.sender.behaviorUnvanillaReport == BclSeverity.ERROR) {
+                return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
+            }
+
             return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.sourceSpan)
         }
 

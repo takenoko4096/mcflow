@@ -7,7 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
-import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
+import io.github.takenoko4096.bcl.brigadier.value.item.VanillaItemType
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.AccessibleActorProperties
 import io.github.takenoko4096.bcl.brigadier.value.entity.ActorProperty
@@ -19,6 +19,7 @@ import io.github.takenoko4096.bcl.brigadier.value.entity.GameMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.InvertibleValue
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorArguments
 import io.github.takenoko4096.bcl.brigadier.value.entity.SelectorType
+import io.github.takenoko4096.bcl.brigadier.value.item.ItemType
 import io.github.takenoko4096.bcl.brigadier.value.misc.InvertibleIntegerRange
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
@@ -354,7 +355,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         )
     }
 
-    private fun itemPredicateObject(reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorArguments.HasItem? {
+    private fun itemPredicateObject(context: ArgumentParseContext, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>): SelectorArguments.HasItem? {
         var item: ItemType? = null
         var location: EntityContainerSlotType? = null
         var slot: InvertibleValue<IntRange>? = null
@@ -395,10 +396,20 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, start2..end2))
 
-                    item = ItemType.get(id) ?: run {
-                        diagnostics.add(diagnostic(start2..end2, "セレクタ引数 'hasitem' の読み取りに失敗しました:  アイテムタイプ '$id' は存在しません"))
-                        return@to
-                    }
+                    item = VanillaItemType.get(id)
+                        ?.toItemType()
+                        ?: run {
+                            // unvanilla
+                            if (context.sender.behaviorUnvanillaReport != null) {
+                                diagnostics.add(diagnostic(
+                                    start2..end2,
+                                    "セレクタ引数 'hasitem' の読み取りに失敗しました:  アイテムタイプ '$id' が見つかりません",
+                                    context.sender.behaviorUnvanillaReport!!
+                                ))
+                            }
+
+                            ItemType(id, isVanilla = false)
+                        }
                 },
                 "slot" to { inv ->
                     val result = unfatalize(diagnostics) { readIntRange() }
@@ -479,11 +490,11 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val t = reader.peek()
         if (t `is` Symbol.ARRAY_START) {
             list.addAll(reader.readList(Symbol.ARRAY_START, Symbol.ARRAY_END) {
-                itemPredicateObject(this, diagnostics, semanticTokens)
+                itemPredicateObject(context, this, diagnostics, semanticTokens)
             })
         }
         else if (t `is` Symbol.BRACE_START) {
-            itemPredicateObject(reader, diagnostics, semanticTokens)?.run { list.add(this) }
+            itemPredicateObject(context, reader, diagnostics, semanticTokens)?.run { list.add(this) }
         }
         else {
             reader.next()
@@ -1184,7 +1195,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             completer,
             mapOf(
                 "item" to {
-                    it.completeUnquotedString(ItemType.IDENTIFIERS, CompletionItemKind.EnumMember)
+                    it.completeUnquotedString(VanillaItemType.IDENTIFIERS, CompletionItemKind.EnumMember)
                 },
                 "location" to {
                     it.completeUnquotedString(EntityContainerSlotType.strings, CompletionItemKind.EnumMember)

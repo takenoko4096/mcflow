@@ -37,7 +37,7 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         }
 
         val result = try {
-            val value = interpret(context.sender, reader, diagnostics, semanticTokens, obj)
+            val value = interpret(context, obj)
             Argument(this, value, obj.sourceSpan)
         }
         catch (error: BclTokenSeqReadException) {
@@ -91,5 +91,5 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
         }
     }
 
-    protected abstract fun interpret(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): T
+    protected abstract fun interpret(context: ArgumentParseContext, obj: CommandJsonObject): T
 }

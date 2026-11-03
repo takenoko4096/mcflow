@@ -7,6 +7,7 @@ import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.argument.type.EntitySelectorArgumentType
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
@@ -33,7 +34,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
-        fun parse(sender: CommandSender, string: String, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
+        fun parse(context: ArgumentParseContext, string: String, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
             val dummyDiags = mutableListOf<BclDiagnostic>()
             val dummySemcs = mutableListOf<BclSemanticToken>()
 
@@ -44,23 +45,22 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             val type = EntitySelectorArgumentType()
 
             if (string.isEmpty()) {
-                diagnostics.add(BclDiagnostic(
+                context.diagnostics.add(BclDiagnostic(
                     "空のセレクターは無効です",
                     tokenizer.sourceCode,
                     fallbackSourceSpan
                 ))
-                return NoValuedArgument(type, fallbackSourceSpan, diagnostics)
+                return NoValuedArgument(type, fallbackSourceSpan, context.diagnostics)
             }
             offset!!
 
             val start = reader.getCurrentTokenStartPosition()
 
             val selector = try {
-                type.parse(ArgumentParseContext(
-                    reader,
-                    sender = sender,
-                    dummyDiags,
-                    dummySemcs
+                type.parse(context.copy(
+                    reader = reader,
+                    diagnostics = dummyDiags,
+                    semanticTokens = dummySemcs
                 ))
             }
             catch (error: BclTokenSeqReadException) {
@@ -79,26 +79,23 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
                 dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.getRemainingSourceSpan()))
             }
 
-            diagnostics.addAll(
-                dummyDiags.map { diag ->
-                    BclDiagnostic(
-                        diag.message,
-                        diag.sourceCode,
-                        (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset),
-                        diag.severity
-                    )
-                }
-            )
-            semanticTokens.addAll(
-                dummySemcs.map { semc ->
-                    BclSemanticToken(
-                        semc.type,
-                        (semc.sourceSpan.start + offset)..(semc.sourceSpan.end + offset)
-                    )
-                }
-            )
+            context.diagnostics.addAll(dummyDiags.map { diag ->
+                BclDiagnostic(
+                    diag.message,
+                    diag.sourceCode,
+                    (diag.sourceSpan.start + offset)..(diag.sourceSpan.end + offset),
+                    diag.severity
+                )
+            })
 
-            return selector ?: NoValuedArgument(type, start..end, diagnostics)
+            context.semanticTokens.addAll(dummySemcs.map { semc ->
+                BclSemanticToken(
+                    semc.type,
+                    (semc.sourceSpan.start + offset)..(semc.sourceSpan.end + offset)
+                )
+            })
+
+            return selector ?: NoValuedArgument(type, start..end, context.diagnostics)
         }
     }
 }

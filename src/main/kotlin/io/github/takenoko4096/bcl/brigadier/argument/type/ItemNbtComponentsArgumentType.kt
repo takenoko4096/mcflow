@@ -3,6 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.argument.type
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.CommandSender
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
@@ -83,7 +84,8 @@ class ItemNbtComponentsArgumentType : JsonObjectArgumentType<ItemNbtComponents>(
 
     override fun getSchema() = components
 
-    override fun interpret(sender: CommandSender, reader: TokenSeqReader, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, obj: CommandJsonObject): ItemNbtComponents {
+    override fun interpret(context: ArgumentParseContext, obj: CommandJsonObject): ItemNbtComponents {
+        val (reader, sender, _, diagnostics, semanticTokens) = context
         val result = components.validate(obj, reader.sourceCode, diagnostics)
 
         if (!result) {

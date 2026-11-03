@@ -1,5 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.argument.type
 
+import io.github.takenoko4096.bcl.brigadier.BclSeverity
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
@@ -35,13 +36,20 @@ class EntityTypeArgumentType(private val summonableOnly: Boolean) : ArgumentType
                         start..end, "不明なエンティティタイプです: ${identifier.value}",
                         context.sender.behaviorUnvanillaReport!!
                     ))
+
+                    if (context.sender.behaviorUnvanillaReport == BclSeverity.ERROR) {
+                        return NoValuedArgument(this, start..end, diagnostics)
+                    }
                 }
 
                 EntityType(identifier, isSummonable = true, isVanilla = false)
             }
 
         if (summonableOnly && !entityType.isSummonable) {
-            diagnostics.add(reader.diagnostic(start..end, "召喚不可能なエンティティタイプです: ${identifier.value}"))
+            diagnostics.add(reader.diagnostic(
+                start..end,
+                "召喚不可能なエンティティタイプです: ${identifier.value}"
+            ))
             return NoValuedArgument(this, start..end, diagnostics)
         }
 

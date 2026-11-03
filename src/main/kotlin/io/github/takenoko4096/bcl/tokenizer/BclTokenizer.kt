@@ -504,6 +504,7 @@ class BclTokenizer(text: String, private val extension: Boolean, private val com
             && previous.type != TokenType.SYMBOL
             && previous.type != TokenType.COORDINATE_COMPONENT_LOCAL
             && previous.type != TokenType.COORDINATE_COMPONENT_RELATIVE
+            && previous.type != TokenType.INT // ?
             && !result.foundWhitespace
 
         while (true) {

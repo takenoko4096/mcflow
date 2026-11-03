@@ -1,10 +1,16 @@
 package io.github.takenoko4096.bcl
 
+import io.github.takenoko4096.bcl.brigadier.argument.Argument
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
+import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
+import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
+import io.github.takenoko4096.bcl.brigadier.argument.type.ArgumentType
 import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.value.misc.CommandPermissionLevel
 import io.github.takenoko4096.bcl.brigadier.argument.type.AxesArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.BlockStateArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.BooleanArgumentType
+import io.github.takenoko4096.bcl.brigadier.argument.type.CommandArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.CoordinateComponentArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.EntitySelectorArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.EntityTypeArgumentType
@@ -27,6 +33,7 @@ import io.github.takenoko4096.bcl.brigadier.argument.type.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.StringEnumArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.TimeDurationArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.WildcardIntegerArgumentType
+import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandRequireContext
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
 import io.github.takenoko4096.bcl.brigadier.value.block.ScanMode
@@ -35,6 +42,11 @@ import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemReplaceMode
 import io.github.takenoko4096.bcl.brigadier.value.location.Biome
 import io.github.takenoko4096.bcl.brigadier.value.misc.*
+import io.github.takenoko4096.bcl.completer.BclCompleter
+import io.github.takenoko4096.bcl.completer.BclCompletionContext
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.CompletionItemKind
 
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
@@ -1027,20 +1039,8 @@ object Commands {
             executes()
         }
 
-        "command_name"(StringArgumentType.word()) {
-            executes {
-                /*val arg = getArgument<String>("command_name")
-                val command = getDispatcher().getCommand(arg.value)
-                    ?: run {
-                        addDiagnostic(
-                            arg.sourceSpan,
-                            "コマンド '${arg.value}' が見つかりません"
-                        )
-                        return@executes null
-                    }
-
-                command.getTreeUsage()*/
-            }
+        "command"(CommandArgumentType()) {
+            executes()
         }
     }
 
@@ -1337,7 +1337,7 @@ object Commands {
             "players"(EntitySelectorArgumentType.players()) {
                 executes()
 
-                "permission_level"(EnumArgumentType.of<PermissionLevel>()) {
+                "permission_level"(EnumArgumentType.of<PlayerPermissionLevel>()) {
                     executes()
                 }
             }
@@ -2248,6 +2248,7 @@ object Commands {
 
         aliases.add("tp")
 
+        // TODO これのせいで completion とか signatureHelp が出ないがどうするか そのままでもいいけど
         "destination_entity"(EntitySelectorArgumentType()) {
             executes()
         }
