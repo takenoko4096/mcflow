@@ -26,6 +26,7 @@ data class NodeParseContext(
     val completionCandidates = mutableListOf<CompletionCandidate>()
 
     var stateAtParseError: DispatcherParseState? = null
+    var errorCursor: Int? = null
 
     val nextState: DispatcherParseState
         get() = DispatcherParseState(

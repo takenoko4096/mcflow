@@ -7,10 +7,14 @@ import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.brigadier.CommandSender
+import io.github.takenoko4096.bcl.brigadier.dispatcher.RoutePotential
 import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.completer.BclArgumentCompletionException
+import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.parser.BclParser
+import io.github.takenoko4096.bcl.reader.CommandLineReader
+import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
@@ -28,7 +32,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         get() = server.client
 
     private fun parse(uri: String?, text: String, extension: Boolean): CommandDocument {
-        val sender = CommandSender()
+        val sender = files[uri]?.sender ?: CommandSender()
         sender.extension = extension
 
         val comments = mutableListOf<BclComment>()
@@ -50,13 +54,15 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             file.sourceCode = tokenizer.sourceCode
             file.block = block
             file.comments = comments
+            file.sender = sender
             file
         }
         else {
             val file = CommandDocument(
                 sourceCode = tokenizer.sourceCode,
                 block = block,
-                comments = comments
+                comments = comments,
+                sender
             )
 
             if (uri != null) {
@@ -308,7 +314,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
         val fakeFile = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
-        val result = getLastLineParseResult(fakeFile.block) ?: return CompletableFuture.completedFuture(null)
+        val result: CommandLineParseResult = getLastLineParseResult(fakeFile.block) ?: return CompletableFuture.completedFuture(null)
 
         if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
             return CompletableFuture.completedFuture(null)
@@ -317,7 +323,21 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         command as Command
 
-        val route = result.route
+        val reader = BclTokenizer(
+            sourceCode.substring(result.sourceSpan.start.index, cursor),
+            extension = textDocument.uri.endsWith(".mcflow"),
+            mutableListOf()
+        ).run {
+            val seqReader = TokenSeqReader(this.sourceCode, this.tokenize(), ::BclParseException)
+            CommandLineReader.of(seqReader, extension = this.extension)
+        }
+
+        val potentials = result.dispatcher.parsePotentials(reader, fakeFile.sender)
+        val potential = potentials.maxWith(
+            compareBy<RoutePotential> { it.furthestCursor }
+                .thenBy { it.state.route.size }
+        )
+        val route = potential.state.route
         val tail = route.last()
         val children = tail.getEffectiveChildren().values
 

@@ -84,7 +84,9 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         return Range(startPosition, endPositionExclusive)
     }
 
-    fun getStringFromSourceCode(sourceCode: String) = sourceCode.slice(start.index..end.index)
+    fun getStringFromSourceCode(sourceCode: String): String {
+        return sourceCode.slice(start.index..end.index)
+    }
 
     companion object {
         val NULL = SourcePosition.NULL..SourcePosition.NULL

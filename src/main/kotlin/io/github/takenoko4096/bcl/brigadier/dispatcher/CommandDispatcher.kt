@@ -62,25 +62,16 @@ class CommandDispatcher(
         return register(Command.builder(name, configurator))
     }
 
-    private fun comparePotentials(a: RoutePotential, b: RoutePotential): Int {
-        val aNoError = a.diagnostics.none { it.isError }
-        val bNoError = b.diagnostics.none { it.isError }
-
-        return when {
-            aNoError != bNoError -> aNoError.compareTo(bNoError)
-            aNoError -> compareValuesBy(
-                a, b,
-                { it.state.reader.isOver() },
-                { it.state.reader.cursor },
-                { it.state.literalCount }
-            )
-            else -> compareValuesBy(
-                a, b,
-                { it.furthestCursor },
-                { it.state.reader.isOver() },
-                { it.state.literalCount }
-            )
-        }
+    fun evaluate(sourceCode: String): List<CommandLineParseResult> {
+        val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
+        val block = BclParser(
+            sourceCode,
+            tokens,
+            this,
+            CommandDispatcher("root"),
+            CommandSender(extension = false)
+        ).parse()
+        return block.nodes.filterIsInstance<CommandLineParseResult>()
     }
 
     fun parse(reader: CommandLineReader, sender: CommandSender): CommandLineParseResult {
@@ -111,43 +102,30 @@ class CommandDispatcher(
 
         val start = reader.getCurrentTokenStartPosition()
 
-        val initialState = DispatcherParseState(
-            reader = reader.clone(),
-            literals = emptyList(),
-            arguments = emptyList(),
-            route = mutableListOf(),
-            literalCount = 0
-        )
-
-        val potentials = dispatch(
-            reader.sourceCode,
-            sender,
-            initialState,
-            root.getEffectiveChildren()
-        )
+        val potentials = parsePotentials(reader, sender)
 
         if (potentials.isNotEmpty()) {
-            val bestRoutePotential = potentials.maxWith(::comparePotentials)
+            val best = potentials.maxWith(::comparePotentials)
 
             val completionCandidates = potentials
-                .filter { comparePotentials(it, bestRoutePotential) == 0 }
+                .filter { comparePotentials(it, best) == 0 }
                 .flatMap { it.completionCandidates }
                 .distinct()
 
-            return if (bestRoutePotential.diagnostics.none { it.isError }) {
+            return if (best.diagnostics.none { it.isError }) {
                 val diagnosticsOnExecution = mutableListOf<BclDiagnostic>()
 
                 val context = CommandExecuteContext(
                     reader.sourceCode,
                     this,
-                    bestRoutePotential.state.route,
-                    bestRoutePotential.state.arguments,
+                    best.state.route,
+                    best.state.arguments,
                     diagnosticsOnExecution,
                     sender
                 )
 
-                val executor = bestRoutePotential.state.route.last().executor ?: throw IllegalStateException(
-                    bestRoutePotential.toString()
+                val executor = best.state.route.last().executor ?: throw IllegalStateException(
+                    best.toString()
                 )
 
                 val resultValue = try {
@@ -155,79 +133,79 @@ class CommandDispatcher(
                 }
                 catch (error: Throwable) {
                     return CommandLineParseResult.Failure(
-                        bestRoutePotential.state.route.firstOrNull() as Command?,
+                        best.state.route.firstOrNull() as Command?,
                         sender,
                         this,
-                        bestRoutePotential.state.route,
-                        bestRoutePotential.state.literals,
-                        bestRoutePotential.state.arguments,
+                        best.state.route,
+                        best.state.literals,
+                        best.state.arguments,
                         completionCandidates,
                         diagnosticsOnExecution + BclDiagnostic(
-                            error.message ?: "This is probably a bug. An error occurred in execution phase (caused by: ${bestRoutePotential.state.route})\n${error.stackTraceToString()}",
+                            error.message ?: "This is probably a bug. An error occurred in execution phase (caused by: ${best.state.route})\n${error.stackTraceToString()}",
                             reader.sourceCode,
                             // TODO linebreak 対策
-                            bestRoutePotential.state.reader.getEntireSourceSpan()
+                            best.state.reader.getEntireSourceSpan()
                         ),
-                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
-                        bestRoutePotential.state.reader.lastSourcePosition,
-                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens
+                        start..best.state.reader.getPreviousTokenEndPosition(),
+                        best.state.reader.lastSourcePosition,
+                        reader.preprocessedSemanticTokens + best.semanticTokens
                     )
                 }
 
                 if (diagnosticsOnExecution.none { it.isError }) {
                     CommandLineParseResult.Successful(
-                        bestRoutePotential.state.route.first() as Command,
+                        best.state.route.first() as Command,
                         sender,
                         this,
-                        bestRoutePotential.state.route,
-                        bestRoutePotential.state.literals,
-                        bestRoutePotential.state.arguments,
+                        best.state.route,
+                        best.state.literals,
+                        best.state.arguments,
                         completionCandidates,
-                        bestRoutePotential.diagnostics + diagnosticsOnExecution,
-                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
-                        bestRoutePotential.state.reader.lastSourcePosition,
-                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens,
+                        best.diagnostics + diagnosticsOnExecution,
+                        start..best.state.reader.getPreviousTokenEndPosition(),
+                        best.state.reader.lastSourcePosition,
+                        reader.preprocessedSemanticTokens + best.semanticTokens,
                         resultValue
                     )
                 }
                 else {
                     CommandLineParseResult.Failure(
-                        bestRoutePotential.state.route.firstOrNull() as Command?,
+                        best.state.route.firstOrNull() as Command?,
                         sender,
                         this,
-                        bestRoutePotential.state.route,
-                        bestRoutePotential.state.literals,
-                        bestRoutePotential.state.arguments,
+                        best.state.route,
+                        best.state.literals,
+                        best.state.arguments,
                         completionCandidates,
                         diagnosticsOnExecution,
-                        start..bestRoutePotential.state.reader.getPreviousTokenEndPosition(),
-                        bestRoutePotential.state.reader.lastSourcePosition,
-                        reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens
+                        start..best.state.reader.getPreviousTokenEndPosition(),
+                        best.state.reader.lastSourcePosition,
+                        reader.preprocessedSemanticTokens + best.semanticTokens
                     )
                 }
             }
             else {
-                val semanticTokens = (reader.preprocessedSemanticTokens + bestRoutePotential.semanticTokens).toMutableList()
+                val semanticTokens = (reader.preprocessedSemanticTokens + best.semanticTokens).toMutableList()
 
-                val furthestReader = bestRoutePotential.state.reader
+                val furthestReader = best.state.reader
                     .clone()
-                    .apply { cursor = bestRoutePotential.furthestCursor }
+                    .apply { cursor = best.furthestCursor }
 
                 furthestReader.getSourceSpansOfRemainingLines().forEach {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, it))
                 }
 
                 CommandLineParseResult.Failure(
-                    bestRoutePotential.state.route.firstOrNull() as Command?,
+                    best.state.route.firstOrNull() as Command?,
                     sender,
                     this,
-                    bestRoutePotential.state.route,
-                    bestRoutePotential.state.literals,
-                    bestRoutePotential.state.arguments,
+                    best.state.route,
+                    best.state.literals,
+                    best.state.arguments,
                     completionCandidates,
-                    bestRoutePotential.diagnostics,
+                    best.diagnostics,
                     start..furthestReader.getPreviousTokenEndPosition(),
-                    bestRoutePotential.state.reader.lastSourcePosition,
+                    best.state.reader.lastSourcePosition,
                     semanticTokens
                 )
             }
@@ -257,16 +235,48 @@ class CommandDispatcher(
         )
     }
 
-    fun evaluate(sourceCode: String): List<CommandLineParseResult> {
-        val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
-        val block = BclParser(
-            sourceCode,
-            tokens,
-            this,
-            CommandDispatcher("root"),
-            CommandSender(extension = false)
-        ).parse()
-        return block.nodes.filterIsInstance<CommandLineParseResult>()
+    fun parsePotentials(reader: CommandLineReader, sender: CommandSender): List<RoutePotential> {
+        if (reader.isOver()) {
+            return emptyList()
+        }
+
+        val initialState = DispatcherParseState(
+            reader = reader.clone(),
+            literals = emptyList(),
+            arguments = emptyList(),
+            route = mutableListOf(),
+            literalCount = 0
+        )
+
+        return dispatch(
+            reader.sourceCode,
+            sender,
+            initialState,
+            root.getEffectiveChildren()
+        )
+    }
+
+    private fun comparePotentials(a: RoutePotential, b: RoutePotential): Int {
+        val aNoError = a.diagnostics.none { it.isError }
+        val bNoError = b.diagnostics.none { it.isError }
+
+        return when {
+            aNoError != bNoError -> aNoError.compareTo(bNoError)
+            aNoError -> compareValuesBy(
+                a, b,
+                { it.state.reader.isOver() },
+                { it.state.reader.cursor },
+                { it.state.literalCount }
+            )
+            else -> compareValuesBy(
+                a, b,
+                { it.errorCursor ?: it.furthestCursor },
+                { -it.diagnostics.count { diagnostic -> diagnostic.isError } },
+                { it.state.reader.isOver() },
+                { it.state.reader.cursor },
+                { it.state.literalCount }
+            )
+        }
     }
 
     /*
@@ -476,9 +486,6 @@ class CommandDispatcher(
             end = start
         }
 
-        // permission failure は diagnostic として記録するだけ
-        context.checkPermission(start, end)
-
         if (argumentParseResult is NoValuedArgument) {
             context.completionCandidates.add(CompletionCandidate(
                 node,
@@ -495,8 +502,19 @@ class CommandDispatcher(
          *
          * permission failure はここでは stateAtDiagnostic にしない。
          */
-        if (context.diagnostics.count { it.isError } > diagnosticCountBeforeParse) {
+        val newErrors = context.diagnostics
+            .drop(diagnosticCountBeforeParse)
+            .filter { it.isError }
+
+        // permission failure は diagnostic として記録するだけ
+        context.checkPermission(start, end)
+
+        if (newErrors.isNotEmpty()) {
             context.saveStateAtParseError()
+
+            if (context.errorCursor == null) {
+                context.errorCursor = newErrors.minOf { it.sourceSpan.start.index }
+            }
         }
     }
 
@@ -519,6 +537,7 @@ class CommandDispatcher(
                     context.sourceCode,
                     error.sourceSpan
                 ),
+            errorCursor = error.sourceSpan.start.index,
             completionCandidates = context.completionCandidates.toList(),
             semanticTokens = context.semanticTokens.toList()
         )
@@ -604,6 +623,7 @@ class CommandDispatcher(
                             context.sourceCode,
                             context.commandLineReader.peek().sourceSpan
                         ),
+                    errorCursor = context.errorCursor,
                     completionCandidates = context.completionCandidates.toList(),
                     semanticTokens = context.semanticTokens.toList()
                 )
@@ -613,6 +633,7 @@ class CommandDispatcher(
         return childPotentials.map { potential ->
             potential.copy(
                 state = context.stateAtParseError ?: potential.state,
+                errorCursor = context.errorCursor ?: potential.errorCursor,
                 diagnostics = context.diagnostics + potential.diagnostics,
                 completionCandidates = context.completionCandidates + potential.completionCandidates,
                 semanticTokens = context.semanticTokens + potential.semanticTokens
