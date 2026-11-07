@@ -341,13 +341,6 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val tail = route.last()
         val children = tail.getEffectiveChildren().values
 
-        System.err.run {
-            println("route = ${route.map { it.toString() }}")
-            println("route.size = ${route.size}")
-            println("children = ${children.map { it.toString() }}")
-            println("activeParameter = ${route.size}")
-        }
-
         if (children.isEmpty()) {
             return CompletableFuture.completedFuture(null)
         }

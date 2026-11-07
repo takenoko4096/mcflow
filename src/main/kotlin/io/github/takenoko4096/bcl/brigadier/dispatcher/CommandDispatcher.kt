@@ -18,9 +18,6 @@ import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
-import kotlin.collections.iterator
-import kotlin.collections.plus
-import kotlin.collections.plusAssign
 
 class CommandDispatcher(
     name: String,
@@ -337,9 +334,6 @@ class CommandDispatcher(
         return potentials
     }
 
-    /*
-     * LiteralCommandNode の解析。
-     */
     private fun parseLiteral(context: NodeParseContext, node: LiteralCommandNode, name: String): LiteralParseResult {
         val reader = context.reader
 
@@ -405,9 +399,6 @@ class CommandDispatcher(
         )
     }
 
-    /*
-     * ArgumentCommandNode の解析。
-     */
     private fun parseArgument(context: NodeParseContext, node: ArgumentCommandNode<*>) {
         val reader = context.reader
 
@@ -494,8 +485,7 @@ class CommandDispatcher(
     }
 
     /*
-     * BclTokenSeqReadException が発生した場合の RoutePotential。
-     * 元 dispatch() の catch ブロックに対応する。
+     * BclTokenSeqReadException が発生した場合の RoutePotential
      */
     private fun createParseErrorPotential(context: NodeParseContext, error: BclTokenSeqReadException): RoutePotential {
         return RoutePotential(
