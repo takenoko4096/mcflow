@@ -270,9 +270,9 @@ class CommandDispatcher(
                 a, b,
                 { it.errorCursor ?: it.furthestState.reader.cursor },
                 { -it.diagnostics.count { diagnostic -> diagnostic.isError } },
-                { it.state.reader.isOver() },
-                { it.state.reader.cursor },
-                { it.state.literalCount }
+                { it.furthestState.reader.isOver() },
+                { it.furthestState.reader.cursor },
+                { it.furthestState.literalCount }
             )
         }
     }
@@ -343,8 +343,6 @@ class CommandDispatcher(
     private fun parseLiteral(context: NodeParseContext, node: LiteralCommandNode, name: String): LiteralParseResult {
         val reader = context.reader
 
-        val originalReader = reader.clone()
-
         if (reader.isOver()) {
             context.addMissingArgumentCompletion()
 
@@ -354,67 +352,57 @@ class CommandDispatcher(
             )
         }
 
-        /*
-         * Literal の読み取り前の cursor を保存
-         * 不一致時にここへ戻す
-         */
-        val cursor = reader.cursor
+        val beforeParsingState = context.nextState.copy(
+            reader = reader.clone(),
+            literalCount = context.parentState.literalCount,
+            route = context.parentState.route
+        )
+
         val start = reader.getCurrentTokenStartPosition()
         val literal = reader.readCommandString()
         val end = reader.getPreviousTokenEndPosition()
 
-        context.semanticTokens.add(BclSemanticToken(
-            if (node is Command) {
-                commandSemanticTokenType
-            } else {
-                BclSemanticTokenType.LITERAL
-            },
-            start..end
-        ))
+        context.semanticTokens.add(
+            BclSemanticToken(
+                if (node is Command) commandSemanticTokenType
+                else BclSemanticTokenType.LITERAL,
+                start..end
+            )
+        )
 
-        /*
-         * permission は Literal が一致しているかどうかに関係なく実行する
-         */
         context.checkPermission(start, end)
 
-        if (literal != name) {
-            context.completionCandidates.add(
-                CompletionCandidate(node, start, start..end)
-            )
-
-            // Literal 読み取り完了時点の状態を保存
-            val furthestState = context.nextState.copy(
-                reader = reader.clone()
-            )
-
-            // 通常の解析結果は Literal 読み取り前の状態に戻す
-            // reader.cursor = cursor ;originalReader
-
-            return LiteralParseResult.Mismatched(
-                RoutePotential(
-                    state = context.nextState.copy(
-                        reader = originalReader,
-                        literalCount = context.parentState.literalCount,
-                        route = context.parentState.route
-                    ),
-                    diagnostics = context.diagnostics + BclDiagnostic(
-                        """
-                        ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません: '$literal'
-                        ${getExpectationMessage(context.nodeCandidates.values)}
-                        """.trimIndent(),
-                        context.sourceCode,
-                        start..end
-                    ),
-                    completionCandidates = context.completionCandidates.toList(),
-                    semanticTokens = context.semanticTokens.toList(),
-                    furthestState = furthestState
-                )
-            )
+        if (literal == name) {
+            context.literals += node to (start..end)
+            return LiteralParseResult.Matched
         }
 
-        context.literals += node to (start..end)
+        context.completionCandidates.add(
+            CompletionCandidate(node, start, start..end)
+        )
 
-        return LiteralParseResult.Matched
+        val furthestState = context.nextState.copy(
+            reader = reader.clone(),
+            literalCount = context.parentState.literalCount,
+            route = context.parentState.route
+        )
+
+        return LiteralParseResult.Mismatched(
+            RoutePotential(
+                state = beforeParsingState,
+                diagnostics = context.diagnostics + BclDiagnostic(
+                    """
+                    ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません: '$literal'
+                    ${getExpectationMessage(context.nodeCandidates.values)}
+                    """.trimIndent(),
+                    context.sourceCode,
+                    start..end
+                ),
+                completionCandidates = context.completionCandidates.toList(),
+                semanticTokens = context.semanticTokens.toList(),
+                furthestState = furthestState
+            )
+        )
     }
 
     /*
@@ -524,6 +512,10 @@ class CommandDispatcher(
                     context.sourceCode,
                     error.sourceSpan
                 ),
+            furthestState = context.nextState.copy(
+                literalCount = context.parentState.literalCount,
+                route = context.parentState.route
+            ),
             errorCursor = error.sourceSpan.start.index,
             completionCandidates = context.completionCandidates.toList(),
             semanticTokens = context.semanticTokens.toList()
