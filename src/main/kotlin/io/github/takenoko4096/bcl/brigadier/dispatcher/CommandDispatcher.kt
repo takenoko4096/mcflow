@@ -187,9 +187,7 @@ class CommandDispatcher(
             else {
                 val semanticTokens = (reader.preprocessedSemanticTokens + best.semanticTokens).toMutableList()
 
-                val furthestReader = best.state.reader
-                    .clone()
-                    .apply { cursor = best.furthestCursor }
+                val furthestReader = best.furthestState.reader.clone()
 
                 furthestReader.getSourceSpansOfRemainingLines().forEach {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, it))
@@ -270,7 +268,7 @@ class CommandDispatcher(
             )
             else -> compareValuesBy(
                 a, b,
-                { it.errorCursor ?: it.furthestCursor },
+                { it.errorCursor ?: it.furthestState.reader.cursor },
                 { -it.diagnostics.count { diagnostic -> diagnostic.isError } },
                 { it.state.reader.isOver() },
                 { it.state.reader.cursor },
@@ -343,7 +341,9 @@ class CommandDispatcher(
      * LiteralCommandNode の解析。
      */
     private fun parseLiteral(context: NodeParseContext, node: LiteralCommandNode, name: String): LiteralParseResult {
-        val reader = context.commandLineReader
+        val reader = context.reader
+
+        val originalReader = reader.clone()
 
         if (reader.isOver()) {
             context.addMissingArgumentCompletion()
@@ -377,50 +377,37 @@ class CommandDispatcher(
          */
         context.checkPermission(start, end)
 
-        /*
-         * Literal 不一致。
-         */
         if (literal != name) {
-            context.completionCandidates.add(CompletionCandidate(
-                node,
-                start,
-                start..end
-            ))
+            context.completionCandidates.add(
+                CompletionCandidate(node, start, start..end)
+            )
 
-            /*
-             * 元コードと同じく、
-             * Literal を読み終わった位置を furthestCursor とする。
-             */
-            // TODO: furthestCursor と reader.cursor の役割を入れ替える？
-            val furthestCursor = reader.cursor
+            // Literal 読み取り完了時点の状態を保存
+            val furthestState = context.nextState.copy(
+                reader = reader.clone()
+            )
 
-            /*
-             * 元コードと同じく、RoutePotential に渡す前に
-             * reader.cursor を Literal 読み取り前へ戻す。
-             *
-             * nextState.reader も同じ reader オブジェクトを参照しているため、
-             * nextState の cursor もここで戻る。
-             */
-            reader.cursor = cursor
+            // 通常の解析結果は Literal 読み取り前の状態に戻す
+            // reader.cursor = cursor ;originalReader
 
             return LiteralParseResult.Mismatched(
                 RoutePotential(
                     state = context.nextState.copy(
+                        reader = originalReader,
                         literalCount = context.parentState.literalCount,
                         route = context.parentState.route
                     ),
-                    diagnostics =
-                        context.diagnostics + BclDiagnostic(
-                            """
-                            ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません: '$literal'
-                            ${getExpectationMessage(context.nodeCandidates.values)}
-                            """.trimIndent(),
-                            context.sourceCode,
-                            start..end
-                        ),
+                    diagnostics = context.diagnostics + BclDiagnostic(
+                        """
+                        ${if (context.parentState.route.isEmpty()) "コマンド名" else "引数"}が正しくありません: '$literal'
+                        ${getExpectationMessage(context.nodeCandidates.values)}
+                        """.trimIndent(),
+                        context.sourceCode,
+                        start..end
+                    ),
                     completionCandidates = context.completionCandidates.toList(),
                     semanticTokens = context.semanticTokens.toList(),
-                    furthestCursor = furthestCursor
+                    furthestState = furthestState
                 )
             )
         }
@@ -434,7 +421,7 @@ class CommandDispatcher(
      * ArgumentCommandNode の解析。
      */
     private fun parseArgument(context: NodeParseContext, node: ArgumentCommandNode<*>) {
-        val reader = context.commandLineReader
+        val reader = context.reader
 
         if (reader.isOver()) {
             context.addMissingArgumentCompletion()
@@ -552,7 +539,7 @@ class CommandDispatcher(
         }
 
         val diagnostics = context.diagnostics
-        val reader = context.commandLineReader
+        val reader = context.reader
 
         val diagnostic =
             if (reader.isOver()) {
@@ -621,7 +608,7 @@ class CommandDispatcher(
                         BclDiagnostic(
                             "予期しない引数です: ${getExpectationMessage(children.values)}",
                             context.sourceCode,
-                            context.commandLineReader.peek().sourceSpan
+                            context.reader.peek().sourceSpan
                         ),
                     errorCursor = context.errorCursor,
                     completionCandidates = context.completionCandidates.toList(),
@@ -633,6 +620,7 @@ class CommandDispatcher(
         return childPotentials.map { potential ->
             potential.copy(
                 state = context.stateAtParseError ?: potential.state,
+                furthestState = potential.furthestState,
                 errorCursor = context.errorCursor ?: potential.errorCursor,
                 diagnostics = context.diagnostics + potential.diagnostics,
                 completionCandidates = context.completionCandidates + potential.completionCandidates,

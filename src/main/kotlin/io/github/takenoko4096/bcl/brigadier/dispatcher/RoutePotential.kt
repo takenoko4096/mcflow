@@ -8,7 +8,7 @@ data class RoutePotential(
     val state: DispatcherParseState,
     val diagnostics: List<BclDiagnostic>,
     val errorCursor: Int? = null,
-    val furthestCursor: Int = state.reader.cursor,
+    val furthestState: DispatcherParseState = state,
     val completionCandidates: List<CompletionCandidate>,
     val semanticTokens: List<BclSemanticToken>
 )

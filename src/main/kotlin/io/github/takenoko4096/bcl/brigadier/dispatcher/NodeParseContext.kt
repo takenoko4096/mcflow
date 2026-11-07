@@ -1,7 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.dispatcher
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandRequireContext
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
@@ -18,7 +17,7 @@ data class NodeParseContext(
     val current: CommandNode,
     val nodeCandidates: Map<String, CommandNode>
 ) {
-    val commandLineReader: CommandLineReader = parentState.reader.clone()
+    val reader: CommandLineReader = parentState.reader.clone()
     val literals = parentState.literals.toMutableList()
     val arguments = parentState.arguments.toMutableList()
     val semanticTokens = mutableListOf<BclSemanticToken>()
@@ -30,7 +29,7 @@ data class NodeParseContext(
 
     val nextState: DispatcherParseState
         get() = DispatcherParseState(
-            reader = commandLineReader,
+            reader = reader,
             literals = literals,
             arguments = arguments,
             route = parentState.route + current,
@@ -42,7 +41,7 @@ data class NodeParseContext(
      */
     fun saveStateAtParseError() {
         stateAtParseError = nextState.copy(
-            reader = commandLineReader.clone(),
+            reader = reader.clone(),
             literals = literals.toList(),
             arguments = arguments.toList()
         )
@@ -79,10 +78,10 @@ data class NodeParseContext(
      * 引数不足時の completion candidate を追加する
      */
     fun addMissingArgumentCompletion() {
-        if (commandLineReader.hasSeparatorBeforeCursor()) {
+        if (reader.hasSeparatorBeforeCursor()) {
             completionCandidates.add(CompletionCandidate(
                 current,
-                commandLineReader.getOverNextSourceSpan().start,
+                reader.getOverNextSourceSpan().start,
                 null
             ))
         }

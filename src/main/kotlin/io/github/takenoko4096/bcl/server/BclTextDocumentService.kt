@@ -334,10 +334,10 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val potentials = result.dispatcher.parsePotentials(reader, fakeFile.sender)
         val potential = potentials.maxWith(
-            compareBy<RoutePotential> { it.furthestCursor }
-                .thenBy { it.state.route.size }
+            compareBy<RoutePotential> { it.furthestState.reader.cursor }
+                .thenBy { it.furthestState.route.size }
         )
-        val route = potential.state.route
+        val route = potential.furthestState.route
         val tail = route.last()
         val children = tail.getEffectiveChildren().values
 
