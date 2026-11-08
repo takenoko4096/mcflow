@@ -14,7 +14,7 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.services.TextDocumentService
-/*
+
 class BclIncrementalTextDocumentService(private val server: BedrockCommandLanguageServer) : TextDocumentService {
     private val documents = mutableMapOf<String, CommandDocumentParseResult>()
 
@@ -43,6 +43,8 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         val parser = BclParser(
             sourceCode,
             tokens,
+            sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices),
+            overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!,
             server.dispatcher,
             server.commentCommandDispatcher,
             sender
@@ -138,4 +140,3 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
 
     override fun didSave(params: DidSaveTextDocumentParams) {}
 }
-*/

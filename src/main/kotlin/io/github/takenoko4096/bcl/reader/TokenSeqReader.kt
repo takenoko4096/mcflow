@@ -200,7 +200,7 @@ open class TokenSeqReader(
         next()
     }
 
-    fun expectIgnoreNewLine(symbol: Symbol) {
+    fun expectIgnoreNewLine(symbol: Symbol, then: ((SourceSpan) -> Unit)? = null) {
         val start = getCurrentTokenStartPosition()
 
         if (isOverIgnoreNewLine()) {
@@ -209,6 +209,8 @@ open class TokenSeqReader(
 
         if (peekIgnoreNewLine() `is` symbol) {
             nextIgnoreNewLine()
+            val end = getPreviousTokenEndPosition()
+            then?.invoke(start..end)
         }
         else {
             val v = peekIgnoreNewLine().value
@@ -218,7 +220,7 @@ open class TokenSeqReader(
         }
     }
 
-    fun expectIgnoreNewLine(keyword: Keyword) {
+    fun expectIgnoreNewLine(keyword: Keyword, then: ((SourceSpan) -> Unit)? = null) {
         val start = getCurrentTokenStartPosition()
 
         if (isOverIgnoreNewLine()) {
@@ -232,6 +234,8 @@ open class TokenSeqReader(
 
         if (peekIgnoreNewLine() `is` keyword) {
             nextIgnoreNewLine()
+            val end = getPreviousTokenEndPosition()
+            then?.invoke(start..end)
         }
         else {
             val v = peekIgnoreNewLine().value
