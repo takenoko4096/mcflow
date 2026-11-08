@@ -64,19 +64,19 @@ class CommandArgumentType : ArgumentType<Command>("command") {
         val completer = context.newCompleter()
 
         val commands = context.dispatcher.getRoot()
-            .getEffectiveChildren().values
-            .filter {
+            .getEffectiveChildren()
+            .filter { (_, node) ->
                 val requireContext = CommandRequireContext(
                     sourceCode = context.sourceCode,
-                    node = it,
+                    node = node,
                     sourceSpan = completer.getNonnullSourceSpan(),
                     sender = context.sender
                 )
-                it.predicate == null || it.predicate(requireContext) is CommandRequireContext.Successful
+                node.predicate == null || node.predicate(requireContext) is CommandRequireContext.Successful
             }
 
         val result = completer.completeUnquotedString(
-            commands.map { it.name },
+            commands.map { it.key },
             CompletionItemKind.EnumMember
         )
 
