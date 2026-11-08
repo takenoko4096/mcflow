@@ -2,7 +2,7 @@ package io.github.takenoko4096.bcl.brigadier
 
 import io.github.takenoko4096.bcl.brigadier.value.misc.CommandPermissionLevel
 
-class CommandSender(
+data class CommandSender(
     var permissionLevel: CommandPermissionLevel = CommandPermissionLevel.GAME_DIRECTOR,
     var behaviorUnvanillaReport: BclSeverity? = BclSeverity.ERROR,
     var resourceUnvanillaReport: BclSeverity? = BclSeverity.WARNING,

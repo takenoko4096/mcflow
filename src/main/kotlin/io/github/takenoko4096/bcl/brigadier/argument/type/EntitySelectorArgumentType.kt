@@ -110,7 +110,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, start..end))
 
         if (!failure) {
-            arguments.c = WithSpan(c, start..end)
+            arguments.c = c
         }
     }
 
@@ -126,7 +126,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return
         }
 
-        arguments.dx = WithSpan(dx, start..end)
+        arguments.dx = dx
     }
 
     private fun dy(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -141,7 +141,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return
         }
 
-        arguments.dy = WithSpan(dy, start..end)
+        arguments.dy = dy
     }
 
     private fun dz(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -156,7 +156,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             return
         }
 
-        arguments.dz = WithSpan(dz, start..end)
+        arguments.dz = dz
     }
 
     private fun family(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -167,7 +167,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
 
-        arguments.family.add(InvertibleValue(inverted, string, start..end))
+        arguments.family.add(InvertibleValue(inverted, string))
     }
 
     private fun hasPermission(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -238,7 +238,6 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
 
         if (arguments.hasPermission != null) {
-            val end = reader.getPreviousTokenEndPosition()
             diagnostics.add(reader.diagnostic(sourceSpan, "セレクタ引数 'haspermission' の読み取りに失敗しました: haspermission は重複できません"))
             return
         }
@@ -256,10 +255,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
             Symbol.BRACE_END,
             kvSeparatorParser = {
                 expect(Symbol.ASSIGN)
-                val start2 = getCurrentTokenStartPosition()
-                val inv = readIsInverted()
-                val end2 = getPreviousTokenEndPosition()
-                WithSpan(inv, if (inv) start2..end2 else SourceSpan.NULL)
+                readIsInverted()
             },
             keyParser = {
                 val start2 = getCurrentTokenStartPosition()
@@ -294,7 +290,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     if (AccessibleActorProperties.getProperty(identifier) == null) {
                         diagnostics.add(reader.diagnostic(start2..end2, "セレクタ引数 'has_property' の読み取りに失敗しました: '$identifier' は不明なプロパティです"))
                     }
-                    properties.add(InvertibleValue(inv.value, identifier, start2..end2))
+                    properties.add(InvertibleValue(inv, identifier))
                     return@readDuplicatableMap null
                 }
 
@@ -324,7 +320,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                     return@readDuplicatableMap null
                 }
 
-                val invertible = InvertibleValue<Any>(inv.value, value, start2..end2)
+                val invertible = InvertibleValue<Any>(inv, value)
 
                 if (key == null) {
                     return@readDuplicatableMap invertible
@@ -379,15 +375,15 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 val start = getCurrentTokenStartPosition()
                 val inv = readIsInverted()
                 val end = getPreviousTokenEndPosition()
-                WithSpan(inv, if (inv) start..end else SourceSpan.NULL)
+                if (inv) start..end else null
             },
             fallbackValueParser = { key, _ ->
                 diagnostics.add(diagnostic(key.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: 不明なキーです: '${key.value}'"))
             },
             valueParsers = mapOf(
-                "item" to { inv ->
-                    if (inv.value) {
-                        diagnostics.add(diagnostic(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: キー 'item' は反転できません"))
+                "item" to { invSourceSpan ->
+                    if (invSourceSpan != null) {
+                        diagnostics.add(diagnostic(invSourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました: キー 'item' は反転できません"))
                     }
 
                     val start2 = getCurrentTokenStartPosition()
@@ -411,37 +407,37 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                             ItemType(id, isVanilla = false)
                         }
                 },
-                "slot" to { inv ->
+                "slot" to { invSourceSpan ->
                     val result = unfatalize(diagnostics) { readIntRange() }
 
-                    if (result.nonnull) {
+                    if (result.sourceSpan != null) {
                         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, result.sourceSpan))
                     }
 
                     if (result is TokenSeqReader.ReadResult.Successful) {
-                        slot = InvertibleValue(inv.value, result.value, result.sourceSpan)
+                        slot = InvertibleValue(invSourceSpan != null, result.value)
                     }
                     else {
                         return@to
                     }
                 },
-                "quantity" to { inv ->
+                "quantity" to { invSourceSpan ->
                     val result = unfatalize(diagnostics) { readIntRange() }
 
-                    if (result.nonnull) {
+                    if (result.sourceSpan != null) {
                         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, result.sourceSpan))
                     }
 
                     if (result is TokenSeqReader.ReadResult.Successful) {
-                        quantity = InvertibleValue(inv.value, result.value, result.sourceSpan)
+                        quantity = InvertibleValue(invSourceSpan != null, result.value)
                     }
                     else {
                         return@to
                     }
                 },
-                "location" to { inv ->
-                    if (inv.value) {
-                        diagnostics.add(diagnostic(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'location' は反転できません"))
+                "location" to { invSourceSpan ->
+                    if (invSourceSpan != null) {
+                        diagnostics.add(diagnostic(invSourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'location' は反転できません"))
                     }
 
                     val start2 = getCurrentTokenStartPosition()
@@ -456,9 +452,9 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                             return@to
                         }
                 },
-                "data" to { inv ->
-                    if (inv.value) {
-                        diagnostics.add(diagnostic(inv.sourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は反転できません"))
+                "data" to { invSourceSpan ->
+                    if (invSourceSpan != null) {
+                        diagnostics.add(diagnostic(invSourceSpan, "セレクタ引数 'hasitem' の読み取りに失敗しました:  キー 'data' は反転できません"))
                     }
 
                     val start2 = getCurrentTokenStartPosition()
@@ -571,7 +567,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 return
             }
 
-        arguments.m = InvertibleValue(inv, gameMode, start..end)
+        arguments.m = InvertibleValue(inv, gameMode)
     }
 
     private fun name(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -603,7 +599,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         }
 
         name as TokenSeqReader.ReadResult.Successful
-        arguments.name.add(InvertibleValue(inverted, name.value, start..end))
+        arguments.name.add(InvertibleValue(inverted, name.value))
     }
 
     private fun r(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -740,12 +736,10 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         val scores = SelectorArguments.Scores()
 
         while (true) {
-            val start2 = reader.getCurrentTokenStartPosition()
             val objective = reader.unfatalize(diagnostics) { readQuotableCommandString() }
-            val end2 = reader.getPreviousTokenEndPosition()
 
-            if (objective.nonnull) {
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start2..end2))
+            if (objective.sourceSpan != null) {
+                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, objective.sourceSpan))
             }
 
             reader.expect(Symbol.ASSIGN)
@@ -753,14 +747,14 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
             val range = reader.unfatalize(diagnostics) { readIntRange() }
 
-            if (range.nonnull) {
+            if (range.sourceSpan != null) {
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, range.sourceSpan))
             }
 
             if (objective is TokenSeqReader.ReadResult.Successful && range is TokenSeqReader.ReadResult.Successful) {
                 scores.add(
-                    WithSpan(objective.value, start2..end2),
-                    InvertibleValue(inverted, range.value, range.sourceSpan)
+                    WithSpan(objective.value, objective.nonnullSourceSpan),
+                    InvertibleValue(inverted, range.value)
                 )
             }
             else {
@@ -803,14 +797,14 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
 
     private fun tag(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
         if (reader.peek() `is` Symbol.ARRAY_END || reader.peek() `is` Symbol.COMMA) {
-            arguments.tag.add(InvertibleValue.uninverted(null, SourceSpan.NULL))
+            arguments.tag.add(InvertibleValue.uninverted(null))
             return
         }
 
         val inverted = reader.readIsInverted()
 
         if (reader.peek() `is` Symbol.ARRAY_END || reader.peek() `is` Symbol.COMMA) {
-            arguments.tag.add(InvertibleValue.inverted(null, SourceSpan.NULL))
+            arguments.tag.add(InvertibleValue.inverted(null))
             return
         }
 
@@ -821,7 +815,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, start..end))
 
         if (string is TokenSeqReader.ReadResult.Successful) {
-            arguments.tag.add(InvertibleValue(inverted, string.value, start..end))
+            arguments.tag.add(InvertibleValue(inverted, string.value))
         }
     }
 
@@ -851,7 +845,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
                 EntityType(identifier, isSummonable = true, isVanilla = false)
             }
 
-        arguments.type.add(InvertibleValue(inverted, entityType, start..end))
+        arguments.type.add(InvertibleValue(inverted, entityType))
     }
 
     private fun x(context: ArgumentParseContext, reader: TokenSeqReader, arguments: SelectorArguments, diagnostics: MutableList<BclDiagnostic>, semanticTokens: MutableList<BclSemanticToken>, sourceSpan: SourceSpan) {
@@ -915,7 +909,7 @@ class EntitySelectorArgumentType(private val validator: (TokenSeqReader.(EntityS
         if (t.type == TokenType.DOUBLE_QUOTED) {
             reader.next()
             val end = reader.getPreviousTokenEndPosition()
-            arguments.name.add(InvertibleValue.uninverted(t.value, start..end))
+            arguments.name.add(InvertibleValue.uninverted(t.value))
             semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SELECTOR_TYPE, start..end))
             return SelectorType.PLAYER
         }

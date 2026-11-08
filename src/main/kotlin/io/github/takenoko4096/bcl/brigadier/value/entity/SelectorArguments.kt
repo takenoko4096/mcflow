@@ -9,10 +9,10 @@ import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 data class SelectorArguments(
-    var c: WithSpan<Int>? = null,
-    var dx: WithSpan<Float>? = null,
-    var dy: WithSpan<Float>? = null,
-    var dz: WithSpan<Float>? = null,
+    var c: Int? = null,
+    var dx: Float? = null,
+    var dy: Float? = null,
+    var dz: Float? = null,
     val family: MutableList<InvertibleValue<String>> = mutableListOf(),
     var hasProperty: HasProperty? = null,
     val hasItem: MutableList<HasItem> = mutableListOf(),
@@ -62,10 +62,10 @@ data class SelectorArguments(
 
     override fun toString(): String {
         return listOfNotNull(
-            c?.run { "c=$value" },
-            dx?.run { "dx=$value" },
-            dy?.run { "dy=$value" },
-            dz?.run { "dz=$value" },
+            c?.run { "c=$this" },
+            dx?.run { "dx=$this" },
+            dy?.run { "dy=$this" },
+            dz?.run { "dz=$this" },
             family.ifEmpty { null }?.run { "family=$this" },
             hasProperty?.run { "has_property=$this" },
             hasItem.ifEmpty { null }?.run { "hasitem=$this" },

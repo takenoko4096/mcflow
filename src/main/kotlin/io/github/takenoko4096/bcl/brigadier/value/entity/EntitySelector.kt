@@ -4,11 +4,8 @@ import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
-import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.argument.type.EntitySelectorArgumentType
-import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
-import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.parser.BclParseException
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
@@ -23,9 +20,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
 
     val isPlayer = type.isPlayer || arguments.type.any { !it.inverted && it.value == VanillaEntityType.PLAYER.toEntityType() }
 
-    val isSingle = c?.value == 1 || c?.value == -1
-
-    val isInvertedOrder = c?.value != null && c.value < 0
+    val isSingle = c == 1 || c == -1
 
     val isWildcard = type == SelectorType.PLAYER && arguments.name.size == 1 && !arguments.name.first().inverted && arguments.name.first().value == KeyChar.WILDCARD.toString()
 
@@ -38,10 +33,20 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             val dummyDiags = mutableListOf<BclDiagnostic>()
             val dummySemcs = mutableListOf<BclSemanticToken>()
 
-            val tokenizer = BclTokenizer(string, extension = false)
+            val tokenizer = BclTokenizer(string, context.sender.copy(extension = false))
             val tokens = tokenizer.tokenize()
 
-            val reader = TokenSeqReader(tokenizer.sourceCode, tokens, ::BclParseException)
+            val sourceCode = tokenizer.sourceCode
+            val sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices)
+            val overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!
+
+            val reader = TokenSeqReader(
+                sourceCode,
+                tokens,
+                sourceSpan,
+                overSourcePosition,
+                ::BclParseException
+            )
             val type = EntitySelectorArgumentType()
 
             if (string.isEmpty()) {
@@ -66,7 +71,8 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             catch (error: BclTokenSeqReadException) {
                 dummyDiags.add(reader.diagnostic(error.sourceSpan, error.description))
                 val span = reader.getRemainingSourceSpan()
-                dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.peekSafely(-1).sourceSpan))
+                // TODO 大丈夫かな
+                dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, reader.peek(-1)!!.sourceSpan))
                 dummySemcs.add(BclSemanticToken(BclSemanticTokenType.ERROR, span))
                 null
             }

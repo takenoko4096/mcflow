@@ -40,11 +40,12 @@ class BlockStateArgumentType : ArgumentType<BlockState>("block_state") {
 
         val blockPropertiesParseResult = blockPropertiesArgumentType.parse(context)
 
-        val mergedSpan = blockTypeParseResult.sourceSpan.start..blockPropertiesParseResult.sourceSpan.end
-
         if (blockPropertiesParseResult !is Argument) {
+            val mergedSpan = blockTypeParseResult.sourceSpan.start..(blockPropertiesParseResult.sourceSpan?.end ?: blockTypeParseResult.sourceSpan.end)
             return NoValuedArgument(this, mergedSpan, diagnostics)
         }
+
+        val mergedSpan = blockTypeParseResult.sourceSpan.start..blockPropertiesParseResult.sourceSpan.end
 
         val blockProperties = blockPropertiesParseResult.value
 

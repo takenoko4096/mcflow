@@ -20,17 +20,24 @@ class BclCompleter(val context: BclCompletionContext) {
 
     private var line: Int = 0
 
-    private var lastLineStartCursor: Int = 0
+    private var linebreakCursor: Int = 0
 
     private val remaining: String
         get() = context.string.substring(this@BclCompleter.cursor)
 
     fun isOver(): Boolean = this@BclCompleter.cursor >= context.string.length
 
+    fun getOverNextSourceSpan(): SourceSpan {
+        val position = SourcePosition.toSourcePosition(context.sourceCode, context.sourceCode.length)!!
+        return position..position
+    }
+
+    fun getNonnullSourceSpan() = context.sourceSpan ?: getOverNextSourceSpan()
+
     fun copy(): BclCompleter {
         val cpy = BclCompleter(context)
         cpy.cursor = this@BclCompleter.cursor
-        cpy.lastLineStartCursor = lastLineStartCursor
+        cpy.linebreakCursor = linebreakCursor
         cpy.line = line
         return cpy
     }
@@ -49,7 +56,7 @@ class BclCompleter(val context: BclCompletionContext) {
 
         if (current == KeyChar.LINEBREAK) {
             line++
-            lastLineStartCursor = this@BclCompleter.cursor
+            linebreakCursor = this@BclCompleter.cursor
         }
     }
 
@@ -73,7 +80,7 @@ class BclCompleter(val context: BclCompletionContext) {
     private fun getCurrentSourcePosition(): SourcePosition {
         return SourcePosition(
             line + context.offset.line,
-            (this@BclCompleter.cursor - lastLineStartCursor) + context.offset.column,
+            (this@BclCompleter.cursor - linebreakCursor) + context.offset.column,
             this@BclCompleter.cursor + context.offset.index
         )
     }
@@ -115,7 +122,7 @@ class BclCompleter(val context: BclCompletionContext) {
         else if (input == null) {
             if (optional && items.isEmpty()) {
                 this@BclCompleter.cursor = cpy.cursor
-                lastLineStartCursor = cpy.lastLineStartCursor
+                linebreakCursor = cpy.linebreakCursor
                 line = cpy.line
                 ShouldContinue("")
             }
@@ -124,7 +131,7 @@ class BclCompleter(val context: BclCompletionContext) {
         else {
             if (optional) {
                 this@BclCompleter.cursor = cpy.cursor
-                lastLineStartCursor = cpy.lastLineStartCursor
+                linebreakCursor = cpy.linebreakCursor
                 line = cpy.line
                 ShouldContinue("")
             }
@@ -720,14 +727,14 @@ class BclCompleter(val context: BclCompletionContext) {
         return Checkpoint(
             cursor = this@BclCompleter.cursor,
             line = this@BclCompleter.line,
-            lastLineStartCursor = this@BclCompleter.lastLineStartCursor
+            lastLineStartCursor = this@BclCompleter.linebreakCursor
         )
     }
 
     fun restore(checkpoint: Checkpoint) {
         this@BclCompleter.cursor = checkpoint.cursor
         this@BclCompleter.line = checkpoint.line
-        this@BclCompleter.lastLineStartCursor = checkpoint.lastLineStartCursor
+        this@BclCompleter.linebreakCursor = checkpoint.lastLineStartCursor
     }
 
     fun skipWhitespaceAndComments() {

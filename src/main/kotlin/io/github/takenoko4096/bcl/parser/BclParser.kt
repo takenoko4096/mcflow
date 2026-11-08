@@ -27,6 +27,7 @@ import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.tokenizer.`!is`
+import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
@@ -36,10 +37,12 @@ import io.github.takenoko4096.bcl.tokenizer.`is`
 class BclParser(
     sourceCode: String,
     tokens: List<Token>,
+    sourceSpan: SourceSpan?,
+    overSourcePosition: SourcePosition,
     private val dispatcher: CommandDispatcher,
     private val commentCommandDispatcher: CommandDispatcher,
     private val sender: CommandSender
-) : TokenSeqReader(sourceCode, tokens, ::BclParseException) {
+) : TokenSeqReader(sourceCode, tokens, sourceSpan, overSourcePosition, ::BclParseException) {
     private fun expression(): Expression {
         skipNewLine()
         val expr = assignment()
@@ -486,8 +489,13 @@ class BclParser(
         }
     }
 
-    private fun command(reader: CommandLineReader, /*macros: Map<String, String>*/): CommandLineParseResult {
-        return (if (reader.isCommentCommand) commentCommandDispatcher else dispatcher).parse(reader, sender)
+    private fun command(reader: CommandLineReader, dispatcher: CommandDispatcher/*macros: Map<String, String>*/): CommandLineParseResult {
+        return try {
+            dispatcher.parse(reader, sender)
+        }
+        catch (_: Throwable) {
+            CommandLineParseResult.error(sender, reader, dispatcher)
+        }
     }
 
     private fun statement(): Statement {
@@ -770,7 +778,9 @@ class BclParser(
             statement()
         }
         else {
-            command(CommandLineReader.of(this, sender.extension))
+            val reader = CommandLineReader.of(this, sender)
+            val dispatcher = if (reader.isCommentCommand) commentCommandDispatcher else dispatcher
+            command(reader, dispatcher)
         }
 
         while (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.SEMICOLON) {
@@ -781,14 +791,12 @@ class BclParser(
     }
 
     fun parse(): Block {
-        // val diagnostics = mutableListOf<BclDiagnostic>()
-
         if (isOverIgnoreNewLine()) {
-            return Block(SourceSpan.NULL, emptyList())
+            return Block(getOverNextSourceSpan(), emptyList())
         }
 
-        try {
-            return block(false)
+        return try {
+            block(false)
         }
         finally {
             cursor = 0

@@ -1,18 +1,22 @@
 package io.github.takenoko4096.bcl.tokenizer
 
 import io.github.takenoko4096.bcl.ast.BclComment
-import io.github.takenoko4096.bcl.reader.CommandLineReader
+import io.github.takenoko4096.bcl.brigadier.CommandSender
 
-class BclTokenizer(text: String, val extension: Boolean, private val comments: MutableList<BclComment>? = mutableListOf()) {
+class BclTokenizer(
+    text: String,
+    private val sender: CommandSender,
+    private val comments: MutableList<BclComment>? = mutableListOf()
+) {
     val sourceCode: String = text
         .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
         .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
 
-    private var line: Int = 1
+    private var line: Int = 0
 
     private var cursor: Int = 0
 
-    private var lastLineStartCursor: Int = 0
+    private var linebreakCursor: Int = 0
 
     private var id = 0
 
@@ -33,7 +37,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
     private fun peek(): Char {
         if (isOver()) {
-            throw exception(getSourcePositionAtBack()..getSourcePositionAtBack(), "入力が不足しています")
+            throw exception(getPreviousSourcePosition()..getPreviousSourcePosition(), "入力が不足しています")
         }
 
         return sourceCode[cursor]
@@ -49,7 +53,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         if (current == KeyChar.LINEBREAK) {
             line++
-            lastLineStartCursor = cursor
+            linebreakCursor = cursor
         }
     }
 
@@ -100,12 +104,12 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
     private fun getCurrentSourcePosition(): SourcePosition {
         return SourcePosition(
             line,
-            (cursor - lastLineStartCursor),
+            (cursor - linebreakCursor),
             cursor
         )
     }
 
-    private fun getSourcePositionAtBack(): SourcePosition {
+    private fun getPreviousSourcePosition(): SourcePosition {
         cursor--
         val p = getCurrentSourcePosition()
         cursor++
@@ -153,7 +157,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         }
 
         val radix = run {
-            if (!extension) return@run Radix.DECIMAL
+            if (!sender.extension) return@run Radix.DECIMAL
 
             if (peek() != KeyChar.ZERO) return@run Radix.DECIMAL
 
@@ -175,7 +179,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         val intPart = digits(radix.value)
 
         if (intPart.isEmpty()) {
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return invalid(start..end, radix.apply(true), "数字を含まない数値リテラルは無効です")
         }
 
@@ -183,7 +187,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         // ([0] == 小数点 or 指数指定 'e') and 10進 and ([1] <: 基数)
         if (!isOver()
-            && (peek() == KeyChar.DECIMAL_POINT || (peek() == KeyChar.EXPONENTIAL && extension))
+            && (peek() == KeyChar.DECIMAL_POINT || (peek() == KeyChar.EXPONENTIAL && sender.extension))
             && radix.value == 10
             && peek(1) in KeyChar.NUMBER_CHAR_SEQUENCE.slice(0..<radix.value)
         ) {
@@ -193,7 +197,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
             next()
             sb.append(digits(10))
 
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
 
             val tokenType = if (isExp) {
                 TokenType.FLOAT_WITH_EXPONENT
@@ -213,13 +217,13 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
             return tokenOf(tokenType, str, start, end)
         }
 
-        var end = getSourcePositionAtBack()
+        var end = getPreviousSourcePosition()
 
         try {
             sb.toString().toInt()
         }
         catch (_: NumberFormatException) {
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return invalid(start..end, radix.apply(true), "無効な整数です: '$intPart'")
         }
 
@@ -230,7 +234,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         val suffix = peek()
         var signed = true
         var integerPostfix: Char? = null
-        if (extension && suffix == KeyChar.UNSIGNED) {
+        if (sender.extension && suffix == KeyChar.UNSIGNED) {
             signed = false
             end = getCurrentSourcePosition()
             next()
@@ -308,7 +312,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         while (true) {
             if (isOver()) {
-                end = getSourcePositionAtBack()
+                end = getPreviousSourcePosition()
                 return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません: $sb")
             }
 
@@ -321,7 +325,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                 break
             }
             else if (peek() == KeyChar.LINEBREAK) {
-                end = getSourcePositionAtBack()
+                end = getPreviousSourcePosition()
                 return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません: $sb")
             }
             else if (peek() == KeyChar.ESCAPE) {
@@ -331,12 +335,12 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
                 // ただし改行お前はダメだ
                 if (c == KeyChar.LINEBREAK) {
-                    if (extension) {
+                    if (sender.extension) {
                         next()
                         continue
                     }
 
-                    end = getSourcePositionAtBack()
+                    end = getPreviousSourcePosition()
                     return invalid(start..end, TokenType.DOUBLE_QUOTED, "文字列の解析に失敗しました: 文字列が $quote で閉じられていません; 文字列内で改行することはできません")
                 }
 
@@ -371,13 +375,13 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         val start = getCurrentSourcePosition()
 
-        if (extension && testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
+        if (sender.extension && testThenAdvance(KeyChar.BLOCK_COMMENT_START_SEQUENCE)) {
             var count = 1
             var start = start
             var end: SourcePosition
             while (true) {
                 if (isOver()) {
-                    end = getSourcePositionAtBack()
+                    end = getPreviousSourcePosition()
                     if (end.index >= start.index) {
                         comments.add(BclComment.Multiline(start..end))
                     }
@@ -390,7 +394,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                     count--
                 }
                 else if (peek() == KeyChar.LINEBREAK) {
-                    end = getSourcePositionAtBack()
+                    end = getPreviousSourcePosition()
                     next()
                     if (end.index >= start.index) comments.add(BclComment.Multiline(start..end))
                     start = getCurrentSourcePosition()
@@ -401,7 +405,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                 }
 
                 if (count == 0) {
-                    end = getSourcePositionAtBack()
+                    end = getPreviousSourcePosition()
                     comments.add(BclComment.Multiline(start..end))
                     break
                 }
@@ -418,7 +422,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                 next()
             }
 
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             val sourceSpan = start..end
             comments.add(BclComment.Line(sourceSpan))
 
@@ -441,7 +445,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         }
         else {
             next()
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return invalid(start..end, TokenType.WORD, "識別子として無効な文字です: '$current'")
         }
 
@@ -467,14 +471,14 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         if (peek() != marker) {
             next()
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return invalid(start..end, type, "座標入力は $marker で開始されることが期待されましたが、 ${peek()} が見つかりました")
         }
 
         next()
 
         if (isOver()) {
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return tokenOf(type, "0", start, end)
         }
 
@@ -482,13 +486,13 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
             val numToken = number()
 
             if (numToken.type == TokenType.UINT || numToken is Token.Invalid) {
-                val end = getSourcePositionAtBack()
+                val end = getPreviousSourcePosition()
                 return invalid(start..end, type, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(sourceCode)}'")
             }
 
             val number = numToken.value
 
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
 
             return tokenOf(type, number, start, end)
         }
@@ -530,7 +534,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         if (peek() in KeyChar.QUOTE_CHARS) {
             if (noSeparator) {
                 next()
-                val end = getSourcePositionAtBack()
+                val end = getPreviousSourcePosition()
                 return invalid(start..end, TokenType.DOUBLE_QUOTED, "区切りが必要です")
             }
 
@@ -552,11 +556,11 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         if (testThenAdvance(Symbol.AT.value)) {
             for (symbol in Symbol.entries) {
                 if (test(symbol.value)) {
-                    return tokenOf(Symbol.AT, start, getSourcePositionAtBack())
+                    return tokenOf(Symbol.AT, start, getPreviousSourcePosition())
                 }
             }
 
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
 
             if (isOver() || peek() in KeyChar.COMMAND_WORD_TERMINATORS) {
                 return tokenOf(TokenType.WORD, Symbol.AT.value, start, end)
@@ -567,7 +571,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                 return invalid(start..word.sourceSpan.end, TokenType.WORD, word.message)
             }
 
-            return tokenOf(TokenType.WORD, "${Symbol.AT.value}${word.value}", start, getSourcePositionAtBack())
+            return tokenOf(TokenType.WORD, "${Symbol.AT.value}${word.value}", start, getPreviousSourcePosition())
         }
 
         a@for (symbol in Symbol.entries.sortedByDescending { it.value.length }) {
@@ -590,7 +594,7 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
 
         if (noSeparator) {
             word()
-            val end = getSourcePositionAtBack()
+            val end = getPreviousSourcePosition()
             return invalid(start..end, TokenType.WORD, "トークン $previous の直後には区切りが必要です")
         }
 
@@ -608,8 +612,6 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
                 list.add(token)
             }
 
-            // list.add(tokenOf(Symbol.SEMICOLON))
-
             return list
         }
         catch (error: BclTokenizationException) {
@@ -618,8 +620,8 @@ class BclTokenizer(text: String, val extension: Boolean, private val comments: M
         }
         finally {
             cursor = 0
-            line = 1
-            lastLineStartCursor = 0
+            line = 0
+            linebreakCursor = 0
         }
     }
 }

@@ -24,7 +24,7 @@ class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
 
         val result = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
 
-        if (result.nonnull) {
+        if (result.sourceSpan != null) {
             semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, result.sourceSpan))
         }
 
@@ -40,19 +40,19 @@ class ItemTypeArgumentType : ArgumentType<ItemType>("item_type") {
                 // unvanilla
                 if (context.sender.behaviorUnvanillaReport != null) {
                     diagnostics.add(reader.diagnostic(
-                        result.sourceSpan, "不明なアイテムタイプです: ${result.value}",
+                        result.nonnullSourceSpan, "不明なアイテムタイプです: ${result.value}",
                         context.sender.behaviorUnvanillaReport!!
                     ))
                 }
 
                 if (context.sender.behaviorUnvanillaReport == BclSeverity.ERROR) {
-                    return NoValuedArgument(this, result.sourceSpan, diagnostics)
+                    return NoValuedArgument(this, result.nonnullSourceSpan, diagnostics)
                 }
 
                 ItemType(identifier, isVanilla = false)
             }
 
-        return Argument(this, itemType, result.sourceSpan)
+        return Argument(this, itemType, result.nonnullSourceSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {

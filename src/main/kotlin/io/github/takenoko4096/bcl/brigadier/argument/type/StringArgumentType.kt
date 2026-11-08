@@ -24,9 +24,13 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
             }
             Mode.QUOTABLE -> {
                 val result = reader.unfatalize(diagnostics) { readQuotableCommandString() }
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+
+                if (result.sourceSpan != null) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+                }
+
                 if (result is TokenSeqReader.ReadResult.Successful) {
-                    Argument(this, result.value, result.sourceSpan)
+                    Argument(this, result.value, result.nonnullSourceSpan)
                 }
                 else {
                     NoValuedArgument(this, result.sourceSpan, diagnostics)
@@ -34,16 +38,20 @@ class StringArgumentType(private val mode: Mode) : ArgumentType<String>("string"
             }
             Mode.WORD -> {
                 val result = reader.unfatalize(diagnostics) { readCommandString() }
-                semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+
+                if (result.sourceSpan != null) {
+                    semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, result.sourceSpan))
+                }
+
                 if (result is TokenSeqReader.ReadResult.Successful) {
-                    Argument(this, result.value, result.sourceSpan)
+                    Argument(this, result.value, result.nonnullSourceSpan)
                 }
                 else {
                     NoValuedArgument(this, result.sourceSpan, diagnostics)
                 }
             }
             Mode.GREEDY -> {
-                val sourceSpans = reader.getSourceSpansOfRemainingLines()
+                val sourceSpans = reader.getRemainingSourceSpanThenSplit()
                 val start = reader.getCurrentTokenStartPosition()
                 val string = reader.readAllRemainingAsString()
                 val end = reader.getPreviousTokenEndPosition()

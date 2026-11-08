@@ -14,6 +14,7 @@ import io.github.takenoko4096.bcl.brigadier.value.misc.TimeUnit
 import io.github.takenoko4096.bcl.parser.Keyword
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
+import io.github.takenoko4096.bcl.tokenizer.`!is`
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
@@ -21,13 +22,19 @@ import io.github.takenoko4096.bcl.tokenizer.Symbol
 import io.github.takenoko4096.bcl.tokenizer.Token
 import io.github.takenoko4096.bcl.tokenizer.TokenType
 
-open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val exceptionConstructor: ExceptionConstructor) {
+open class TokenSeqReader(
+    val sourceCode: String,
+    val tokens: List<Token>,
+    open val sourceSpan: SourceSpan?,
+    val overSourcePosition: SourcePosition,
+    val exceptionConstructor: ExceptionConstructor
+) {
     typealias ExceptionConstructor = (String, String, SourceSpan, Throwable?, Boolean) -> BclTokenSeqReadException
 
     var cursor: Int = 0
 
     open fun clone(): TokenSeqReader {
-        val cpy = TokenSeqReader(sourceCode, tokens, exceptionConstructor)
+        val cpy = TokenSeqReader(sourceCode, tokens, sourceSpan, overSourcePosition, exceptionConstructor)
         cpy.cursor = cursor
         return cpy
     }
@@ -36,12 +43,10 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return getCurrentTokenStartPosition()..tokens.last().sourceSpan.end
     }
 
-    fun getSourceSpansOfRemainingLines(): List<SourceSpan> {
+    fun getRemainingSourceSpanThenSplit(): List<SourceSpan> {
         if (isOver()) return emptyList()
 
         val rem = getRemainingSourceSpan()
-
-        // tokens.find { it.sourceSpan.start.index >= rem.start.index && it `is` Symbol.NEWLINE }
 
         return tokens
             .filter { it.sourceSpan.start.index >= rem.start.index }
@@ -53,14 +58,6 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
                     line.last().sourceSpan.end
                 )
             }
-    }
-
-    fun getFirstPosition(): SourcePosition {
-        if (tokens.isEmpty()) {
-            throw exception(getOverNextSourceSpan(), "sourceCode が空です")
-        }
-
-        return tokens.first().sourceSpan.start
     }
 
     fun isOver(): Boolean {
@@ -79,6 +76,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return tokens.getOrNull(cursor + offset)
     }
 
+    @Deprecated("想定と異なるトークンを返す可能性があり危険です")
     fun peekSafely(offset: Int): Token {
         return if (cursor + offset < 0) {
             tokens.first()
@@ -160,20 +158,17 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
     }
 
     fun peekIgnoreNewLine(): Token {
-        val start = getCurrentTokenStartPosition()
         var i = 0
-        var token: Token?
-        do {
-            token = peek(i) ?: run {
-                for (j in 0..i) next()
-                val end = getPreviousTokenEndPosition()
-                throw exception(start..end, "入力が不足しています")
+        while (true) {
+            val token = peek(i)
+                ?: throw exception(getOverNextSourceSpan(), "入力が不足しています")
+
+            if (token `!is` Symbol.NEWLINE) {
+                return token
             }
+
             i++
         }
-        while (token `is` Symbol.NEWLINE)
-
-        return token
     }
 
     fun peekIgnoreNewLine(offset: Int): Token? {
@@ -288,7 +283,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
 
     fun readIgnoreNewLine(vararg types: TokenType): String {
         if (isOverIgnoreNewLine()) {
-            throw exception(peekSafely(-1).sourceSpan, "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
+            throw exception(getOverNextSourceSpan(), "${types.joinToString(" | ")} のトークンが期待されましたが、入力が不足しています")
         }
 
         val start = getCurrentTokenStartPosition()
@@ -308,32 +303,15 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
     }
 
     fun getCurrentTokenStartPosition(): SourcePosition {
-        return peekSafely(0).sourceSpan.start
+        return peek().sourceSpan.start
     }
 
     fun getPreviousTokenEndPosition(): SourcePosition {
-        return peekSafely(-1).sourceSpan.end
+        return peek(-1)!!.sourceSpan.end
     }
 
     fun getOverNextSourceSpan(): SourceSpan {
-        val last = tokens.lastOrNull()?.sourceSpan?.end
-            ?: return SourcePosition(1, 0, 0)..SourcePosition(1, 0, 0)
-
-        val over = if (tokens.last() `is` Symbol.NEWLINE) {
-            SourcePosition(
-                last.line + 1,
-                0,
-                last.index + 1
-            )
-        } else {
-            SourcePosition(
-                last.line,
-                last.column + 1,
-                last.index + 1
-            )
-        }
-
-        return over..over
+        return overSourcePosition..overSourcePosition
     }
 
     fun readInteger(allowExtendedNotation: Boolean = false): Int {
@@ -861,15 +839,15 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         return map
     }
 
-    sealed class ReadResult<T>(val successful: Boolean, val sourceSpan: SourceSpan) {
-        class Successful<T>(val value: T, sourceSpan: SourceSpan): ReadResult<T>(successful = true, sourceSpan)
+    sealed class ReadResult<T>(val successful: Boolean, val sourceSpan: SourceSpan?) {
+        class Successful<T>(val value: T, sourceSpan: SourceSpan): ReadResult<T>(successful = true, sourceSpan) {
+            val nonnullSourceSpan = sourceSpan
+        }
 
         /**
          * つまり fatal
          */
-        class Failure<T>(sourceSpan: SourceSpan) : ReadResult<T>(successful = false, sourceSpan)
-
-        val nonnull = sourceSpan != SourceSpan.NULL
+        class Failure<T>(sourceSpan: SourceSpan?) : ReadResult<T>(successful = false, sourceSpan)
     }
 
     /**
@@ -893,7 +871,7 @@ open class TokenSeqReader(val sourceCode: String, val tokens: List<Token>, val e
         val end = getPreviousTokenEndPosition()
 
         if (start.index > end.index) {
-            return ReadResult.Failure(SourceSpan.NULL)
+            return ReadResult.Failure(null)
         }
 
         return if (value == null) ReadResult.Failure(start..end)

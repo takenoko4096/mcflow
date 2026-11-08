@@ -24,12 +24,12 @@ open class IdentifierArgumentType(
             readNamespacedIdentifier(defaultNamespace, quotable, strict)
         }
 
-        if (identifier.nonnull) {
+        if (identifier.sourceSpan != null) {
             semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
         }
 
         return if (identifier is TokenSeqReader.ReadResult.Successful) {
-            Argument(this, identifier.value, identifier.sourceSpan)
+            Argument(this, identifier.value, identifier.nonnullSourceSpan)
         }
         else {
             NoValuedArgument(this, identifier.sourceSpan, diagnostics)

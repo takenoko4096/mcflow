@@ -9,7 +9,7 @@ import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
-import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 
 sealed class CommandLineParseResult(
@@ -22,7 +22,7 @@ sealed class CommandLineParseResult(
     val completionCandidates: List<CompletionCandidate>,
     val diagnostics: List<BclDiagnostic>,
     sourceSpan: SourceSpan,
-    val lastSourcePosition: SourcePosition,
+    val usedCommandLineReader: CommandLineReader,
     val semanticTokens: List<BclSemanticToken>
 ) : Node(sourceSpan) {
     class Successful(
@@ -35,7 +35,7 @@ sealed class CommandLineParseResult(
         completionCandidates: List<CompletionCandidate>,
         diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan,
-        lastSourcePosition: SourcePosition,
+        usedSubReader: CommandLineReader,
         semanticTokens: List<BclSemanticToken>,
         val resultValue: Any?
     ) : CommandLineParseResult(
@@ -48,7 +48,7 @@ sealed class CommandLineParseResult(
         completionCandidates,
         diagnostics,
         sourceSpan,
-        lastSourcePosition,
+        usedSubReader,
         semanticTokens
     ) {
         override fun toString(): String {
@@ -66,7 +66,7 @@ sealed class CommandLineParseResult(
         completionCandidates: List<CompletionCandidate>,
         diagnostics: List<BclDiagnostic>,
         sourceSpan: SourceSpan,
-        lastSourcePosition: SourcePosition,
+        usedSubReader: CommandLineReader,
         semanticTokens: List<BclSemanticToken>
     ) : CommandLineParseResult(
         command,
@@ -78,7 +78,7 @@ sealed class CommandLineParseResult(
         completionCandidates,
         diagnostics,
         sourceSpan,
-        lastSourcePosition,
+        usedSubReader,
         semanticTokens
     ) {
         override fun toString(): String {
@@ -95,4 +95,20 @@ sealed class CommandLineParseResult(
     }
 
     abstract override fun toString(): String
+
+    companion object {
+        fun error(sender: CommandSender, reader: CommandLineReader, dispatcher: CommandDispatcher) = Failure(
+            command = null,
+            sender,
+            dispatcher,
+            route = emptyList(),
+            literals = emptyList(),
+            arguments = emptyList(),
+            completionCandidates = emptyList(),
+            diagnostics = emptyList(),
+            sourceSpan = reader.getEntireSourceSpan(),
+            usedSubReader = reader,
+            semanticTokens = reader.preprocessedSemanticTokens
+        )
+    }
 }

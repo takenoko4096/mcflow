@@ -21,27 +21,28 @@ class InvertibleIntegerRangeArgumentType : ArgumentType<InvertibleIntegerRange>(
         // val diagnostics = context.diagnostics
         val semanticTokens = context.semanticTokens
 
-        val start = reader.getCurrentTokenStartPosition()
-
-        val inv = if (reader.peek() `is` Symbol.LOGICAL_NOT) {
+        val (inv, invSourceSpan) = if (reader.peek() `is` Symbol.LOGICAL_NOT) {
+            val start = reader.getCurrentTokenStartPosition()
             reader.next()
-            true
+            val end = reader.getPreviousTokenEndPosition()
+            true to start..end
         }
-        else false
+        else {
+            false to null
+        }
 
         val range = reader.unfatalize(context.diagnostics) { readIntRange() }
 
-        if (range.nonnull) {
+        if (range.sourceSpan != null) {
             semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, range.sourceSpan))
         }
 
-        val wholeSourceSpan = start..range.sourceSpan.end
-
         return if (range is TokenSeqReader.ReadResult.Successful) {
+            val wholeSourceSpan = (invSourceSpan?.start ?: range.nonnullSourceSpan.start)..range.nonnullSourceSpan.end
             Argument(this, InvertibleIntegerRange(inv, range.value), wholeSourceSpan)
         }
         else {
-            NoValuedArgument(this, wholeSourceSpan, context.diagnostics)
+            NoValuedArgument(this, invSourceSpan, context.diagnostics)
         }
     }
 

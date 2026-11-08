@@ -33,7 +33,7 @@ class ScoreComparatorArgumentType : ArgumentType<ScoreComparator>("score_compara
         reader.next()
         val end = reader.getPreviousTokenEndPosition()
         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
-        throw reader.exception(start..end, "スコア比較演算子の解析に失敗しました: 無効なトークンです: ${reader.peekSafely(-1)}")
+        throw reader.exception(start..end, "スコア比較演算子の解析に失敗しました: 無効なトークンです: ${reader.peek(-1)}")
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {

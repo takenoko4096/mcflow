@@ -24,7 +24,9 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
 
         val identifier = reader.unfatalize(diagnostics) { readNamespacedIdentifier() }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
+        if (identifier.sourceSpan != null) {
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, identifier.sourceSpan))
+        }
 
         if (identifier !is TokenSeqReader.ReadResult.Successful) {
             return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
@@ -32,26 +34,26 @@ class BlockTypeArgumentType : ArgumentType<BlockType>("block_type") {
 
         for (entry in VanillaBlockType.entries) {
             if (identifier.value == entry.identifier) {
-                return Argument(this, entry.toBlockType(), identifier.sourceSpan)
+                return Argument(this, entry.toBlockType(), identifier.nonnullSourceSpan)
             }
         }
 
         if (context.sender.behaviorUnvanillaReport != null) {
             diagnostics.add(reader.diagnostic(
-                identifier.sourceSpan,
+                identifier.nonnullSourceSpan,
                 "不明なブロックタイプです: ${identifier.value}",
                 context.sender.behaviorUnvanillaReport!!
             ))
 
             if (context.sender.behaviorUnvanillaReport == BclSeverity.ERROR) {
-                return NoValuedArgument(this, identifier.sourceSpan, diagnostics)
+                return NoValuedArgument(this, identifier.nonnullSourceSpan, diagnostics)
             }
 
-            return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.sourceSpan)
+            return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.nonnullSourceSpan)
         }
 
         // unvanilla
-        return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.sourceSpan)
+        return Argument(this, BlockType(identifier.value, setOf(), isVanilla = false), identifier.nonnullSourceSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {

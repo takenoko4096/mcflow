@@ -61,20 +61,22 @@ class CommandArgumentType : ArgumentType<Command>("command") {
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
+        val completer = context.newCompleter()
+
         val commands = context.dispatcher.getRoot()
-            .getEffectiveChildren()
-            .filter { (_, value) ->
+            .getEffectiveChildren().values
+            .filter {
                 val requireContext = CommandRequireContext(
                     sourceCode = context.sourceCode,
-                    value,
-                    SourceSpan.NULL,
-                    context.sender
+                    node = it,
+                    sourceSpan = completer.getNonnullSourceSpan(),
+                    sender = context.sender
                 )
-                value.predicate == null || value.predicate(requireContext) is CommandRequireContext.Successful
+                it.predicate == null || it.predicate(requireContext) is CommandRequireContext.Successful
             }
 
-        val result = context.newCompleter().completeUnquotedString(
-            commands.map { it.key },
+        val result = completer.completeUnquotedString(
+            commands.map { it.name },
             CompletionItemKind.EnumMember
         )
 

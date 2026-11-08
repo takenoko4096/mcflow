@@ -6,7 +6,7 @@ import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 class Argument<T>(
     type: ArgumentType<T>,
     val value: T,
-    sourceSpan: SourceSpan
+    override val sourceSpan: SourceSpan
 ) : ArgumentParseResult<T>(type, sourceSpan) {
     override fun toString(): String {
         return value.toString()

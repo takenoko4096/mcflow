@@ -12,12 +12,10 @@ import io.github.takenoko4096.bcl.brigadier.node.CommandNodeBuilder
 import io.github.takenoko4096.bcl.brigadier.node.LiteralCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.RootCommandNode
 import io.github.takenoko4096.bcl.completer.CompletionCandidate
-import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
 import io.github.takenoko4096.bcl.reader.CommandLineReader
 import io.github.takenoko4096.bcl.server.BclSemanticToken
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
-import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 
 class CommandDispatcher(
     name: String,
@@ -59,18 +57,6 @@ class CommandDispatcher(
         return register(Command.builder(name, configurator))
     }
 
-    fun evaluate(sourceCode: String): List<CommandLineParseResult> {
-        val tokens = BclTokenizer(sourceCode, extension = false).tokenize()
-        val block = BclParser(
-            sourceCode,
-            tokens,
-            this,
-            CommandDispatcher("root"),
-            CommandSender(extension = false)
-        ).parse()
-        return block.nodes.filterIsInstance<CommandLineParseResult>()
-    }
-
     fun parse(reader: CommandLineReader, sender: CommandSender): CommandLineParseResult {
         if (reader.isOver()) {
             return CommandLineParseResult.Failure(
@@ -82,17 +68,17 @@ class CommandDispatcher(
                 emptyList(),
                 getCommands()
                     .map {
-                        CompletionCandidate(it, reader.lastSourcePosition, null)
+                        CompletionCandidate(it, reader.sourceSpan.end, null)
                     },
                 listOf(
                     BclDiagnostic(
                         "コマンド名を入力してください",
                         reader.sourceCode,
-                        reader.lastSourcePosition..reader.lastSourcePosition
+                        reader.getOverNextSourceSpan()
                     )
                 ),
-                reader.lastSourcePosition..reader.lastSourcePosition,
-                reader.lastSourcePosition,
+                reader.sourceSpan,
+                reader,
                 reader.preprocessedSemanticTokens
             )
         }
@@ -144,7 +130,7 @@ class CommandDispatcher(
                             best.state.reader.getEntireSourceSpan()
                         ),
                         start..best.state.reader.getPreviousTokenEndPosition(),
-                        best.state.reader.lastSourcePosition,
+                        reader,
                         reader.preprocessedSemanticTokens + best.semanticTokens
                     )
                 }
@@ -160,7 +146,7 @@ class CommandDispatcher(
                         completionCandidates,
                         best.diagnostics + diagnosticsOnExecution,
                         start..best.state.reader.getPreviousTokenEndPosition(),
-                        best.state.reader.lastSourcePosition,
+                        reader,
                         reader.preprocessedSemanticTokens + best.semanticTokens,
                         resultValue
                     )
@@ -176,7 +162,7 @@ class CommandDispatcher(
                         completionCandidates,
                         diagnosticsOnExecution,
                         start..best.state.reader.getPreviousTokenEndPosition(),
-                        best.state.reader.lastSourcePosition,
+                        reader,
                         reader.preprocessedSemanticTokens + best.semanticTokens
                     )
                 }
@@ -186,7 +172,7 @@ class CommandDispatcher(
 
                 val furthestReader = best.furthestState.reader.clone()
 
-                furthestReader.getSourceSpansOfRemainingLines().forEach {
+                furthestReader.getRemainingSourceSpanThenSplit().forEach {
                     semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ERROR, it))
                 }
 
@@ -200,13 +186,14 @@ class CommandDispatcher(
                     completionCandidates,
                     best.diagnostics,
                     start..furthestReader.getPreviousTokenEndPosition(),
-                    best.state.reader.lastSourcePosition,
+                    reader,
                     semanticTokens
                 )
             }
         }
 
-        val end = reader.peekSafely(-1).sourceSpan.end
+        // TODO 大丈夫かな
+        val end = reader.peek(-1)!!.sourceSpan.end
         val sourceSpan = start..end
 
         return CommandLineParseResult.Failure(
@@ -225,7 +212,7 @@ class CommandDispatcher(
                 )
             ),
             sourceSpan,
-            reader.lastSourcePosition,
+            reader,
             reader.preprocessedSemanticTokens
         )
     }

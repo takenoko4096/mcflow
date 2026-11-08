@@ -18,6 +18,7 @@ import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
+import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.Tuple
@@ -36,12 +37,15 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         sender.extension = extension
 
         val comments = mutableListOf<BclComment>()
-        val tokenizer = BclTokenizer(text, extension, comments)
+        val tokenizer = BclTokenizer(text, sender, comments)
+        val sourceCode = tokenizer.sourceCode
         val tokens = tokenizer.tokenize()
 
         val parser = BclParser(
-            tokenizer.sourceCode,
+            sourceCode,
             tokens,
+            sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices),
+            overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!,
             server.dispatcher,
             server.commentCommandDispatcher,
             sender
@@ -51,7 +55,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val file: CommandDocument = if (uri in files) {
             val file = files[uri]!!
-            file.sourceCode = tokenizer.sourceCode
+            file.sourceCode = sourceCode
             file.block = block
             file.comments = comments
             file.sender = sender
@@ -59,7 +63,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         }
         else {
             val file = CommandDocument(
-                sourceCode = tokenizer.sourceCode,
+                sourceCode = sourceCode,
                 block = block,
                 comments = comments,
                 sender
@@ -134,9 +138,11 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             for ((node, argument) in result.arguments) {
                 if (!argument.type.hasInlayHint) continue
 
-                val pos = argument.sourceSpan.start.toLsp4jPosition() ?: continue
+                val sourceSpan = argument.sourceSpan ?: continue
+
+                val position = sourceSpan.start.toLsp4jPosition()
                 hints.add(InlayHint().apply {
-                    position = pos
+                    this.position = position
                     label = Either.forLeft("${node.name}:")
                     kind = InlayHintKind.Parameter
                     paddingRight = true
@@ -155,7 +161,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val file = files[uri] ?: return empty
         val sourceCode = file.sourceCode
 
-        val comments = file.comments.filterNot { it is BclComment.CommandLine }
+        val comments = file.comments
         if (comments.any { it.sourceSpan.contains(position) }) return empty
 
         val sourcePosition = SourcePosition.from(sourceCode, position)
@@ -268,8 +274,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             val start = token.sourceSpan.start
             val end = token.sourceSpan.end
 
-            // SourcePositionのlineが1始まりである場合
-            val line = start.line - 1
+            val line = start.line
             val character = start.column
 
             val deltaLine = line - previousLine
@@ -302,7 +307,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val file = files[textDocument.uri]!!
         val sourceCode = file.sourceCode
 
-        val comments = file.comments.filterNot { it is BclComment.CommandLine }
+        val comments = file.comments
         if (comments.any { it.sourceSpan.contains(params.position) }) {
             return CompletableFuture.completedFuture(null)
         }
@@ -316,7 +321,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val fakeFile = parse(null, text, extension = textDocument.uri.endsWith(".mcflow"))
         val result: CommandLineParseResult = getLastLineParseResult(fakeFile.block) ?: return CompletableFuture.completedFuture(null)
 
-        if (result.lastSourcePosition != SourcePosition.NULL && (params.position.line + 1) > result.lastSourcePosition.line) {
+        if (params.position.line > result.usedCommandLineReader.overSourcePosition.line) {
             return CompletableFuture.completedFuture(null)
         }
 
@@ -325,11 +330,17 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
 
         val reader = BclTokenizer(
             sourceCode.substring(result.sourceSpan.start.index, cursor),
-            extension = textDocument.uri.endsWith(".mcflow"),
+            fakeFile.sender,
             mutableListOf()
         ).run {
-            val seqReader = TokenSeqReader(this.sourceCode, this.tokenize(), ::BclParseException)
-            CommandLineReader.of(seqReader, extension = this.extension)
+            val seqReader = TokenSeqReader(
+                this.sourceCode,
+                this.tokenize(),
+                SourceSpan.toSourceSpan(this.sourceCode, this.sourceCode.indices),
+                SourcePosition.toSourcePosition(this.sourceCode, this.sourceCode.length)!!,
+                ::BclParseException
+            )
+            CommandLineReader.of(seqReader, fakeFile.sender)
         }
 
         val potentials = result.dispatcher.parsePotentials(reader, fakeFile.sender)

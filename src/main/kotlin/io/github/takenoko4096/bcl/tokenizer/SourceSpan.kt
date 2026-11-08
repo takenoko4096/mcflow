@@ -28,7 +28,6 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
     }
 
     override fun toString(): String {
-        if (this == NULL) return "NULL_SOURCE_SPAN"
         return if (start == end) start.toString() else "$start to $end"
     }
 
@@ -37,14 +36,18 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         return other.start.index in range && other.end.index in range
     }
 
+    operator fun contains(position: SourcePosition): Boolean {
+        return position.index in start.index..end.index
+    }
+
     operator fun contains(position: Position): Boolean {
-        return if ((position.line + 1) == start.line) {
+        return if (position.line == start.line) {
             position.character >= start.column
         }
-        else if ((position.line + 1) == end.line) {
+        else if (position.line == end.line) {
             position.character <= end.column
         }
-        else if (start.line < (position.line + 1) && (position.line + 1) < end.line) {
+        else if (start.line < position.line && position.line < end.line) {
             true
         }
         else {
@@ -63,10 +66,10 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
                 else {
                     buildList {
                         if (span.start.index < exclusion.start.index) {
-                            add(SourceSpan(span.start, exclusion.start - SourcePosition.OFFSET_NEXT_COLUMN))
+                            add(SourceSpan(span.start, exclusion.start - SourcePosition.ONE))
                         }
                         if (exclusion.end.index < span.end.index) {
-                            add(SourceSpan(exclusion.end + SourcePosition.OFFSET_NEXT_COLUMN, span.end))
+                            add(SourceSpan(exclusion.end + SourcePosition.ONE, span.end))
                         }
                     }
                 }
@@ -76,19 +79,29 @@ data class SourceSpan(val start: SourcePosition, val end: SourcePosition) {
         return remaining
     }
 
-    fun toLsp4jRange(): Range? {
-        val startPosition = start.toLsp4jPosition()
-        val endPositionInclusive = end.toLsp4jPosition()
-        if (startPosition == null || endPositionInclusive == null) return null
-        val endPositionExclusive = Position(endPositionInclusive.line, endPositionInclusive.character + 1)
-        return Range(startPosition, endPositionExclusive)
+    fun toLsp4jRange(): Range {
+        val startInclusive = start.toLsp4jPosition()
+        val endInclusive = end.toLsp4jPosition()
+
+        val endExclusive = Position(endInclusive.line, endInclusive.character + 1)
+
+        return Range(startInclusive, endExclusive)
     }
 
     fun getStringFromSourceCode(sourceCode: String): String {
-        return sourceCode.slice(start.index..end.index)
+        return sourceCode.slice(start.index.coerceIn(sourceCode.indices)..end.index.coerceIn(sourceCode.indices))
     }
 
     companion object {
-        val NULL = SourcePosition.NULL..SourcePosition.NULL
+        fun toSourceSpan(string: String, range: IntRange): SourceSpan? {
+            if (range.first !in 0..string.length || range.last !in 0..string.length) {
+                return null
+            }
+
+            val startSourcePosition = SourcePosition.toSourcePosition(string, range.first)!!
+            val endSourcePosition = SourcePosition.toSourcePosition(string, range.last)!!
+
+            return startSourcePosition..endSourcePosition
+        }
     }
 }

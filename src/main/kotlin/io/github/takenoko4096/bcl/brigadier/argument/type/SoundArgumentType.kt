@@ -22,7 +22,9 @@ class SoundArgumentType : ArgumentType<String>("sound") {
 
         val string = reader.unfatalize(diagnostics) { readQuotableCommandString() }
 
-        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, string.sourceSpan))
+        if (string.sourceSpan != null) {
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.ENUM, string.sourceSpan))
+        }
 
         if (string !is TokenSeqReader.ReadResult.Successful) {
             return NoValuedArgument(this, string.sourceSpan, diagnostics)
@@ -30,14 +32,14 @@ class SoundArgumentType : ArgumentType<String>("sound") {
 
         if (string.value !in SOUNDS && context.sender.resourceUnvanillaReport != null) {
             diagnostics.add(reader.diagnostic(
-                string.sourceSpan,
+                string.nonnullSourceSpan,
                 "サウンドの読み取りに失敗しました: 不明なサウンドです: '${string.value}'",
                 context.sender.resourceUnvanillaReport!!
             ))
             return NoValuedArgument(this, string.sourceSpan, diagnostics)
         }
 
-        return Argument(this, string.value, string.sourceSpan)
+        return Argument(this, string.value, string.nonnullSourceSpan)
     }
 
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
