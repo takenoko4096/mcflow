@@ -20,11 +20,11 @@ sealed class CommandLineParseResult(
     val literals: List<Pair<LiteralCommandNode, SourceSpan>>,
     val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
     val completionCandidates: List<CompletionCandidate>,
-    val diagnostics: List<BclDiagnostic>,
-    sourceSpan: SourceSpan,
+    diagnostics: List<BclDiagnostic>,
+    sourceSpan: SourceSpan, // = end は usedCommandLineReader.sourceSpan.end でいい start はだめかも 先頭の / とかは of() したら消えるから別にいいのか？
     val usedCommandLineReader: CommandLineReader,
     val semanticTokens: List<BclSemanticToken>
-) : Node(sourceSpan) {
+) : Node(sourceSpan, diagnostics) {
     class Successful(
         override val command: Command,
         sender: CommandSender,
