@@ -126,6 +126,12 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
             return
         }
 
+        /*
+            1. 変更範囲の sourceSpan を作る
+            2. 新しい sourceCode を作る
+            3. 変更範囲全体を包含する最小の Block を取得する
+            4. 
+         */
         val block = documentParseResult.block
 
         var start: SourcePosition

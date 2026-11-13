@@ -901,6 +901,8 @@ class BclParser(
             throw exception(getOverNextSourceSpan(), "ブロックが期待されましたが、入力が不足しています")
         }
 
+        val diagnostics = mutableListOf<BclDiagnostic>()
+
         val start = getCurrentTokenStartPosition()
 
         if (requireBraces) expectIgnoreNewLine(Symbol.BRACE_START)
@@ -908,11 +910,15 @@ class BclParser(
         val nodes = mutableListOf<Node>()
 
         while (true) {
-            if (requireBraces && peekIgnoreNewLine() `is` Symbol.BRACE_END) {
-                nextIgnoreNewLine()
+            if (isOverIgnoreNewLine()) {
+                if (requireBraces) {
+                    diagnostics.add(diagnostic(getOverNextSourceSpan(), "ブロックが閉じられていません"))
+                }
                 break
             }
-            else if (isOverIgnoreNewLine()) {
+
+            if (requireBraces && peekIgnoreNewLine() `is` Symbol.BRACE_END) {
+                nextIgnoreNewLine()
                 break
             }
 
