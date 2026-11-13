@@ -109,7 +109,8 @@ open class TokenSeqReader(
 
     fun testThenAdvanceIgnoreNewLine(predicate: (Token) -> Boolean, preAdvance: (() -> Unit)? = null, postAdvance: (() -> Unit)? = null): Boolean {
         if (isOverIgnoreNewLine()) return false
-        val result = predicate(peekIgnoreNewLine())
+        val token = peekIgnoreNewLine()
+        val result = predicate(token)
         return if (result) {
             preAdvance?.invoke()
             nextIgnoreNewLine()

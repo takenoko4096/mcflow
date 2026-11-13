@@ -10,6 +10,6 @@ class AssignmentExpression(
     diagnostics: List<BclDiagnostic>,
     semanticTokens: List<BclSemanticToken>,
     val operation: AssignmentOperation,
-    val target: IdentifierReferenceExpression,
+    val target: Expression,
     val value: Expression
 ) : Expression(sourceSpan, diagnostics, semanticTokens)

@@ -1,9 +1,19 @@
 package io.github.takenoko4096.bcl.parser
 
+import io.github.takenoko4096.bcl.ast.AssignmentOperation
+import io.github.takenoko4096.bcl.ast.BinaryOperation
 import io.github.takenoko4096.bcl.ast.Block
 import io.github.takenoko4096.bcl.ast.Label
 import io.github.takenoko4096.bcl.ast.Node
+import io.github.takenoko4096.bcl.ast.UnaryOperation
+import io.github.takenoko4096.bcl.ast.expression.AssignmentExpression
+import io.github.takenoko4096.bcl.ast.expression.BinaryExpression
 import io.github.takenoko4096.bcl.ast.expression.Expression
+import io.github.takenoko4096.bcl.ast.expression.ReferenceExpression
+import io.github.takenoko4096.bcl.ast.expression.IntExpression
+import io.github.takenoko4096.bcl.ast.expression.CallExpression
+import io.github.takenoko4096.bcl.ast.expression.ErrorExpression
+import io.github.takenoko4096.bcl.ast.expression.UnaryExpression
 import io.github.takenoko4096.bcl.brigadier.CommandLineParseResult
 import io.github.takenoko4096.bcl.ast.statement.BreakStatement
 import io.github.takenoko4096.bcl.ast.statement.ContinueStatement
@@ -38,294 +48,394 @@ class BclParser(
 
     private fun expression(): Expression {
         skipNewLine()
-        val expr = TODO() // assignment()
+        val expr = assignment()
         skipNewLine()
         return expr
     }
-/*
+
     private fun assignment(): Expression {
-        val start = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
 
+        val leftStart = getCurrentTokenStartPosition()
         var node = logicalOr()
+        val leftEnd = getPreviousTokenEndPosition()
 
-        if (node !is IdentifierReferenceExpression) {
-            throw exception(start, "代入式の左辺は変数参照またはフィールド参照である必要があります: ${node::class.simpleName}")
+        if (node !is ReferenceExpression) {
+            diagnostics.add(diagnostic(
+                leftStart..leftEnd,
+                "代入式の左辺は変数参照またはフィールド参照である必要があります: ${node::class.simpleName}"
+            ))
         }
 
         if (isOverIgnoreNewLine()) return node
 
-        val operation = if (peekIgnoreNewLine() `is` Symbol.PLUS_ASSIGN) {
-            nextIgnoreNewLine()
+        val operatorStart = getCurrentTokenStartPosition()
+
+        val operation = if (testThenAdvance(predicate = { it `is` Symbol.PLUS_ASSIGN })) {
             AssignmentOperation.PLUS_ASSIGN
         }
-        else if (peekIgnoreNewLine() `is` Symbol.MINUS_ASSIGN) {
-            nextIgnoreNewLine()
+        else if (testThenAdvance(predicate = { it `is` Symbol.MINUS_ASSIGN })) {
             AssignmentOperation.MINUS_ASSIGN
         }
-        else if (peekIgnoreNewLine() `is` Symbol.MULTIPLY_ASSIGN) {
-            nextIgnoreNewLine()
+        else if (testThenAdvance(predicate = { it `is` Symbol.MULTIPLY_ASSIGN })) {
             AssignmentOperation.MULTIPLY_ASSIGN
         }
-        else if (peekIgnoreNewLine() `is` Symbol.DIVIDE_ASSIGN) {
-            nextIgnoreNewLine()
+        else if (testThenAdvance(predicate = { it `is` Symbol.DIVIDE_ASSIGN})) {
             AssignmentOperation.DIVIDE_ASSIGN
         }
-        else if (peekIgnoreNewLine() `is` Symbol.MOD_ASSIGN) {
-            nextIgnoreNewLine()
+        else if (testThenAdvance(predicate = { it `is` Symbol.MOD_ASSIGN })) {
             AssignmentOperation.MOD_ASSIGN
         }
-        else if (peekIgnoreNewLine() `is` Symbol.POWER_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.POWER_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_AND_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_AND_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_OR_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_OR_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_XOR) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_XOR_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_SHIFT_LEFT_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_SHIFT_LEFT_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_SHIFT_RIGHT_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_SHIFT_RIGHT_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_SHIFT_RIGHT_UNSIGNED_ASSIGN) {
-            nextIgnoreNewLine()
-            AssignmentOperation.BIT_SHIFT_RIGHT_UNSIGNED_ASSIGN
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.ASSIGN) {
-            nextIgnoreNewLine()
+        else if (testThenAdvance(predicate = { it `is` Symbol.ASSIGN })) {
             AssignmentOperation.ASSIGN
         }
-        else null
-
-        if (operation != null) {
-            val value = assignment()
-            node = AssignmentExpression(start..getPreviousTokenEndPosition(), operation, node, value)
+        else {
+            return node
         }
+
+        val operatorEnd = getPreviousTokenEndPosition()
+
+        semanticTokens.add(BclSemanticToken(
+            BclSemanticTokenType.SYMBOL,
+            operatorStart..operatorEnd
+        ))
+
+        val value = assignment()
+
+        node = AssignmentExpression(
+            leftStart..value.sourceSpan.end,
+            diagnostics,
+            semanticTokens,
+            operation,
+            node,
+            value
+        )
 
         return node
     }
 
     private fun logicalOr(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
 
         var node = logicalAnd()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.LOGICAL_OR) {
+            val operatorStart = getCurrentTokenStartPosition()
             nextIgnoreNewLine()
+            val operatorEnd = getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(
+                BclSemanticTokenType.SYMBOL,
+                operatorStart..operatorEnd
+            ))
+
             val right = logicalAnd()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_OR, node, right)
+
+            val end = getPreviousTokenEndPosition()
+
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.LOGICAL_OR,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun logicalAnd(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = comparison()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.LOGICAL_AND) {
+            val operatorStart = getCurrentTokenStartPosition()
             nextIgnoreNewLine()
+            val operatorEnd = getPreviousTokenEndPosition()
+
+            semanticTokens.add(BclSemanticToken(
+                BclSemanticTokenType.SYMBOL,
+                operatorStart..operatorEnd
+            ))
+
             val right = comparison()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_AND, node, right)
+
+            val end = getPreviousTokenEndPosition()
+
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.LOGICAL_AND,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun comparison(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = bitOr()
 
         while (!isOverIgnoreNewLine()) {
-            if (peekIgnoreNewLine() `is` Symbol.LOGICAL_EQUALS) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_EQUALS, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.LOGICAL_NOT_EQUALS) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_NOT_EQUALS, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.LOGICAL_LESS) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_LESS, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.LOGICAL_MORE) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_MORE, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.LOGICAL_LESS_OR_EQUALS) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_LESS_OR_EQUALS, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.LOGICAL_MORE_OR_EQUALS) {
-                nextIgnoreNewLine()
-                val right = bitOr()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.LOGICAL_MORE_OR_EQUALS, node, right)
-            }
-            else {
-                break
-            }
+            val operator = peekIgnoreNewLine()
+
+            val operation = if (operator `is` Symbol.LOGICAL_EQUALS) BinaryOperation.LOGICAL_EQUALS
+            else if (operator `is` Symbol.LOGICAL_NOT_EQUALS) BinaryOperation.LOGICAL_NOT_EQUALS
+            else if (operator `is` Symbol.LOGICAL_LESS) BinaryOperation.LOGICAL_LESS
+            else if (operator `is` Symbol.LOGICAL_MORE) BinaryOperation.LOGICAL_MORE
+            else if (operator `is` Symbol.LOGICAL_LESS_OR_EQUALS) BinaryOperation.LOGICAL_LESS_OR_EQUALS
+            else if (operator `is` Symbol.LOGICAL_MORE_OR_EQUALS) BinaryOperation.LOGICAL_MORE_OR_EQUALS
+            else break
+
+            semanticTokens.add(BclSemanticToken(
+                BclSemanticTokenType.SYMBOL,
+                operator.sourceSpan
+            ))
+
+            val right = bitOr()
+
+            val end = getPreviousTokenEndPosition()
+
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                operation,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun bitOr(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = bitXor()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.BIT_OR) {
+            val operator = peekIgnoreNewLine()
             nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
             val right = bitXor()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_OR, node, right)
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.BIT_OR,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun bitXor(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = bitAnd()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.BIT_XOR) {
+            val operator = peekIgnoreNewLine()
             nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
             val right = bitAnd()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_XOR, node, right)
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.BIT_XOR,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun bitAnd(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = bitShift()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.BIT_AND) {
+            val operator = peekIgnoreNewLine()
             nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
             val right = bitShift()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_AND, node, right)
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.BIT_AND,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun bitShift(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = arithmetic()
 
         while (!isOverIgnoreNewLine()) {
-            skipNewLine()
-            if (peek(0) `is` Symbol.LOGICAL_LESS && peek(1) `is` Symbol.LOGICAL_LESS) {
-                next(); next()
-                skipNewLine()
-                val right = arithmetic()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_SHIFT_LEFT, node, right)
-            }
-            else if (peek(0) `is` Symbol.LOGICAL_MORE && peek(1) `is` Symbol.LOGICAL_MORE && peek(2) `is` Symbol.LOGICAL_MORE) {
-                next(); next(); next()
-                skipNewLine()
-                val right = arithmetic()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_SHIFT_RIGHT_UNSIGNED, node, right)
-            }
-            else if (peek(0) `is` Symbol.LOGICAL_MORE && peek(1) `is` Symbol.LOGICAL_MORE) {
-                next(); next()
-                skipNewLine()
-                val right = arithmetic()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.BIT_SHIFT_RIGHT, node, right)
-            }
+            val operator = peekIgnoreNewLine()
+
+            val operation = if (operator `is` Symbol.BIT_SHIFT_LEFT) BinaryOperation.BIT_SHIFT_LEFT
+            else if (operator `is` Symbol.BIT_SHIFT_RIGHT) BinaryOperation.BIT_SHIFT_RIGHT
+            else if (operator `is` Symbol.BIT_SHIFT_RIGHT_UNSIGNED) BinaryOperation.BIT_SHIFT_RIGHT_UNSIGNED
             else break
+
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
+            nextIgnoreNewLine()
+            val right = arithmetic()
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                operation,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun arithmetic(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = term()
 
         while (!isOverIgnoreNewLine()) {
-            if (peekIgnoreNewLine() `is` Symbol.PLUS) {
-                nextIgnoreNewLine()
-                val right = term()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.PLUS, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.MINUS) {
-                nextIgnoreNewLine()
-                val right = term()
-                node  = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.MINUS, node, right)
-            }
-            else {
-                break
-            }
+            val operator = peekIgnoreNewLine()
+            val operation = if (operator `is` Symbol.PLUS) BinaryOperation.PLUS
+            else if (peekIgnoreNewLine() `is` Symbol.MINUS) BinaryOperation.MINUS
+            else break
+
+            nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
+            val right = term()
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                operation,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun term(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = power()
 
         while (!isOverIgnoreNewLine()) {
-            if (peekIgnoreNewLine() `is` Symbol.MULTIPLY) {
-                nextIgnoreNewLine()
-                val right = power()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.MULTIPLY, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.DIVIDE) {
-                nextIgnoreNewLine()
-                val right = power()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.DIVIDE, node, right)
-            }
-            else if (peekIgnoreNewLine() `is` Symbol.MOD) {
-                nextIgnoreNewLine()
-                val right = power()
-                node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.MOD, node, right)
-            }
-            else {
-                break
-            }
+            val operator = peekIgnoreNewLine()
+            val operation = if (operator `is` Symbol.MULTIPLY) BinaryOperation.MULTIPLY
+            else if (operator `is` Symbol.DIVIDE) BinaryOperation.DIVIDE
+            else if (operator `is` Symbol.MOD) BinaryOperation.MOD
+            else break
+
+            nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
+            val right = power()
+            val end = getPreviousTokenEndPosition()
+
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                operation,
+                node,
+                right
+            )
         }
 
         return node
     }
 
     private fun power(): Expression {
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = getCurrentTokenStartPosition()
         var node = prefixUnary()
 
         if (isOverIgnoreNewLine()) return node
 
         while (peekIgnoreNewLine() `is` Symbol.POWER) {
+            val operator = peekIgnoreNewLine()
             nextIgnoreNewLine()
+            semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
             val right = prefixUnary()
-            node = BinaryExpression(s..getPreviousTokenEndPosition(), BinaryOperation.POWER, node, right)
+            val end = getPreviousTokenEndPosition()
+            node = BinaryExpression(
+                start..end,
+                diagnostics,
+                semanticTokens,
+                BinaryOperation.POWER,
+                node,
+                right
+            )
         }
 
         return node
@@ -336,72 +446,87 @@ class BclParser(
             return factor()
         }
 
-        val s = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
 
-        return if (peekIgnoreNewLine() `is` Symbol.LOGICAL_NOT) {
-            nextIgnoreNewLine()
-            val target = factor()
-            UnaryExpression(s..getPreviousTokenEndPosition(), UnaryOperation.LOGICAL_NOT, target)
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.BIT_NOT) {
-            nextIgnoreNewLine()
-            val target = factor()
-            UnaryExpression(s..getPreviousTokenEndPosition(), UnaryOperation.BIT_INVERSE, target)
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.PLUS) {
-            nextIgnoreNewLine()
-            val target = factor()
-            UnaryExpression(s..getPreviousTokenEndPosition(), UnaryOperation.PLUS, target)
-        }
-        else if (peekIgnoreNewLine() `is` Symbol.MINUS) {
-            nextIgnoreNewLine()
-            val target = factor()
-            UnaryExpression(s..getPreviousTokenEndPosition(), UnaryOperation.MINUS, target)
-        }
-        else {
-            factor()
-        }
+        val start = getCurrentTokenStartPosition()
+
+        val operator = peekIgnoreNewLine()
+        val operation = if (operator `is` Symbol.LOGICAL_NOT) UnaryOperation.LOGICAL_NOT
+        else if (operator `is` Symbol.MINUS) UnaryOperation.MINUS
+        else if (operator `is` Symbol.BIT_NOT) UnaryOperation.BIT_INVERSE
+        else return factor()
+
+        nextIgnoreNewLine()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, operator.sourceSpan))
+
+        val target = factor()
+        val end = getPreviousTokenEndPosition()
+
+        return UnaryExpression(
+            start..end,
+            diagnostics,
+            semanticTokens,
+            operation,
+            target
+        )
     }
 
     /**
      * リテラル・ラムダ・変数参照・関数呼び出し
      */
     private fun factor(): Expression {
-        val start = getCurrentTokenStartPosition()
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
 
         if (isOverIgnoreNewLine()) {
-            throw exception(start, "コード外に到達しました")
+            diagnostics.add(diagnostic(getOverNextSourceSpan(), "入力が不足しています"))
+            return ErrorExpression(getOverNextSourceSpan(), diagnostics, semanticTokens)
         }
 
-        val current = peekIgnoreNewLine()
+        val token = peekIgnoreNewLine()
 
-        return when (current.type) {
-            TokenType.SYMBOL -> {
-                if (current `is` Symbol.PARENTHESIS_START) group()
-                else throw exception(start, "factorとして予期しないトークンです: $current")
-            }
-            TokenType.SINGLE_QUOTED, TokenType.DOUBLE_QUOTED -> throw exception(start, "unsupported token type")
-            TokenType.WORD -> referenceOrMacroCall()
-            else -> number()
+        return if (token `is` Symbol.PARENTHESIS_START) {
+            group()
         }
-    }
-
-    private fun referenceOrMacroCall(): Expression {
-        val s = getCurrentTokenStartPosition()
-        val access = readIgnoreNewLine(TokenType.WORD)
-
-        return if (!isOverIgnoreNewLine() && (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_START || peekIgnoreNewLine() `is` Symbol.BRACE_START)) {
-            val args = macroArguments()
-            MacroCallExpression(s..getPreviousTokenEndPosition(), access, args)
+        else if (token.type in TokenType.TOKEN_TYPES_INTEGER) {
+            integer()
+        }
+        else if (token.type == TokenType.WORD) {
+            identifier()
         }
         else {
-            IdentifierReferenceExpression(s..getPreviousTokenEndPosition(), access)
+            nextIgnoreNewLine()
+            diagnostics.add(diagnostic(
+                getOverNextSourceSpan(),
+                "無効なトークンタイプです: ${token.type}"
+            ))
+            ErrorExpression(token.sourceSpan, diagnostics, semanticTokens)
         }
     }
 
-    /**
-     * グループ化された式を予測
-     */
+    private fun identifier(): Expression {
+        val start = getCurrentTokenStartPosition()
+        val name = readIgnoreNewLine(TokenType.WORD)
+        val end = getPreviousTokenEndPosition()
+
+        if (!isOverIgnoreNewLine() && peekIgnoreNewLine() `is` Symbol.PARENTHESIS_START) {
+            return call(name, start..end)
+        }
+
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.PARAMETER, start..end))
+
+        return ReferenceExpression(
+            start..end,
+            diagnostics,
+            semanticTokens,
+            name
+        )
+    }
+
     private fun group(): Expression {
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
         val expr = expression()
@@ -409,79 +534,80 @@ class BclParser(
         return expr
     }
 
-    private fun macroArguments(): List<Expression> {
-        val start = getCurrentTokenStartPosition()
+    private fun call(identifier: String, sourceSpan: SourceSpan): Expression {
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
+
+        val start = sourceSpan.start
 
         expectIgnoreNewLine(Symbol.PARENTHESIS_START)
 
-        val args = mutableListOf<Expression>()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.IDENTIFIER, sourceSpan))
+
+        val arguments = mutableListOf<Expression>()
 
         while (!isOverIgnoreNewLine()) {
-            if (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_END) {
-                nextIgnoreNewLine()
-                return args
-            }
+            arguments.add(expression())
 
-            args.add(expression())
-
-            if (peekIgnoreNewLine() `is` Symbol.COMMA) {
+            val token = peekIgnoreNewLine()
+            if (token `is` Symbol.COMMA) {
                 nextIgnoreNewLine()
             }
-            else if (peekIgnoreNewLine() `is` Symbol.PARENTHESIS_END) {
+            else if (token `is` Symbol.PARENTHESIS_END) {
                 nextIgnoreNewLine()
-                return args
+                break
             }
             else {
-                throw exception(start, "実引数リストの読み取りに失敗しました: 無効なトークンです: ${peekIgnoreNewLine()}")
+                nextIgnoreNewLine()
+                diagnostics.add(diagnostic(token.sourceSpan, "括弧が閉じられていません: ${token.sourceSpan}"))
+                break
             }
         }
 
-        throw exception(start, "関数呼び出しの引数の解析に失敗しました: 丸括弧が閉じられていません")
+        val end = getPreviousTokenEndPosition()
+
+        return CallExpression(
+            start..end,
+            diagnostics,
+            semanticTokens,
+            identifier,
+            arguments
+        )
     }
 
-    private fun number(): IntExpression {
-        val s = getCurrentTokenStartPosition()
-        val current = peekIgnoreNewLine()
+    private fun integer(): Expression {
+        val diagnostics = mutableListOf<BclDiagnostic>()
+        val semanticTokens = mutableListOf<BclSemanticToken>()
 
-        return when (current.type) {
-            TokenType.INT_RAD2 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toInt(2), s..getPreviousTokenEndPosition())
-            }
-            TokenType.INT_RAD8 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toInt(8), s..getPreviousTokenEndPosition())
-            }
-            TokenType.INT -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toInt(), s..getPreviousTokenEndPosition())
-            }
-            TokenType.INT_RAD16 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toInt(16), s..getPreviousTokenEndPosition())
-            }
-            TokenType.UINT_RAD2 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toUInt(2).toInt(), s..getPreviousTokenEndPosition())
-            }
-            TokenType.UINT_RAD8 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toUInt(8).toInt(), s..getPreviousTokenEndPosition())
-            }
-            TokenType.UINT -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toUInt().toInt(), s..getPreviousTokenEndPosition())
-            }
-            TokenType.UINT_RAD16 -> {
-                nextIgnoreNewLine()
-                IntExpression(current.value.toUInt(16).toInt(), s..getPreviousTokenEndPosition())
-            }
+        val token = peekIgnoreNewLine()
+
+        val constant = when (token.type) {
+            TokenType.INT_RAD2 -> token.value.toInt(2)
+            TokenType.INT_RAD8 -> token.value.toInt(8)
+            TokenType.INT -> token.value.toInt()
+            TokenType.INT_RAD16 -> token.value.toInt(16)
+            TokenType.UINT_RAD2 -> token.value.toUInt(2).toInt()
+            TokenType.UINT_RAD8 -> token.value.toUInt(8).toInt()
+            TokenType.UINT -> token.value.toUInt().toInt()
+            TokenType.UINT_RAD16 -> token.value.toUInt(16).toInt()
             else -> {
-                throw exception(s, "数値リテラルの解析に失敗しました: 不明または未実装の種類のトークンです: ${current.type}")
+                diagnostics.add(diagnostic(token.sourceSpan, "無効なトークンタイプです: ${token.type}"))
+                nextIgnoreNewLine()
+                return ErrorExpression(token.sourceSpan, diagnostics, semanticTokens)
             }
         }
+
+        nextIgnoreNewLine()
+        semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, token.sourceSpan))
+
+        return IntExpression(
+            token.sourceSpan,
+            diagnostics,
+            semanticTokens,
+            constant
+        )
     }
-*/
+
     private fun command(reader: CommandLineReader, dispatcher: CommandDispatcher/*macros: Map<String, String>*/): CommandLineParseResult {
         return try {
             dispatcher.parse(reader, sender)
@@ -492,26 +618,35 @@ class BclParser(
     }
 
     private fun statement(): Statement {
-        val start = getCurrentTokenStartPosition()
-
         if (isOverIgnoreNewLine()) {
-            throw exception(getOverNextSourceSpan(), "ステートメントを読み取れませんでした: 入力が不足しています")
+            throw exception(
+                getOverNextSourceSpan(),
+                "ステートメントを読み取れませんでした: 入力が不足しています"
+            )
         }
 
-        return if (peekIgnoreNewLine() `is` Keyword.IF) ifElse()
-        else if (peekIgnoreNewLine() `is` Keyword.SET) set()
-        else if (peekIgnoreNewLine() `is` Keyword.RETURN) `return`()
-        else if (peekIgnoreNewLine() `is` Keyword.CONTINUE) `continue`()
-        else if (peekIgnoreNewLine() `is` Keyword.BREAK) `break`()
-        else if (peekIgnoreNewLine() `is` Keyword.WHILE) `while`()
-        else if (peekIgnoreNewLine() `is` Keyword.DO) doWhile()
-        else throw exception(start, "ステートメントを読み取れませんでした: ${peekIgnoreNewLine()} はステートメントとして無効なトークンです")
+        val start = getCurrentTokenStartPosition()
+
+        val token = peekIgnoreNewLine()
+        return if (token `is` Keyword.IF) ifElse()
+        else if (token `is` Keyword.SET) set()
+        else if (token `is` Keyword.RETURN) `return`()
+        else if (token `is` Keyword.CONTINUE) `continue`()
+        else if (token `is` Keyword.BREAK) `break`()
+        else if (token `is` Keyword.WHILE) `while`()
+        else if (token `is` Keyword.DO) doWhile()
+        else {
+            nextIgnoreNewLine()
+            val end = getPreviousTokenEndPosition()
+            throw exception(
+                start..end,
+                "ステートメントを読み取れませんでした: ${peekIgnoreNewLine()} はステートメントとして無効なトークンです"
+            )
+        }
     }
 
     private fun requireSeparator() {
         if (isOverIgnoreNewLine()) return
-
-        val start = getCurrentTokenStartPosition()
 
         if (peekIgnoreNewLine() `is` Symbol.SEMICOLON) {
             nextIgnoreNewLine()
@@ -520,9 +655,9 @@ class BclParser(
             next()
         }
         else {
-            val a = peek()
+            val token = peek()
             next()
-            throw exception(start, "ステートメントの直後には区切りが必要です: $a")
+            throw exception(token.sourceSpan, "ステートメントの直後には区切りが必要です: $token")
         }
     }
 

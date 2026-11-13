@@ -106,7 +106,7 @@ sealed class CommandLineParseResult(
             arguments = emptyList(),
             completionCandidates = emptyList(),
             diagnostics = emptyList(),
-            sourceSpan = reader.getEntireSourceSpan(),
+            sourceSpan = reader.sourceSpan,
             usedSubReader = reader,
             semanticTokens = reader.preprocessedSemanticTokens
         )
