@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.brigadier.value.entity
 
-import io.github.takenoko4096.bcl.SpanHolder
 import io.github.takenoko4096.bcl.WithSpan
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
@@ -119,8 +118,8 @@ data class SelectorArguments(
         val slot: InvertibleValue<IntRange>?,
         val quantity: InvertibleValue<IntRange>?,
         val data: Int?,
-        override val sourceSpan: SourceSpan
-    ) : SpanHolder {
+        val sourceSpan: SourceSpan
+    ) {
         override fun toString(): String {
             var string = "item=${item.identifier}"
             if (location != null) string += ", location=${location.getString()}"

@@ -1,11 +1,11 @@
-package io.github.takenoko4096.bcl.brigadier.value.json
+package io.github.takenoko4096.bcl.brigadier.value.json.value
 
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import kotlin.reflect.KClass
 import kotlin.reflect.cast
 
 class CommandJsonObject(
-    val entries: List<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>,
+    val entries: List<Pair<CommandJsonString, CommandJsonValue<*>>>,
     sourceSpan: SourceSpan
 ) : CommandJsonValue<List<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>>(entries, sourceSpan) {
     operator fun contains(key: String): Boolean {

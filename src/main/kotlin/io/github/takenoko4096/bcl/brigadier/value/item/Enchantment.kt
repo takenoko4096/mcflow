@@ -3,7 +3,7 @@ package io.github.takenoko4096.bcl.brigadier.value.item
 import io.github.takenoko4096.bcl.brigadier.value.CommandEnumerable
 import io.github.takenoko4096.bcl.brigadier.value.StringRepresentable
 
-enum class Enchant(minLevel: Int, maxLevel: Int) : StringRepresentable, CommandEnumerable {
+enum class Enchantment(minLevel: Int, maxLevel: Int) : StringRepresentable, CommandEnumerable {
     PROTECTION(1, 4),
     FIRE_PROTECTION(1, 4),
     FEATHER_FALLING(1, 4),

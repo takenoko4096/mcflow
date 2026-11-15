@@ -37,8 +37,8 @@ open class IdentifierArgumentType(
     }
 
     companion object {
-        fun namespaced(name: String) = IdentifierArgumentType(name, null)
+        fun namespaced() = IdentifierArgumentType("namespaced_identifier", null)
 
-        fun unstrict(name: String, fallbackNamespace: String) = IdentifierArgumentType(name, fallbackNamespace, strict = false)
+        fun unstrict(name: String, defaultNamespace: String) = IdentifierArgumentType(name, defaultNamespace, strict = false)
     }
 }

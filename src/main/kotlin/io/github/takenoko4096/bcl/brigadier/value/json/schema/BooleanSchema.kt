@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import org.eclipse.lsp4j.CompletionItemKind
 
@@ -10,7 +10,7 @@ object BooleanSchema : CommandJsonSchema() {
         return value.value is Boolean
     }
 
-    override fun completeJson(completer: BclCompleter): JsonCompletionResult {
+    override fun complete(completer: BclCompleter): JsonCompletionResult {
         return when (val result = completer.completeUnquotedString(listOf("true", "false"), CompletionItemKind.Keyword)) {
             is BclCompleter.ShouldComplete -> {
                 if (result.items.isEmpty()) JsonCompletionResult.Invalid

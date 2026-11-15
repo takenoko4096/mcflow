@@ -5,8 +5,8 @@ import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
 import io.github.takenoko4096.bcl.brigadier.value.entity.EntitySelector
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.brigadier.value.text.AbstractTextComponent

@@ -2,8 +2,7 @@ package io.github.takenoko4096.bcl.brigadier.value.item
 
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
-import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
 
 sealed class ItemNbtComponent(

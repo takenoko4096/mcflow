@@ -2,13 +2,14 @@ package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.BclDsl
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import org.eclipse.lsp4j.CompletionItem
-import kotlin.collections.set
 
 sealed class CommandJsonSchema {
     abstract fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean
+
+    abstract fun complete(completer: BclCompleter): JsonCompletionResult
 
     @BclDsl
     class Builder private constructor(callback: Builder.() -> Unit) {
@@ -18,7 +19,9 @@ sealed class CommandJsonSchema {
             callback()
         }
 
-        fun property(name: String, callback: PropertyBuilder.() -> Unit) = PropertyBuilder.set(keys, name, callback)
+        fun property(name: String, callback: PropertyBuilder.() -> Unit) {
+            PropertyBuilder.put(keys, name, callback)
+        }
 
         private fun build() = ObjectSchema(keys)
 
@@ -47,7 +50,10 @@ sealed class CommandJsonSchema {
             callback()
         }
 
-        fun createString(completer: ((BclCompleter) -> JsonCompletionResult)? = null) = if (completer == null) StringSchema() else StringSchema(completer)
+        fun createString(completer: ((BclCompleter) -> JsonCompletionResult)? = null): StringSchema {
+            return if (completer == null) StringSchema()
+            else StringSchema(completer)
+        }
 
         fun append(schema: CommandJsonSchema) {
             schemas.add(schema)
@@ -74,7 +80,9 @@ sealed class CommandJsonSchema {
         }
 
         companion object {
-            fun set(keys: MutableMap<String, KeySchema>, name: String, callback: PropertyBuilder.() -> Unit) = PropertyBuilder(name, callback).set(keys)
+            fun put(keys: MutableMap<String, KeySchema>, name: String, callback: PropertyBuilder.() -> Unit) {
+                PropertyBuilder(name, callback).set(keys)
+            }
         }
     }
 
@@ -84,13 +92,8 @@ sealed class CommandJsonSchema {
         data object Invalid: JsonCompletionResult()
     }
 
-    abstract fun completeJson(completer: BclCompleter): JsonCompletionResult
-
     companion object {
-        fun completeSchemaUnion(
-            completer: BclCompleter,
-            schemas: Set<CommandJsonSchema>
-        ): JsonCompletionResult {
+        fun completeSchemaUnion(completer: BclCompleter, schemas: Set<CommandJsonSchema>): JsonCompletionResult {
             if (schemas.isEmpty()) {
                 return JsonCompletionResult.Invalid
             }
@@ -106,7 +109,7 @@ sealed class CommandJsonSchema {
             for (schema in schemas) {
                 completer.restore(start)
 
-                val result = schema.completeJson(completer)
+                val result = schema.complete(completer)
 
                 if (result != JsonCompletionResult.Invalid) {
                     candidates += Candidate(

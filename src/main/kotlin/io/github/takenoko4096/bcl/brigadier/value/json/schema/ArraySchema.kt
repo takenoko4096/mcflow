@@ -1,30 +1,21 @@
 package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InsertTextFormat
 
-class ArraySchema(
-    val elementSchemas: Set<CommandJsonSchema>
-) : CommandJsonSchema() {
-
-    override fun validate(
-        value: CommandJsonValue<*>,
-        sourceCode: String,
-        diagnostics: MutableList<BclDiagnostic>
-    ): Boolean {
+class ArraySchema(val elementSchemas: Set<CommandJsonSchema>) : CommandJsonSchema() {
+    override fun validate(value: CommandJsonValue<*>, sourceCode: String, diagnostics: MutableList<BclDiagnostic>): Boolean {
         if (value !is CommandJsonArray) {
-            diagnostics.add(
-                BclDiagnostic(
-                    "ここでは配列が期待されています",
-                    sourceCode,
-                    value.sourceSpan
-                )
-            )
+            diagnostics.add(BclDiagnostic(
+                "ここでは配列が期待されています",
+                sourceCode,
+                value.sourceSpan
+            ))
             return false
         }
 
@@ -49,35 +40,25 @@ class ArraySchema(
         return result
     }
 
-    override fun completeJson(
-        completer: BclCompleter
-    ): JsonCompletionResult {
-        val start = completer.checkpoint()
-
+    override fun complete(completer: BclCompleter): JsonCompletionResult {
         val openResult = completer.completeChar(
             listOf('['),
             CompletionItemKind.Keyword
         )
 
-        when (openResult) {
-            is BclCompleter.ShouldComplete -> {
-                if (openResult.items.isEmpty()) {
-                    return JsonCompletionResult.Invalid
-                }
+        if (openResult is BclCompleter.ShouldComplete) {
+            if (openResult.items.isEmpty()) {
+                return JsonCompletionResult.Invalid
+            }
 
-                return JsonCompletionResult.Complete(
-                    listOf(
-                        CompletionItem("[]").apply {
-                            insertTextFormat = InsertTextFormat.Snippet
-                            insertText = "[$0]"
-                        }
-                    )
+            return JsonCompletionResult.Complete(
+                listOf(
+                    CompletionItem("[]").apply {
+                        insertTextFormat = InsertTextFormat.Snippet
+                        insertText = "[$0]"
+                    }
                 )
-            }
-
-            is BclCompleter.ShouldContinue -> {
-                // 開き括弧を消費したので続行
-            }
+            )
         }
 
         completer.skipWhitespaceAndComments()
@@ -91,12 +72,7 @@ class ArraySchema(
                 return JsonCompletionResult.Continue
             }
 
-            when (
-                val result = completeSchemaUnion(
-                    completer,
-                    elementSchemas
-                )
-            ) {
+            when (val result = completeSchemaUnion(completer, elementSchemas)) {
                 is JsonCompletionResult.Complete -> {
                     return result
                 }

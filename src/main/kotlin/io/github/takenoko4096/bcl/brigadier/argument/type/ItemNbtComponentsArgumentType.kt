@@ -9,8 +9,8 @@ import io.github.takenoko4096.bcl.brigadier.value.block.BlockType
 import io.github.takenoko4096.bcl.brigadier.value.block.VanillaBlockType
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponent
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemNbtComponents
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.misc.ItemLockMode
 import io.github.takenoko4096.bcl.completer.BclCompleter

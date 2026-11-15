@@ -1,21 +1,18 @@
 package io.github.takenoko4096.bcl.brigadier.argument.type
 
 import io.github.takenoko4096.bcl.server.BclSemanticToken
-import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
 import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.CommandJsonSchema
 import io.github.takenoko4096.bcl.brigadier.value.json.schema.ObjectSchema
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.completer.BclCompletionContext
 import io.github.takenoko4096.bcl.reader.BclTokenSeqReadException
-import io.github.takenoko4096.bcl.reader.TokenSeqReader
 import io.github.takenoko4096.bcl.server.BclSemanticTokenType
 import org.eclipse.lsp4j.CompletionItem
 
@@ -84,7 +81,7 @@ abstract class JsonObjectArgumentType<T>(name: String) : ArgumentType<T>(name) {
     override fun complete(context: BclCompletionContext): List<CompletionItem> {
         val completer = BclCompleter(context)
 
-        return when (val result = getSchema().completeJson(completer)) {
+        return when (val result = getSchema().complete(completer)) {
             is CommandJsonSchema.JsonCompletionResult.Complete -> result.items
             is CommandJsonSchema.JsonCompletionResult.Continue -> emptyList()
             is CommandJsonSchema.JsonCompletionResult.Invalid -> emptyList()

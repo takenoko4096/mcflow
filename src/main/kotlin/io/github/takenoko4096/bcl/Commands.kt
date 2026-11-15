@@ -1,10 +1,5 @@
 package io.github.takenoko4096.bcl
 
-import io.github.takenoko4096.bcl.brigadier.argument.Argument
-import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseContext
-import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
-import io.github.takenoko4096.bcl.brigadier.argument.NoValuedArgument
-import io.github.takenoko4096.bcl.brigadier.argument.type.ArgumentType
 import io.github.takenoko4096.bcl.brigadier.node.Command
 import io.github.takenoko4096.bcl.brigadier.value.misc.CommandPermissionLevel
 import io.github.takenoko4096.bcl.brigadier.argument.type.AxesArgumentType
@@ -33,20 +28,14 @@ import io.github.takenoko4096.bcl.brigadier.argument.type.StringArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.StringEnumArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.TimeDurationArgumentType
 import io.github.takenoko4096.bcl.brigadier.argument.type.WildcardIntegerArgumentType
-import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandRequireContext
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.block.FillMode
 import io.github.takenoko4096.bcl.brigadier.value.block.ScanMode
 import io.github.takenoko4096.bcl.brigadier.value.entity.*
-import io.github.takenoko4096.bcl.brigadier.value.item.Enchant
+import io.github.takenoko4096.bcl.brigadier.value.item.Enchantment
 import io.github.takenoko4096.bcl.brigadier.value.item.ItemReplaceMode
 import io.github.takenoko4096.bcl.brigadier.value.location.Biome
 import io.github.takenoko4096.bcl.brigadier.value.misc.*
-import io.github.takenoko4096.bcl.completer.BclCompleter
-import io.github.takenoko4096.bcl.completer.BclCompletionContext
-import io.github.takenoko4096.bcl.tokenizer.SourceSpan
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionItemKind
 
 object Commands {
     val AIMASSIST = Command.builder("aimassist") {
@@ -578,28 +567,28 @@ object Commands {
         }
 
         "targets"(EntitySelectorArgumentType()) {
-            "enchant"(EnumArgumentType.of<Enchant>()) {
+            "enchantment"(EnumArgumentType.of<Enchantment>()) {
                 executes()
 
                 "level"(IntegerArgumentType.positive()) {
                     executes {
-                        val enchant = getValue<Enchant>("enchant")
+                        val enchantment = getValue<Enchantment>("enchantment")
                         val levelArgument = getArgument<Int>("level")
 
-                        val range = if (enchant.levels.first == enchant.levels.last) {
-                            enchant.levels.first.toString()
+                        val range = if (enchantment.levels.first == enchantment.levels.last) {
+                            enchantment.levels.first.toString()
                         }
                         else {
-                            "${enchant.levels.first} ～ ${enchant.levels.last}"
+                            "${enchantment.levels.first} ～ ${enchantment.levels.last}"
                         }
 
                         val level = levelArgument.value
 
-                        if (level !in enchant.levels) {
-                            addDiagnostic(
+                        if (level !in enchantment.levels) {
+                            diagnostics.add(diagnostic(
                                 levelArgument.sourceSpan,
-                                "エンチャント '${enchant.getString()}' はレベル $level に対応していません: 有効なレベルは $range です"
-                            )
+                                "エンチャント '${enchantment.getString()}' はレベル $level に対応していません: 有効なレベルは $range です"
+                            ))
                         }
                     }
                 }
@@ -850,7 +839,7 @@ object Commands {
             }
 
             "push" {
-                "fog_id"(IdentifierArgumentType.namespaced("namespace_required_identifier")) {
+                "fog_id"(IdentifierArgumentType.namespaced()) {
                     "user_provider_id"(StringArgumentType.isolated()) {
                         executes()
                     }
@@ -897,7 +886,10 @@ object Commands {
                     val valueArg = getArgument<Int>("value")
 
                     if (valueArg.value !in gameRule.range) {
-                        addDiagnostic(valueArg.sourceSpan, "ゲームルール '${gameRule.getString()}' は ${gameRule.range.first} ～ ${gameRule.range.last} までの値が有効ですが、 ${valueArg.value} が渡されました")
+                        diagnostics.add(diagnostic(
+                            valueArg.sourceSpan,
+                            "ゲームルール '${gameRule.getString()}' は ${gameRule.range.first} ～ ${gameRule.range.last} までの値が有効ですが、 ${valueArg.value} が渡されました"
+                        ))
                     }
                 }
             }
@@ -1843,7 +1835,10 @@ object Commands {
                                         val source = getArgument<EntitySelector>("source")
 
                                         if (target.value.isWildcard && source.value.isWildcard) {
-                                            addDiagnostic(source.sourceSpan, "scoreboard operation ではワイルドカードは target または source のどちらか片方にのみ使用できます")
+                                            diagnostics.add(diagnostic(
+                                                source.sourceSpan,
+                                                "scoreboard operation ではワイルドカードは target または source のどちらか片方にのみ使用できます"
+                                            ))
                                         }
                                     }
                                 }
@@ -1863,10 +1858,16 @@ object Commands {
                                     val max = getArgument<Int>("max")
 
                                     if (min.value > max.value) {
-                                        addDiagnostic(min.sourceSpan.start..max.sourceSpan.end, "最小値が最大値を上回っています (${min.value} > ${max.value})")
+                                        diagnostics.add(diagnostic(
+                                            min.sourceSpan.start..max.sourceSpan.end,
+                                            "最小値が最大値を上回っています (${min.value} > ${max.value})"
+                                        ))
                                     }
                                     else if (min.value == max.value) {
-                                        addDiagnostic(min.sourceSpan.start..max.sourceSpan.end, "最小値と最大値は 1 以上離れている必要があります")
+                                        diagnostics.add(diagnostic(
+                                            min.sourceSpan.start..max.sourceSpan.end,
+                                            "最小値と最大値は 1 以上離れている必要があります"
+                                        ))
                                     }
                                 }
                             }
@@ -1948,11 +1949,14 @@ object Commands {
             requirePermissionLevel(CommandPermissionLevel.GAME_DIRECTOR)
         }
 
-        "id"(IdentifierArgumentType.namespaced("namespaced_identifier")) {
+        "id"(IdentifierArgumentType.namespaced()) {
             executes {
                 val argument = getArgument<NamespacedIdentifier>("id")
                 if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
-                    addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
+                    diagnostics.add(diagnostic(
+                        argument.sourceSpan,
+                        "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません"
+                    ))
                 }
             }
 
@@ -1960,7 +1964,10 @@ object Commands {
                 executes {
                     val argument = getArgument<NamespacedIdentifier>("id")
                     if (argument.value.namespace == NamespacedIdentifier.DEFAULT_NAMESPACE) {
-                        addDiagnostic(argument.sourceSpan, "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません")
+                        diagnostics.add(diagnostic(
+                            argument.sourceSpan,
+                            "id の名前空間は '${NamespacedIdentifier.DEFAULT_NAMESPACE}' 以外でなければなりません"
+                        ))
                     }
                 }
             }

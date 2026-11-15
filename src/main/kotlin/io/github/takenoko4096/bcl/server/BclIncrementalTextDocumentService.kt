@@ -61,7 +61,7 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
     }
 
     // TODO
-    private fun parse(oldDocumentParseResult: CommandDocumentParseResult.Parsed, newEntireSourceCode: String, targetSourceSpan: SourceSpan, sender: CommandSender): CommandDocumentParseResult {
+    /*private fun parse(oldDocumentParseResult: CommandDocumentParseResult.Parsed, newEntireSourceCode: String, targetSourceSpan: SourceSpan, sender: CommandSender): CommandDocumentParseResult {
         val targetSourceCode = targetSourceSpan.getStringFromSourceCode(newEntireSourceCode)
         val documentParseResult = parseAll(targetSourceCode, sender)
 
@@ -73,7 +73,7 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
 
             )
         }
-    }
+    }*/
 
     private fun getChangesAppliedSourceCode(origin: String, changes: List<TextDocumentContentChangeEvent>): String {
         var sourceCode = origin
@@ -93,7 +93,7 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
     }
 
     // TODO
-    private fun getChangesAppliedTokens(origin: List<Token>, changes: List<Token>): List<Token> {
+    /*private fun getChangesAppliedTokens(origin: List<Token>, changes: List<Token>): List<Token> {
         if (changes.isEmpty()) {
             return origin
         }
@@ -106,7 +106,7 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         val endIndex = origin.indexOfLast { token -> token.sourceSpan.start in changedSourceSpan }
 
 
-    }
+    }*/
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
         val textDocument = params.textDocument

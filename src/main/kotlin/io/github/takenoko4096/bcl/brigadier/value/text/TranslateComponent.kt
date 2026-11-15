@@ -1,8 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.value.text
 
 import io.github.takenoko4096.bcl.WithSpan
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
 
 data class TranslateComponent(
     val translate: WithSpan<String>?,

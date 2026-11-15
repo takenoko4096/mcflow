@@ -1,7 +1,7 @@
 package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.BclCompleter
 
 object NumberSchema : CommandJsonSchema() {
@@ -9,7 +9,7 @@ object NumberSchema : CommandJsonSchema() {
         return value.value is Number
     }
 
-    override fun completeJson(completer: BclCompleter): JsonCompletionResult {
+    override fun complete(completer: BclCompleter): JsonCompletionResult {
         return completer.completeJsonNumber()
     }
 }

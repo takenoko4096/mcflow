@@ -1,8 +1,8 @@
 package io.github.takenoko4096.bcl.brigadier.value.json.schema
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.completer.BclCompleter
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import org.eclipse.lsp4j.CompletionItem
@@ -82,7 +82,7 @@ class ObjectSchema(
         return result
     }
 
-    override fun completeJson(
+    override fun complete(
         completer: BclCompleter
     ): JsonCompletionResult {
         val start = completer.checkpoint()

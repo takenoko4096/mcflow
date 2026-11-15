@@ -6,9 +6,13 @@ import io.github.takenoko4096.bcl.brigadier.BclSeverity
 import io.github.takenoko4096.bcl.brigadier.value.location.CoordinateComponent
 import io.github.takenoko4096.bcl.brigadier.value.NamespacedIdentifier
 import io.github.takenoko4096.bcl.brigadier.value.entity.ExperienceAmount
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonArray
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonObject
-import io.github.takenoko4096.bcl.brigadier.value.json.CommandJsonValue
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonArray
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonBoolean
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonNull
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonNumber
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonObject
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonString
+import io.github.takenoko4096.bcl.brigadier.value.json.value.CommandJsonValue
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeDuration
 import io.github.takenoko4096.bcl.brigadier.value.misc.TimeUnit
 import io.github.takenoko4096.bcl.parser.Keyword
@@ -1012,15 +1016,15 @@ open class TokenSeqReader(
                 when (t.value) {
                     "true" -> {
                         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, vStart..vEnd))
-                        CommandJsonValue(true, vStart..vEnd)
+                        CommandJsonBoolean(true, vStart..vEnd)
                     }
                     "false" -> {
                         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.BOOLEAN, vStart..vEnd))
-                        CommandJsonValue(false, vStart..vEnd)
+                        CommandJsonBoolean(false, vStart..vEnd)
                     }
                     "null" -> {
                         semanticTokens.add(BclSemanticToken(BclSemanticTokenType.LITERAL, vStart..vEnd))
-                        CommandJsonValue(null, vStart..vEnd)
+                        CommandJsonNull(vStart..vEnd)
                     }
                     else -> throw exception(vStart..vEnd, "json の読み取りに失敗しました: 不正な値です: ${t.value}")
                 }
@@ -1029,19 +1033,19 @@ open class TokenSeqReader(
                 next()
                 val vEnd = getPreviousTokenEndPosition()
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, vStart..vEnd))
-                CommandJsonValue(t.value.toInt(), vStart..vEnd)
+                CommandJsonNumber(t.value.toInt(), vStart..vEnd)
             }
             TokenType.FLOAT -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.NUMBER, vStart..vEnd))
-                CommandJsonValue(t.value.toFloat(), vStart..vEnd)
+                CommandJsonNumber(t.value.toFloat(), vStart..vEnd)
             }
             TokenType.DOUBLE_QUOTED -> {
                 next()
                 val vEnd = getPreviousTokenEndPosition()
                 semanticTokens.add(BclSemanticToken(BclSemanticTokenType.STRING, vStart..vEnd))
-                CommandJsonValue(t.value, vStart..vEnd)
+                CommandJsonString(t.value, vStart..vEnd)
             }
             TokenType.SYMBOL -> {
                 if (t `is` Symbol.BRACE_START) {
@@ -1106,7 +1110,7 @@ open class TokenSeqReader(
     }
 
     fun readJsonObject(semanticTokens: MutableList<BclSemanticToken>): CommandJsonObject {
-        val entries = mutableListOf<Pair<CommandJsonValue<String>, CommandJsonValue<*>>>()
+        val entries = mutableListOf<Pair<CommandJsonString, CommandJsonValue<*>>>()
 
         val start = getCurrentTokenStartPosition()
 
@@ -1129,7 +1133,7 @@ open class TokenSeqReader(
 
             val value = readJsonValue(semanticTokens)
 
-            entries.add(CommandJsonValue(key, kStart..kEnd) to value)
+            entries.add(CommandJsonString(key, kStart..kEnd) to value)
 
             if (isOver()) {
                 throw exception(getOverNextSourceSpan(), "json の読み取りに失敗しました: 入力が不足しています")

@@ -1,7 +1,6 @@
 package io.github.takenoko4096.bcl.brigadier.dispatcher
 
 import io.github.takenoko4096.bcl.brigadier.BclDiagnostic
-import io.github.takenoko4096.bcl.brigadier.dispatcher.CommandDispatcher
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.brigadier.argument.Argument
 import io.github.takenoko4096.bcl.brigadier.argument.ArgumentParseResult
@@ -9,36 +8,28 @@ import io.github.takenoko4096.bcl.brigadier.node.ArgumentCommandNode
 import io.github.takenoko4096.bcl.brigadier.node.CommandNode
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
 import kotlin.reflect.KClass
+import kotlin.reflect.cast
 
 /**
  * CommandSourceStack はないよ
  */
 class CommandExecuteContext(
-    private val sourceCode: String,
-    private val dispatcher: CommandDispatcher,
-    private val route: List<CommandNode>,
-    private val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
-    private val diagnostics: MutableList<BclDiagnostic>,
+    val sourceCode: String,
+    val dispatcher: CommandDispatcher,
+    val route: List<CommandNode>,
+    val arguments: List<Pair<ArgumentCommandNode<*>, ArgumentParseResult<*>>>,
+    val diagnostics: MutableList<BclDiagnostic>,
     val sender: CommandSender
 ) {
-    fun addDiagnostic(sourceSpan: SourceSpan, message: String) {
-        diagnostics.add(BclDiagnostic(message, sourceCode, sourceSpan))
+    fun diagnostic(sourceSpan: SourceSpan, message: String): BclDiagnostic {
+        return BclDiagnostic(message, sourceCode, sourceSpan)
     }
-
-    fun getDispatcher() = dispatcher
-
-    fun getRoute(): List<CommandNode> {
-        return route
-    }
-
-    fun getArguments() = arguments.toList()
 
     fun <T : Any> getArgument(name: String, clazz: KClass<T>): Argument<T> {
         val result = mutableListOf<Argument<T>>()
+
         for ((node, argument) in arguments) {
-            if (argument !is Argument<*>) {
-                throw IllegalStateException("引数 ${clazz.simpleName} $name が無効な値です (NEVER HAPPENS?)")
-            }
+            if (argument !is Argument<*>) continue
 
             if (node.name == name && clazz.isInstance(argument.value)) {
                 result.add(argument as Argument<T>)

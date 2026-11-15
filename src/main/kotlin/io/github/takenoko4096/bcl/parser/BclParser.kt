@@ -45,7 +45,6 @@ class BclParser(
     private val commentCommandDispatcher: CommandDispatcher,
     private val sender: CommandSender
 ) : TokenSeqReader(sourceCode, tokens, sourceSpan, overSourcePosition, ::BclParseException) {
-
     private fun expression(): Expression {
         skipNewLine()
         val expr = assignment()
