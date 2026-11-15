@@ -60,6 +60,11 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         return CommandDocumentParseResult.Parsed(sender, sourceCode, tokens, comments, block)
     }
 
+    /*
+    @file:BclTokenizer.kt @file:BclParser.kt
+今言語サーバーのIncremental化を進めているんだけど、その第一歩としてTokenizationを適切にIncremental化して、毎回の同期の度に全文をtokenizeし直す必要がないようにしたい そこで、設計+具体的なコード修正案をお願いしたい
+     */
+
     // TODO
     /*private fun parse(oldDocumentParseResult: CommandDocumentParseResult.Parsed, newEntireSourceCode: String, targetSourceSpan: SourceSpan, sender: CommandSender): CommandDocumentParseResult {
         val targetSourceCode = targetSourceSpan.getStringFromSourceCode(newEntireSourceCode)
@@ -92,22 +97,6 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         return normalizeSourceCode(sourceCode)
     }
 
-    // TODO
-    /*private fun getChangesAppliedTokens(origin: List<Token>, changes: List<Token>): List<Token> {
-        if (changes.isEmpty()) {
-            return origin
-        }
-
-        val changedSourceSpan = changes.first().sourceSpan.start..changes.last().sourceSpan.end
-
-        val tokens = mutableListOf<Token>()
-
-        val startIndex = origin.indexOfFirst { token -> token.sourceSpan.end in changedSourceSpan }
-        val endIndex = origin.indexOfLast { token -> token.sourceSpan.start in changedSourceSpan }
-
-
-    }*/
-
     override fun didOpen(params: DidOpenTextDocumentParams) {
         val textDocument = params.textDocument
         val sender = CommandSender(extension = textDocument.uri.endsWith(".mcflow"))
@@ -126,12 +115,6 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
             return
         }
 
-        /*
-            1. 変更範囲の sourceSpan を作る
-            2. 新しい sourceCode を作る
-            3. 変更範囲全体を包含する最小の Block を取得する
-            4. 
-         */
         val block = documentParseResult.block
 
         var start: SourcePosition

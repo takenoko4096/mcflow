@@ -44,3 +44,5 @@ bin/
 .idea/
 src/test/resources/classes/
 src/test/resources/particles/
+
+#AGENTS.md
