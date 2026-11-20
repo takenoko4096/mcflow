@@ -4,21 +4,13 @@ import io.github.takenoko4096.bcl.ast.BclComment
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 
 class BclTokenizer(
-    text: String,
+    private val sourceCode: String,
     private val sender: CommandSender,
-    private val comments: MutableList<BclComment>? = mutableListOf()
+    private val interpretComments: Boolean
 ) {
-    val sourceCode: String = text
-        .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
-        .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
-
     private var line: Int = 0
-
     private var cursor: Int = 0
-
     private var linebreakCursor: Int = 0
-
-    private var id = 0
 
     /**
      * カーソルが文字列外であれば`true`
@@ -28,7 +20,7 @@ class BclTokenizer(
     }
 
     private fun invalid(sourceSpan: SourceSpan, type: TokenType, message: String): Token.Invalid {
-        return Token.Invalid(id++, type, message, sourceSpan)
+        return Token.Invalid(type, message, sourceSpan)
     }
 
     private fun exception(sourceSpan: SourceSpan, message: String, cause: Throwable? = null): BclTokenizationException {
@@ -74,7 +66,7 @@ class BclTokenizer(
             }
         }
 
-        for (i in 0..<string.length) {
+        for (i in string.indices) {
             next()
         }
 
@@ -82,13 +74,18 @@ class BclTokenizer(
     }
 
     private fun skipWhitespace(): WhitespaceSkipResult {
-        if (isOver()) return WhitespaceSkipResult(false, null)
+        if (isOver()) {
+            return WhitespaceSkipResult(false, null)
+        }
 
         var currentChar = peek()
         var result = WhitespaceSkipResult(false, null)
 
         while (currentChar in KeyChar.WHITESPACE_CHARS) {
-            if (!result.foundWhitespace) result = WhitespaceSkipResult(true, result.linebreak)
+            if (!result.foundWhitespace) {
+                result = WhitespaceSkipResult(true, result.linebreak)
+            }
+
             if (result.linebreak == null && currentChar == KeyChar.LINEBREAK) {
                 result = WhitespaceSkipResult(result.foundWhitespace, getCurrentSourcePosition())
             }
@@ -118,7 +115,6 @@ class BclTokenizer(
 
     private fun tokenOf(type: TokenType, value: String, start: SourcePosition, end: SourcePosition): Token {
         return Token(
-            id++,
             type,
             value,
             start..end
@@ -126,7 +122,7 @@ class BclTokenizer(
     }
 
     private fun tokenOf(symbol: Symbol, start: SourcePosition, end: SourcePosition): Token {
-        return Token(id++, TokenType.SYMBOL, symbol.value, start..end)
+        return Token(TokenType.SYMBOL, symbol.value, start..end)
     }
 
     private fun digits(radix: Int): String {
@@ -365,9 +361,8 @@ class BclTokenizer(
         return tokenOf(TokenType.DOUBLE_QUOTED, sb.toString(), start, end)
     }
 
-    private fun skipComment(): Boolean {
-        // コメントを解釈しないという意味になる
-        if (comments == null) {
+    private fun skipComment(comments: MutableList<BclComment>): Boolean {
+        if (!interpretComments) {
             return false
         }
 
@@ -487,7 +482,11 @@ class BclTokenizer(
 
             if (numToken.type == TokenType.UINT || numToken is Token.Invalid) {
                 val end = getPreviousSourcePosition()
-                return invalid(start..end, type, "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(sourceCode)}'")
+                return invalid(
+                    start..end,
+                    type,
+                    "位置成分として無効なトークンです: '${numToken.sourceSpan.getStringFromSourceCode(sourceCode)}'"
+                )
             }
 
             val number = numToken.value
@@ -501,7 +500,7 @@ class BclTokenizer(
         }
     }
 
-    private fun token(previous: Token?): Token? {
+    private fun token(previous: Token?, comments: MutableList<BclComment>): Token? {
         var result = skipWhitespace()
 
         var noSeparator = previous != null
@@ -516,7 +515,7 @@ class BclTokenizer(
                 return tokenOf(Symbol.NEWLINE, result.linebreak, result.linebreak)
             }
 
-            if (skipComment()) {
+            if (skipComment(comments)) {
                 noSeparator = false
                 result = skipWhitespace()
                 continue
@@ -584,7 +583,7 @@ class BclTokenizer(
             }
 
             var end = getCurrentSourcePosition()
-            for (i in 0..<symbol.value.length) {
+            for (i in symbol.value.indices) {
                 end = getCurrentSourcePosition()
                 next()
             }
@@ -601,22 +600,63 @@ class BclTokenizer(
         return word()
     }
 
-    fun tokenize(): List<Token> {
-        val list = mutableListOf<Token>()
+    data class BclTokenizationCheckpoint(
+        val sourcePosition: SourcePosition,
+        val previousTokenType: TokenType?,
+        val tokenIndex: Int,
+        val commentIndex: Int
+    )
+
+    data class BclTokenizationResult(
+        val tokens: List<Token>,
+        val comments: List<BclComment>,
+        val checkpoints: List<BclTokenizationCheckpoint>
+    )
+
+    private val checkpoints = mutableListOf<BclTokenizationCheckpoint>()
+
+    fun tokenize(): BclTokenizationResult {
+        val tokens = mutableListOf<Token>()
+        val comments = mutableListOf<BclComment>()
+
+        var previousToken: Token? = null
+
+        checkpoints.clear()
+
+        // 最初のcheckpoint
+        checkpoints.add(
+            BclTokenizationCheckpoint(
+                sourcePosition = getCurrentSourcePosition(),
+                previousTokenType = null,
+                tokenIndex = 0,
+                commentIndex = 0,
+            )
+        )
 
         try {
-            var token: Token? = null
-
             while (!isOver()) {
-                token = token(token) ?: break
-                list.add(token)
+                val token = token(previousToken, comments) ?: break
+
+                tokens.add(token)
+                previousToken = token
+
+                if (token `is` Symbol.NEWLINE) {
+                    checkpoints.add(
+                        BclTokenizationCheckpoint(
+                            sourcePosition = getCurrentSourcePosition(),
+                            previousTokenType = previousToken.type,
+                            tokenIndex = tokens.size,
+                            commentIndex = comments.size,
+                        )
+                    )
+                }
             }
 
-            return list
+            return BclTokenizationResult(tokens, comments, checkpoints.toList(),)
         }
         catch (error: BclTokenizationException) {
-            list.add(invalid(error.sourceSpan, TokenType.UNKNOWN, error.description))
-            return list
+            tokens.add(invalid(error.sourceSpan, TokenType.UNKNOWN, error.description))
+            return BclTokenizationResult(tokens, comments, checkpoints)
         }
         finally {
             cursor = 0

@@ -10,7 +10,7 @@ sealed interface CommandDocumentParseResult {
 
     val sourceCode: String
 
-    open class Normalized(
+    open class Read(
         override val sender: CommandSender,
         override val sourceCode: String
     ) : CommandDocumentParseResult
@@ -20,7 +20,7 @@ sealed interface CommandDocumentParseResult {
         sourceCode: String,
         val tokens: List<Token>,
         val comments: List<BclComment>
-    ) : Normalized(sender, sourceCode), CommandDocumentParseResult
+    ) : Read(sender, sourceCode), CommandDocumentParseResult
 
     class Parsed(
         sender: CommandSender,
