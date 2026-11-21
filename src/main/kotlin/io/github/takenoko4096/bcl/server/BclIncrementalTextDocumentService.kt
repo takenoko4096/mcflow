@@ -7,7 +7,6 @@ import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
-import io.github.takenoko4096.bcl.tokenizer.Token
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
@@ -25,24 +24,23 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
     }
 
     private fun parseAll(text: String, sender: CommandSender): CommandDocumentParseResult {
-        val comments = mutableListOf<BclComment>()
         val sourceCode = normalizeSourceCode(text)
-        val tokenizer = BclTokenizer(sourceCode, sender, comments)
+        val tokenizer = BclTokenizer(sourceCode, sender, interpretComments = true)
 
         if (text.isEmpty()) {
-            return CommandDocumentParseResult.Normalized(sender, sourceCode)
+            return CommandDocumentParseResult.Read(sender, sourceCode)
         }
 
-        val tokens = try {
+        val tokenizationResult = try {
             tokenizer.tokenize()
         }
         catch (_: Throwable) {
-            return CommandDocumentParseResult.Normalized(sender, sourceCode)
+            return CommandDocumentParseResult.Read(sender, sourceCode)
         }
 
         val parser = BclParser(
             sourceCode,
-            tokens,
+            tokenizationResult.tokens,
             sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices),
             overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!,
             server.dispatcher,
@@ -54,10 +52,21 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
             parser.parse()
         }
         catch (_: Throwable) {
-            return CommandDocumentParseResult.Tokenized(sender, sourceCode, tokens, comments)
+            return CommandDocumentParseResult.Tokenized(
+                sender,
+                sourceCode,
+                tokenizationResult.tokens,
+                tokenizationResult.comments
+            )
         }
 
-        return CommandDocumentParseResult.Parsed(sender, sourceCode, tokens, comments, block)
+        return CommandDocumentParseResult.Parsed(
+            sender,
+            sourceCode,
+            tokenizationResult.tokens,
+            tokenizationResult.comments,
+            block
+        )
     }
 
     /*
@@ -80,21 +89,21 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         }
     }*/
 
-    private fun getChangesAppliedSourceCode(origin: String, changes: List<TextDocumentContentChangeEvent>): String {
+    private fun updateSourceCode(origin: String, changes: List<TextDocumentContentChangeEvent>): String {
         var sourceCode = origin
 
         for (change in changes) {
             val range = change.range
             val start = SourcePosition.from(sourceCode, range.start)
-            val end = SourcePosition.from(sourceCode, range.end)
+            val endExclusive = SourcePosition.from(sourceCode, range.end)
             sourceCode = buildString {
                 append(sourceCode.slice(0..<start.index))
-                append(change.text)
-                append(sourceCode.slice(end.index..sourceCode.lastIndex))
+                append(normalizeSourceCode(change.text))
+                append(sourceCode.slice(endExclusive.index..sourceCode.lastIndex))
             }
         }
 
-        return normalizeSourceCode(sourceCode)
+        return sourceCode
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
@@ -108,21 +117,15 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
         val textDocument = params.textDocument
         val documentParseResult = documents[textDocument.uri]!!
 
-        val newSourceCode = getChangesAppliedSourceCode(documentParseResult.sourceCode, params.contentChanges)
+        val newSourceCode = updateSourceCode(documentParseResult.sourceCode, params.contentChanges)
 
-        if (documentParseResult !is CommandDocumentParseResult.Parsed) {
+        // 前回の解析が tokenize に失敗していたら全文再解析でok
+        if (documentParseResult !is CommandDocumentParseResult.Tokenized) {
             documents[textDocument.uri] = parseAll(newSourceCode, documentParseResult.sender)
             return
         }
 
-        val block = documentParseResult.block
-
-        var start: SourcePosition
-        var end: SourcePosition
-
-        for (change in params.contentChanges) {
-            change.range.start
-        }
+        val oldTokens = documentParseResult.tokens
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {}

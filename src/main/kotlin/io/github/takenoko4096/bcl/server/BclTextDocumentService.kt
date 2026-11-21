@@ -36,14 +36,15 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val sender = files[uri]?.sender ?: CommandSender()
         sender.extension = extension
 
-        val comments = mutableListOf<BclComment>()
-        val tokenizer = BclTokenizer(text, sender, comments)
-        val sourceCode = tokenizer.sourceCode
-        val tokens = tokenizer.tokenize()
+        val sourceCode = text
+            .replace(KeyChar.WINDOWS_LINE_SEPARATOR_SEQUENCE, KeyChar.LINEBREAK.toString())
+            .replace(KeyChar.MAC_LINE_SEPARATOR, KeyChar.LINEBREAK)
+        val tokenizer = BclTokenizer(sourceCode, sender, interpretComments = true)
+        val tokenizationResult = tokenizer.tokenize()
 
         val parser = BclParser(
             sourceCode,
-            tokens,
+            tokenizationResult.tokens,
             sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices),
             overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!,
             server.dispatcher,
@@ -57,7 +58,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             val file = files[uri]!!
             file.sourceCode = sourceCode
             file.block = block
-            file.comments = comments
+            file.comments = tokenizationResult.comments
             file.sender = sender
             file
         }
@@ -65,7 +66,7 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
             val file = CommandDocument(
                 sourceCode = sourceCode,
                 block = block,
-                comments = comments,
+                comments = tokenizationResult.comments,
                 sender
             )
 
@@ -328,16 +329,18 @@ class BclTextDocumentService(private val server: BedrockCommandLanguageServer) :
         val command = result.route.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         command as Command
 
+        val subSourceCode = sourceCode.substring(result.sourceSpan.start.index, cursor)
         val reader = BclTokenizer(
-            sourceCode.substring(result.sourceSpan.start.index, cursor),
+            subSourceCode,
             fakeFile.sender,
-            mutableListOf()
+            interpretComments = true
         ).run {
+            val tokenizationResult = tokenize()
             val seqReader = TokenSeqReader(
-                this.sourceCode,
-                this.tokenize(),
-                SourceSpan.toSourceSpan(this.sourceCode, this.sourceCode.indices),
-                SourcePosition.toSourcePosition(this.sourceCode, this.sourceCode.length)!!,
+                subSourceCode,
+                tokenizationResult.tokens,
+                SourceSpan.toSourceSpan(subSourceCode, subSourceCode.indices),
+                SourcePosition.toSourcePosition(subSourceCode, subSourceCode.length)!!,
                 ::BclParseException
             )
             CommandLineReader.of(seqReader, fakeFile.sender)

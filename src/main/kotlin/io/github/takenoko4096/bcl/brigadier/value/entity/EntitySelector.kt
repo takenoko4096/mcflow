@@ -29,20 +29,26 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
     }
 
     companion object {
+        /**
+         * @param string must be normalized
+         */
         fun parse(context: ArgumentParseContext, string: String, offset: SourcePosition?, fallbackSourceSpan: SourceSpan): ArgumentParseResult<EntitySelector> {
             val dummyDiags = mutableListOf<BclDiagnostic>()
             val dummySemcs = mutableListOf<BclSemanticToken>()
 
-            val tokenizer = BclTokenizer(string, context.sender.copy(extension = false))
-            val tokens = tokenizer.tokenize()
+            val tokenizer = BclTokenizer(
+                string,
+                context.sender.copy(extension = false),
+                interpretComments = false
+            )
+            val tokenizationResult = tokenizer.tokenize()
 
-            val sourceCode = tokenizer.sourceCode
-            val sourceSpan = SourceSpan.toSourceSpan(sourceCode, sourceCode.indices)
-            val overSourcePosition = SourcePosition.toSourcePosition(sourceCode, sourceCode.length)!!
+            val sourceSpan = SourceSpan.toSourceSpan(string, string.indices)
+            val overSourcePosition = SourcePosition.toSourcePosition(string, string.length)!!
 
             val reader = TokenSeqReader(
-                sourceCode,
-                tokens,
+                string,
+                tokenizationResult.tokens,
                 sourceSpan,
                 overSourcePosition,
                 ::BclParseException
@@ -52,7 +58,7 @@ class EntitySelector(val type: SelectorType, val arguments: SelectorArguments) {
             if (string.isEmpty()) {
                 context.diagnostics.add(BclDiagnostic(
                     "空のセレクターは無効です",
-                    tokenizer.sourceCode,
+                    string,
                     fallbackSourceSpan
                 ))
                 return NoValuedArgument(type, fallbackSourceSpan, context.diagnostics)
