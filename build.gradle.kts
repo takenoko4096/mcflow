@@ -14,6 +14,7 @@ repositories {
 dependencies {
     // wasm にするには jvmMain/ にこのあたりは書かないといけない
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:1.0.0")
+    implementation("io.github.tree-sitter:ktreesitter:0.25.1")
 
     testImplementation(kotlin("reflect"))
     testImplementation("io.github.takenoko4096:mojangson-bridge:0.2.0")
