@@ -621,17 +621,17 @@ class BclTokenizer(
 
         var previousToken: Token? = null
 
-        checkpoints.clear()
+        // checkpoints.clear()
 
         // 最初のcheckpoint
-        checkpoints.add(
+        /*checkpoints.add(
             BclTokenizationCheckpoint(
                 sourcePosition = getCurrentSourcePosition(),
                 previousTokenType = null,
                 tokenIndex = 0,
                 commentIndex = 0,
             )
-        )
+        )*/
 
         try {
             while (!isOver()) {
