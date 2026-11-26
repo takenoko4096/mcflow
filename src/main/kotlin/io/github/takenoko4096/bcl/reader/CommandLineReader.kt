@@ -34,77 +34,9 @@ class CommandLineReader private constructor(
     }
 
     companion object {
-        /*fun of(reader: TokenSeqReader, sender: CommandSender): CommandLineReader {
-            val preprocessedSemanticTokens = mutableListOf<BclSemanticToken>()
-            val tokens = mutableListOf<Token>()
-            var current: Token
-
-            reader.skipNewLine()
-
-            var lastSourcePosition: SourcePosition = if (reader.isOver()) {
-                reader.getOverNextSourceSpan().start
-            }
-            else {
-                reader.getCurrentTokenStartPosition()
-            }
-
-            var isCommentCommand = false
-
-            val t = reader.peek()
-            if (sender.extension && t `is` Symbol.DIVIDE) {
-                preprocessedSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, t.sourceSpan))
-                reader.next()
-            }
-            else if (reader.peek(0) `is` Symbol.HASH && reader.peek(1) `is` Symbol.DIVIDE) {
-                preprocessedSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.COMMENT, reader.peek().sourceSpan))
-                reader.next()
-                preprocessedSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.COMMENT, reader.peek().sourceSpan))
-                reader.next()
-                isCommentCommand = true
-            }
-
-            var lastWasEscapedNewLine = false
-
-            while (!reader.isOver()) {
-                current = reader.peek()
-                val start = reader.getCurrentTokenStartPosition()
-                reader.next()
-                val end = reader.getPreviousTokenEndPosition()
-
-                if (sender.extension && !isCommentCommand && current `is` Symbol.ESCAPE && !reader.isOver() && reader.peek() `is` Symbol.NEWLINE) {
-                    reader.next()
-                    lastSourcePosition = reader.getOverNextSourceSpan().start
-                    lastWasEscapedNewLine = true
-                    preprocessedSemanticTokens.add(BclSemanticToken(BclSemanticTokenType.SYMBOL, start..end))
-                    continue
-                }
-
-                if (current `is` Symbol.NEWLINE) {
-                    break
-                }
-
-                tokens.add(current)
-
-                lastSourcePosition = end
-                lastWasEscapedNewLine = false
-            }
-
-            if (!lastWasEscapedNewLine && tokens.isNotEmpty()) {
-                lastSourcePosition = tokens.last().sourceSpan.end
-            }
-
-            return CommandLineReader(
-                reader.sourceCode,
-                tokens,
-                sourceSpan = null,
-                overSourcePosition = null,
-                lastSourcePosition,
-                ::BclParseException,
-                preprocessedSemanticTokens,
-                isCommentCommand = isCommentCommand
-            )
-        }*/
-
+        /**
+         * TODO: '\' + '\n' + comment のときの挙動を直したい
+         */
         fun of(reader: TokenSeqReader, sender: CommandSender): CommandLineReader {
             val sourceCode = reader.sourceCode
             val preprocessedSemanticTokens = mutableListOf<BclSemanticToken>()
@@ -161,12 +93,28 @@ class CommandLineReader private constructor(
                 }
             }
 
+            var isContinuingLine = false
+
             while (!reader.isOver()) {
                 val current = reader.peek()
                 reader.next()
 
                 // 通常の改行はコマンドの終端。
+                /*if (current `is` Symbol.NEWLINE) {
+                    endExclusivePosition = current.sourceSpan.start
+                    terminatedByNewLine = true
+                    break
+                }*/
+
                 if (current `is` Symbol.NEWLINE) {
+                    if (isContinuingLine) {
+                        endExclusivePosition = SourcePosition.toSourcePosition(
+                            sourceCode,
+                            current.sourceSpan.end.index + 1
+                        )!!
+                        continue
+                    }
+
                     endExclusivePosition = current.sourceSpan.start
                     terminatedByNewLine = true
                     break
@@ -182,6 +130,7 @@ class CommandLineReader private constructor(
                 ) {
                     val newline = reader.peek()
                     reader.next()
+                    isContinuingLine = true
 
                     preprocessedSemanticTokens.add(
                         BclSemanticToken(
@@ -199,6 +148,7 @@ class CommandLineReader private constructor(
                 }
 
                 tokens.add(current)
+                isContinuingLine = false
 
                 endExclusivePosition = SourcePosition.toSourcePosition(
                     sourceCode,

@@ -640,7 +640,7 @@ class BclTokenizer(
                 tokens.add(token)
                 previousToken = token
 
-                if (token `is` Symbol.NEWLINE) {
+                /*if (token `is` Symbol.NEWLINE) {
                     checkpoints.add(
                         BclTokenizationCheckpoint(
                             sourcePosition = getCurrentSourcePosition(),
@@ -649,7 +649,7 @@ class BclTokenizer(
                             commentIndex = comments.size,
                         )
                     )
-                }
+                }*/
             }
 
             return BclTokenizationResult(tokens, comments, checkpoints.toList(),)

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @file Mcflow grammar for tree-sitter
  * @author takenoko4096
@@ -5,13 +6,31 @@
  */
 
 /// <reference types="tree-sitter-cli/dsl" />
-// @ts-check
 
+/**
+ * '\r', '\t' が無いことは呼び出し側によって保証される
+ */
 export default grammar({
-  name: "mcflow",
+    name: "mcflow",
+    rules: {
+        source_file: $ => repeat($.command_line),
 
-  rules: {
-    // TODO: add the actual grammar rules
-    source_file: $ => "hello"
-  }
+        command_line: $ => seq(
+            optional('/'),
+            repeat1(choice(
+                $.command_text,
+                $.line_continuation
+            ))
+        ),
+
+        command_text: () => token(/[^\\\n]+/),
+
+        line_continuation: $ => seq(
+            '\\',
+            $.newline,
+            /\s*/
+        ),
+
+        newline: () => /\n/
+    }
 });
