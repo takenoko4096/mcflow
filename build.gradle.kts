@@ -59,7 +59,7 @@ tasks {
     }
 
     register<Copy>("putTreeSitter") {
-        from(projectDir.resolve("tree-sitter-mcflow/tree-sitter-mcflow.dll"))
+        from(projectDir.resolve("tree-sitter-mcflow/build/tree-sitter-mcflow.dll"))
 
         into("extension/native")
     }

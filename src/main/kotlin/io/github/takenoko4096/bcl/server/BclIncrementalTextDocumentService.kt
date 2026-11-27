@@ -1,6 +1,5 @@
 package io.github.takenoko4096.bcl.server
 
-import io.github.takenoko4096.bcl.ast.BclComment
 import io.github.takenoko4096.bcl.brigadier.CommandSender
 import io.github.takenoko4096.bcl.parser.BclParser
 import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
@@ -68,26 +67,6 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
             block
         )
     }
-
-    /*
-    @file:BclTokenizer.kt @file:BclParser.kt
-今言語サーバーのIncremental化を進めているんだけど、その第一歩としてTokenizationを適切にIncremental化して、毎回の同期の度に全文をtokenizeし直す必要がないようにしたい そこで、設計+具体的なコード修正案をお願いしたい
-     */
-
-    // TODO
-    /*private fun parse(oldDocumentParseResult: CommandDocumentParseResult.Parsed, newEntireSourceCode: String, targetSourceSpan: SourceSpan, sender: CommandSender): CommandDocumentParseResult {
-        val targetSourceCode = targetSourceSpan.getStringFromSourceCode(newEntireSourceCode)
-        val documentParseResult = parseAll(targetSourceCode, sender)
-
-        if (documentParseResult is CommandDocumentParseResult.Parsed) {
-            return CommandDocumentParseResult.Parsed(
-                sender,
-                newEntireSourceCode,
-                getChangesAppliedTokens(oldDocumentParseResult.tokens, documentParseResult.tokens),
-
-            )
-        }
-    }*/
 
     private fun updateSourceCode(origin: String, changes: List<TextDocumentContentChangeEvent>): String {
         var sourceCode = origin
