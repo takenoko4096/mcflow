@@ -9,10 +9,10 @@
 #define LANGUAGE_VERSION 15
 #define STATE_COUNT 8
 #define LARGE_STATE_COUNT 7
-#define SYMBOL_COUNT 11
+#define SYMBOL_COUNT 10
 #define ALIAS_COUNT 0
-#define TOKEN_COUNT 7
-#define EXTERNAL_TOKEN_COUNT 6
+#define TOKEN_COUNT 6
+#define EXTERNAL_TOKEN_COUNT 5
 #define FIELD_COUNT 0
 #define MAX_ALIAS_SEQUENCE_LENGTH 2
 #define MAX_RESERVED_WORD_SET_SIZE 0
@@ -21,25 +21,23 @@
 
 enum ts_symbol_identifiers {
   sym__command_start = 1,
-  sym__command_content = 2,
-  sym__continued_comment_command = 3,
-  sym__standalone_comment_command = 4,
+  sym__command_part = 2,
+  sym__top_level_comment_command = 3,
+  sym__inner_comment_command = 4,
   sym__trivia = 5,
-  sym__error_sentinel = 6,
-  sym_source_file = 7,
-  sym_command_line = 8,
-  aux_sym_source_file_repeat1 = 9,
-  aux_sym_command_line_repeat1 = 10,
+  sym_source_file = 6,
+  sym_command_line = 7,
+  aux_sym_source_file_repeat1 = 8,
+  aux_sym_command_line_repeat1 = 9,
 };
 
 static const char * const ts_symbol_names[] = {
   [ts_builtin_sym_end] = "end",
   [sym__command_start] = "_command_start",
-  [sym__command_content] = "_command_content",
-  [sym__continued_comment_command] = "comment_command",
-  [sym__standalone_comment_command] = "comment_command",
+  [sym__command_part] = "_command_part",
+  [sym__top_level_comment_command] = "comment_command",
+  [sym__inner_comment_command] = "comment_command",
   [sym__trivia] = "_trivia",
-  [sym__error_sentinel] = "_error_sentinel",
   [sym_source_file] = "source_file",
   [sym_command_line] = "command_line",
   [aux_sym_source_file_repeat1] = "source_file_repeat1",
@@ -49,11 +47,10 @@ static const char * const ts_symbol_names[] = {
 static const TSSymbol ts_symbol_map[] = {
   [ts_builtin_sym_end] = ts_builtin_sym_end,
   [sym__command_start] = sym__command_start,
-  [sym__command_content] = sym__command_content,
-  [sym__continued_comment_command] = sym__continued_comment_command,
-  [sym__standalone_comment_command] = sym__continued_comment_command,
+  [sym__command_part] = sym__command_part,
+  [sym__top_level_comment_command] = sym__top_level_comment_command,
+  [sym__inner_comment_command] = sym__top_level_comment_command,
   [sym__trivia] = sym__trivia,
-  [sym__error_sentinel] = sym__error_sentinel,
   [sym_source_file] = sym_source_file,
   [sym_command_line] = sym_command_line,
   [aux_sym_source_file_repeat1] = aux_sym_source_file_repeat1,
@@ -69,23 +66,19 @@ static const TSSymbolMetadata ts_symbol_metadata[] = {
     .visible = false,
     .named = true,
   },
-  [sym__command_content] = {
+  [sym__command_part] = {
     .visible = false,
     .named = true,
   },
-  [sym__continued_comment_command] = {
+  [sym__top_level_comment_command] = {
     .visible = true,
     .named = true,
   },
-  [sym__standalone_comment_command] = {
+  [sym__inner_comment_command] = {
     .visible = true,
     .named = true,
   },
   [sym__trivia] = {
-    .visible = false,
-    .named = true,
-  },
-  [sym__error_sentinel] = {
     .visible = false,
     .named = true,
   },
@@ -145,23 +138,22 @@ static bool ts_lex(TSLexer *lexer, TSStateId state) {
 static const TSLexerMode ts_lex_modes[STATE_COUNT] = {
   [0] = {.lex_state = 0, .external_lex_state = 1},
   [1] = {.lex_state = 0, .external_lex_state = 2},
-  [2] = {.lex_state = 0, .external_lex_state = 3},
-  [3] = {.lex_state = 0, .external_lex_state = 3},
-  [4] = {.lex_state = 0, .external_lex_state = 3},
+  [2] = {.lex_state = 0, .external_lex_state = 1},
+  [3] = {.lex_state = 0, .external_lex_state = 1},
+  [4] = {.lex_state = 0, .external_lex_state = 1},
   [5] = {.lex_state = 0, .external_lex_state = 2},
   [6] = {.lex_state = 0, .external_lex_state = 2},
-  [7] = {.lex_state = 0, .external_lex_state = 4},
+  [7] = {.lex_state = 0, .external_lex_state = 3},
 };
 
 static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
   [STATE(0)] = {
     [ts_builtin_sym_end] = ACTIONS(1),
     [sym__command_start] = ACTIONS(1),
-    [sym__command_content] = ACTIONS(1),
-    [sym__continued_comment_command] = ACTIONS(1),
-    [sym__standalone_comment_command] = ACTIONS(1),
+    [sym__command_part] = ACTIONS(1),
+    [sym__top_level_comment_command] = ACTIONS(1),
+    [sym__inner_comment_command] = ACTIONS(1),
     [sym__trivia] = ACTIONS(3),
-    [sym__error_sentinel] = ACTIONS(1),
   },
   [STATE(1)] = {
     [sym_source_file] = STATE(7),
@@ -169,34 +161,34 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [aux_sym_source_file_repeat1] = STATE(5),
     [ts_builtin_sym_end] = ACTIONS(5),
     [sym__command_start] = ACTIONS(7),
-    [sym__standalone_comment_command] = ACTIONS(9),
+    [sym__top_level_comment_command] = ACTIONS(9),
     [sym__trivia] = ACTIONS(3),
   },
   [STATE(2)] = {
     [aux_sym_command_line_repeat1] = STATE(3),
     [ts_builtin_sym_end] = ACTIONS(11),
     [sym__command_start] = ACTIONS(11),
-    [sym__command_content] = ACTIONS(13),
-    [sym__continued_comment_command] = ACTIONS(13),
-    [sym__standalone_comment_command] = ACTIONS(11),
+    [sym__command_part] = ACTIONS(13),
+    [sym__top_level_comment_command] = ACTIONS(11),
+    [sym__inner_comment_command] = ACTIONS(13),
     [sym__trivia] = ACTIONS(3),
   },
   [STATE(3)] = {
     [aux_sym_command_line_repeat1] = STATE(4),
     [ts_builtin_sym_end] = ACTIONS(15),
     [sym__command_start] = ACTIONS(15),
-    [sym__command_content] = ACTIONS(17),
-    [sym__continued_comment_command] = ACTIONS(17),
-    [sym__standalone_comment_command] = ACTIONS(15),
+    [sym__command_part] = ACTIONS(17),
+    [sym__top_level_comment_command] = ACTIONS(15),
+    [sym__inner_comment_command] = ACTIONS(17),
     [sym__trivia] = ACTIONS(3),
   },
   [STATE(4)] = {
     [aux_sym_command_line_repeat1] = STATE(4),
     [ts_builtin_sym_end] = ACTIONS(19),
     [sym__command_start] = ACTIONS(19),
-    [sym__command_content] = ACTIONS(21),
-    [sym__continued_comment_command] = ACTIONS(21),
-    [sym__standalone_comment_command] = ACTIONS(19),
+    [sym__command_part] = ACTIONS(21),
+    [sym__top_level_comment_command] = ACTIONS(19),
+    [sym__inner_comment_command] = ACTIONS(21),
     [sym__trivia] = ACTIONS(3),
   },
   [STATE(5)] = {
@@ -204,7 +196,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [aux_sym_source_file_repeat1] = STATE(6),
     [ts_builtin_sym_end] = ACTIONS(24),
     [sym__command_start] = ACTIONS(7),
-    [sym__standalone_comment_command] = ACTIONS(26),
+    [sym__top_level_comment_command] = ACTIONS(26),
     [sym__trivia] = ACTIONS(3),
   },
   [STATE(6)] = {
@@ -212,7 +204,7 @@ static const uint16_t ts_parse_table[LARGE_STATE_COUNT][SYMBOL_COUNT] = {
     [aux_sym_source_file_repeat1] = STATE(6),
     [ts_builtin_sym_end] = ACTIONS(28),
     [sym__command_start] = ACTIONS(30),
-    [sym__standalone_comment_command] = ACTIONS(33),
+    [sym__top_level_comment_command] = ACTIONS(33),
     [sym__trivia] = ACTIONS(3),
   },
 };
@@ -252,44 +244,34 @@ static const TSParseActionEntry ts_parse_actions[] = {
 
 enum ts_external_scanner_symbol_identifiers {
   ts_external_token__command_start = 0,
-  ts_external_token__command_content = 1,
-  ts_external_token__continued_comment_command = 2,
-  ts_external_token__standalone_comment_command = 3,
+  ts_external_token__command_part = 1,
+  ts_external_token__top_level_comment_command = 2,
+  ts_external_token__inner_comment_command = 3,
   ts_external_token__trivia = 4,
-  ts_external_token__error_sentinel = 5,
 };
 
 static const TSSymbol ts_external_scanner_symbol_map[EXTERNAL_TOKEN_COUNT] = {
   [ts_external_token__command_start] = sym__command_start,
-  [ts_external_token__command_content] = sym__command_content,
-  [ts_external_token__continued_comment_command] = sym__continued_comment_command,
-  [ts_external_token__standalone_comment_command] = sym__standalone_comment_command,
+  [ts_external_token__command_part] = sym__command_part,
+  [ts_external_token__top_level_comment_command] = sym__top_level_comment_command,
+  [ts_external_token__inner_comment_command] = sym__inner_comment_command,
   [ts_external_token__trivia] = sym__trivia,
-  [ts_external_token__error_sentinel] = sym__error_sentinel,
 };
 
-static const bool ts_external_scanner_states[5][EXTERNAL_TOKEN_COUNT] = {
+static const bool ts_external_scanner_states[4][EXTERNAL_TOKEN_COUNT] = {
   [1] = {
     [ts_external_token__command_start] = true,
-    [ts_external_token__command_content] = true,
-    [ts_external_token__continued_comment_command] = true,
-    [ts_external_token__standalone_comment_command] = true,
+    [ts_external_token__command_part] = true,
+    [ts_external_token__top_level_comment_command] = true,
+    [ts_external_token__inner_comment_command] = true,
     [ts_external_token__trivia] = true,
-    [ts_external_token__error_sentinel] = true,
   },
   [2] = {
     [ts_external_token__command_start] = true,
-    [ts_external_token__standalone_comment_command] = true,
+    [ts_external_token__top_level_comment_command] = true,
     [ts_external_token__trivia] = true,
   },
   [3] = {
-    [ts_external_token__command_start] = true,
-    [ts_external_token__command_content] = true,
-    [ts_external_token__continued_comment_command] = true,
-    [ts_external_token__standalone_comment_command] = true,
-    [ts_external_token__trivia] = true,
-  },
-  [4] = {
     [ts_external_token__trivia] = true,
   },
 };

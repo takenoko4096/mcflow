@@ -652,7 +652,7 @@ class BclTokenizer(
                 }*/
             }
 
-            return BclTokenizationResult(tokens, comments, checkpoints.toList(),)
+            return BclTokenizationResult(tokens, comments, checkpoints.toList())
         }
         catch (error: BclTokenizationException) {
             tokens.add(invalid(error.sourceSpan, TokenType.UNKNOWN, error.description))

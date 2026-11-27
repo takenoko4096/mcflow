@@ -15,7 +15,7 @@
             "type": "ALIAS",
             "content": {
               "type": "SYMBOL",
-              "name": "_standalone_comment_command"
+              "name": "_top_level_comment_command"
             },
             "named": true,
             "value": "comment_command"
@@ -37,13 +37,13 @@
             "members": [
               {
                 "type": "SYMBOL",
-                "name": "_command_content"
+                "name": "_command_part"
               },
               {
                 "type": "ALIAS",
                 "content": {
                   "type": "SYMBOL",
-                  "name": "_continued_comment_command"
+                  "name": "_inner_comment_command"
                 },
                 "named": true,
                 "value": "comment_command"
@@ -69,23 +69,19 @@
     },
     {
       "type": "SYMBOL",
-      "name": "_command_content"
+      "name": "_command_part"
     },
     {
       "type": "SYMBOL",
-      "name": "_continued_comment_command"
+      "name": "_top_level_comment_command"
     },
     {
       "type": "SYMBOL",
-      "name": "_standalone_comment_command"
+      "name": "_inner_comment_command"
     },
     {
       "type": "SYMBOL",
       "name": "_trivia"
-    },
-    {
-      "type": "SYMBOL",
-      "name": "_error_sentinel"
     }
   ],
   "inline": [],

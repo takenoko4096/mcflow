@@ -1,578 +1,332 @@
-#include "tree_sitter/parser.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
+
+#include "tree_sitter/parser.h"
 
 enum TokenType {
-    COMMAND_START,
-    COMMAND_CONTENT,
-
-    CONTINUED_COMMENT_COMMAND,
-    STANDALONE_COMMENT_COMMAND,
-
-    TRIVIA,
-
-    ERROR_SENTINEL,
+  COMMAND_START,
+  COMMAND_PART,
+  TOP_LEVEL_COMMENT_COMMAND,
+  INNER_COMMENT_COMMAND,
+  TRIVIA,
 };
 
 typedef struct {
-    bool in_command;
-    bool continuation_pending;
-    bool in_quote;
+  bool command_open;
+  bool continuation_pending;
 } Scanner;
 
-static void advance(TSLexer *lexer, bool skip) {
-    lexer->advance(lexer, skip);
+static bool is_newline(int32_t c) {
+  return c == '\n' || c == '\r';
 }
 
-static bool is_eof(TSLexer *lexer) {
-    return lexer->eof(lexer);
+static void advance(TSLexer *lexer) {
+  lexer->advance(lexer, false);
 }
 
-static bool is_newline(TSLexer *lexer) {
-    return lexer->lookahead == '\n';
+static void consume_newline(TSLexer *lexer) {
+  int32_t first = lexer->lookahead;
+  advance(lexer);
+  if (first == '\r' && lexer->lookahead == '\n') {
+    advance(lexer);
+  }
 }
 
-static bool is_space(int32_t c) {
-    return c == ' ' || c == '\t';
+static bool scan_line_comment(TSLexer *lexer) {
+  // The leading '#' has already been consumed.
+  while (!lexer->eof(lexer) && !is_newline(lexer->lookahead)) {
+    advance(lexer);
+  }
+  lexer->mark_end(lexer);
+  lexer->result_symbol = TRIVIA;
+  return true;
 }
 
-static bool emit_token(
-    TSLexer *lexer,
-    TSSymbol symbol
-) {
-    lexer->mark_end(lexer);
-    lexer->result_symbol = symbol;
-    return true;
-}
+static bool scan_block_comment(TSLexer *lexer) {
+  // The opening "#::" has already been consumed.
+  uint32_t depth = 1;
 
-/*
- * Consume a nested block comment.
- *
- * The opening '#::' has already been consumed.
- */
-static void consume_block_comment(TSLexer *lexer) {
-    unsigned depth = 1;
+  while (!lexer->eof(lexer) && depth > 0) {
+    if (lexer->lookahead == '#') {
+      advance(lexer);
+      if (lexer->lookahead == ':') {
+        advance(lexer);
+        if (lexer->lookahead == ':') {
+          advance(lexer);
+          depth++;
+        }
+      }
+      continue;
+    }
 
-    while (depth > 0 && !is_eof(lexer)) {
+    if (lexer->lookahead == ':') {
+      advance(lexer);
+      if (lexer->lookahead == ':') {
+        advance(lexer);
         if (lexer->lookahead == '#') {
-            advance(lexer, false);
-
-            if (lexer->lookahead == ':') {
-                advance(lexer, false);
-
-                if (lexer->lookahead == ':') {
-                    advance(lexer, false);
-                    depth++;
-                }
-            }
+          advance(lexer);
+          depth--;
         }
-        else if (lexer->lookahead == ':') {
-            advance(lexer, false);
-
-            if (lexer->lookahead == ':') {
-                advance(lexer, false);
-
-                if (lexer->lookahead == '#') {
-                    advance(lexer, false);
-                    depth--;
-                }
-            }
-        }
-        else {
-            advance(lexer, false);
-        }
+      }
+      continue;
     }
+
+    advance(lexer);
+  }
+
+  lexer->mark_end(lexer);
+  lexer->result_symbol = TRIVIA;
+  return true;
 }
 
-/*
- * Consume a line comment.
- *
- * The '#' has already been consumed.
- * The newline is deliberately left to the caller.
- */
-static void consume_line_comment(TSLexer *lexer) {
-    while (!is_eof(lexer) && !is_newline(lexer)) {
-        advance(lexer, false);
-    }
+static bool is_horizontal_space(int32_t c) {
+  return c == ' ' || c == '\t';
 }
 
-/*
- * Scan trivia and comment commands.
- *
- * This function is also responsible for ending a command:
- * a normal newline or a trailing line comment resets
- * in_command.
- *
- * It never returns false after consuming input.
- */
-static bool scan_trivia(
-    Scanner *scanner,
-    TSLexer *lexer,
-    const bool *valid_symbols
+static bool scan_comment_or_trivia(
+  Scanner *scanner,
+  TSLexer *lexer,
+  const bool *valid_symbols
 ) {
-    bool consumed = false;
-
-    while (!is_eof(lexer)) {
-        /*
-         * Inside a quoted string, only a physical newline
-         * is relevant to trivia scanning.
-         *
-         * Other characters, including '#', belong to the
-         * quoted string and are handled by COMMAND_CONTENT.
-         */
-        if (scanner->in_command && scanner->in_quote) {
-            if (!is_newline(lexer)) {
-                break;
-            }
-
-            advance(lexer, false);
-
-            scanner->in_command = false;
-            scanner->continuation_pending = false;
-            scanner->in_quote = false;
-
-            consumed = true;
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * A normal command newline terminates the command.
-         * A newline while continuation_pending is true
-         * is merely a blank line in the continuation area.
-         */
-        if (is_newline(lexer)) {
-            advance(lexer, false);
-
-            if (scanner->in_command &&
-                !scanner->continuation_pending) {
-                scanner->in_command = false;
-                scanner->in_quote = false;
-            }
-
-            consumed = true;
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * Horizontal whitespace:
-         *
-         * - At the top level: trivia.
-         * - During continuation: trivia.
-         * - In ordinary command content: actual content.
-         */
-        if (is_space(lexer->lookahead)) {
-            if (scanner->in_command &&
-                !scanner->continuation_pending) {
-                break;
-            }
-
-            advance(lexer, false);
-
-            consumed = true;
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * A further line continuation inside the continuation
-         * area is handled by COMMAND_CONTENT.
-         *
-         * Do not consume '\' here, because it may be ordinary
-         * command content rather than a continuation marker.
-         */
-        if (scanner->in_command &&
-            scanner->continuation_pending &&
-            lexer->lookahead == '\\') {
-            break;
-        }
-
-        /*
-         * Anything other than '#' is the beginning of
-         * actual command content.
-         */
-        if (lexer->lookahead != '#') {
-            if (scanner->in_command &&
-                scanner->continuation_pending &&
-                consumed) {
-                scanner->continuation_pending = false;
-            }
-
-            break;
-        }
-
-        /*
-         * Inspect a comment opener.
-         *
-         * Save the boundary before '#'. If this is a comment
-         * command and we already consumed trivia, return the
-         * trivia first. The next scan will start at '#'.
-         */
-        lexer->mark_end(lexer);
-        advance(lexer, false);
-
-        if (lexer->lookahead == '/') {
-            bool is_continued =
-                scanner->in_command &&
-                scanner->continuation_pending;
-
-            bool is_standalone = !scanner->in_command;
-
-            bool can_emit =
-                (is_continued &&
-                 valid_symbols[CONTINUED_COMMENT_COMMAND]) ||
-                (is_standalone &&
-                 valid_symbols[STANDALONE_COMMENT_COMMAND]);
-
-            if (can_emit) {
-                if (consumed) {
-                    lexer->result_symbol = TRIVIA;
-                    return true;
-                }
-
-                advance(lexer, false); // '/'
-
-                consume_line_comment(lexer);
-
-                lexer->mark_end(lexer);
-
-                lexer->result_symbol = is_continued
-                    ? CONTINUED_COMMENT_COMMAND
-                    : STANDALONE_COMMENT_COMMAND;
-
-                return true;
-            }
-
-            // Otherwise, '#/' is an ordinary line comment.
-            advance(lexer, false); // '/'
-            consume_line_comment(lexer);
-        }
-        else if (lexer->lookahead == ':') {
-            advance(lexer, false);
-
-            if (lexer->lookahead == ':') {
-                advance(lexer, false);
-
-                consume_block_comment(lexer);
-
-                consumed = true;
-                lexer->mark_end(lexer);
-                continue;
-            }
-
-            // '#:' is not a block-comment opener.
-            consume_line_comment(lexer);
-        }
-        else {
-            // Ordinary line comment.
-            consume_line_comment(lexer);
-        }
-
-        /*
-         * A normal line comment ends the current command.
-         * A line comment inside a continuation area does not.
-         */
-        if (scanner->in_command &&
-            !scanner->continuation_pending) {
-            scanner->in_command = false;
-            scanner->in_quote = false;
-        }
-
-        // At the top level, and during continuation,
-        // the comment line is simply trivia.
-        if (is_newline(lexer)) {
-            advance(lexer, false);
-        }
-
-        consumed = true;
-        lexer->mark_end(lexer);
-    }
-
-    /*
-     * If we reached actual content after consuming indentation
-     * or comments, emit trivia first.
-     */
-    if (consumed) {
-        lexer->result_symbol = TRIVIA;
-        return true;
-    }
-
-    /*
-     * No input was consumed, so returning false is safe.
-     */
-    return false;
-}
-
-/*
- * Scan the first character of a command.
- *
- * This token establishes the command state.
- */
-static bool scan_command_start(
-    Scanner *scanner,
-    TSLexer *lexer
-) {
-    if (is_eof(lexer) ||
-        is_newline(lexer) ||
-        is_space(lexer->lookahead) ||
-        lexer->lookahead == '#') {
-        return false;
-    }
-
-    int32_t first = lexer->lookahead;
-
-    advance(lexer, false);
-
-    scanner->in_command = true;
-    scanner->continuation_pending = false;
-    scanner->in_quote = first == '"';
-
-    /*
-     * Handle the unusual case where the first character
-     * itself is a line continuation marker.
-     */
-    if (first == '\\' && is_newline(lexer)) {
-        advance(lexer, false);
-        scanner->continuation_pending = true;
-    }
-
-    return emit_token(lexer, COMMAND_START);
-}
-
-/*
- * Scan one contiguous portion of command content.
- *
- * The token ends at:
- * - a physical newline,
- * - a comment opener,
- * - a line continuation marker.
- *
- * A line continuation marker is included in this token.
- */
-static bool scan_command_content(
-    Scanner *scanner,
-    TSLexer *lexer
-) {
-    if (!scanner->in_command) {
-        return false;
-    }
-
-    /*
-     * The first actual content character after a continuation
-     * ends the pending continuation area.
-     */
-    scanner->continuation_pending = false;
-
-    bool consumed = false;
-
-    while (!is_eof(lexer)) {
-        int32_t c = lexer->lookahead;
-
-        if (is_newline(lexer)) {
-            break;
-        }
-
-        /*
-         * Quoted string.
-         *
-         * Comments and line continuations are not recognized
-         * inside a quoted string.
-         */
-        if (scanner->in_quote) {
-            if (c == '\\') {
-                advance(lexer, false);
-                consumed = true;
-
-                /*
-                 * A backslash immediately before a newline
-                 * does not continue the quoted string.
-                 */
-                if (is_eof(lexer) || is_newline(lexer)) {
-                    lexer->mark_end(lexer);
-                    break;
-                }
-
-                advance(lexer, false);
-                lexer->mark_end(lexer);
-                continue;
-            }
-
-            if (c == '"') {
-                advance(lexer, false);
-                scanner->in_quote = false;
-
-                consumed = true;
-                lexer->mark_end(lexer);
-                continue;
-            }
-
-            advance(lexer, false);
-
-            consumed = true;
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * A comment opener is handled by scan_trivia.
-         * Do not consume it here.
-         */
-        if (c == '#') {
-            break;
-        }
-
-        /*
-         * Start of a quoted string.
-         */
-        if (c == '"') {
-            advance(lexer, false);
-
-            scanner->in_quote = true;
-
-            consumed = true;
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * Line continuation outside quoted strings.
-         */
-        if (c == '\\') {
-            advance(lexer, false);
-            consumed = true;
-
-            if (is_newline(lexer)) {
-                advance(lexer, false);
-
-                scanner->continuation_pending = true;
-
-                lexer->mark_end(lexer);
-                lexer->result_symbol = COMMAND_CONTENT;
-                return true;
-            }
-
-            lexer->mark_end(lexer);
-            continue;
-        }
-
-        /*
-         * Ordinary command character.
-         */
-        advance(lexer, false);
-
-        consumed = true;
-        lexer->mark_end(lexer);
-    }
-
-    if (!consumed) {
-        return false;
-    }
-
-    lexer->result_symbol = COMMAND_CONTENT;
+  if (is_horizontal_space(lexer->lookahead)) {
+    do {
+      advance(lexer);
+    } while (is_horizontal_space(lexer->lookahead));
+
+    lexer->mark_end(lexer);
+    lexer->result_symbol = TRIVIA;
     return true;
+  }
+
+  if (lexer->lookahead == '#') {
+    // Consume '#' so that the following character can be inspected.
+    advance(lexer);
+
+    if (lexer->lookahead == '/') {
+      // A comment command takes precedence over an ordinary line comment.
+      if (scanner->command_open) {
+        if (!valid_symbols[INNER_COMMENT_COMMAND]) return false;
+        advance(lexer); // '/'
+        while (!lexer->eof(lexer) && !is_newline(lexer->lookahead)) {
+          advance(lexer);
+        }
+        lexer->mark_end(lexer);
+        lexer->result_symbol = INNER_COMMENT_COMMAND;
+        return true;
+      }
+
+      if (!valid_symbols[TOP_LEVEL_COMMENT_COMMAND]) return false;
+      advance(lexer); // '/'
+      while (!lexer->eof(lexer) && !is_newline(lexer->lookahead)) {
+        advance(lexer);
+      }
+      lexer->mark_end(lexer);
+      lexer->result_symbol = TOP_LEVEL_COMMENT_COMMAND;
+      return true;
+    }
+
+    if (lexer->lookahead == ':') {
+      advance(lexer);
+      if (lexer->lookahead == ':') {
+        advance(lexer);
+        return scan_block_comment(lexer);
+      }
+    }
+
+    // Any other '#' begins a line comment. If one or two colons were
+    // consumed while checking for "#::", they remain part of the comment.
+    return scan_line_comment(lexer);
+  }
+
+  if (is_newline(lexer->lookahead)) {
+    consume_newline(lexer);
+
+    if (scanner->command_open && !scanner->continuation_pending) {
+      scanner->command_open = false;
+    }
+
+    lexer->mark_end(lexer);
+    lexer->result_symbol = TRIVIA;
+    return true;
+  }
+
+  return false;
 }
 
-/*
- * Scanner API
- */
+static bool scan_command_content(
+  Scanner *scanner,
+  TSLexer *lexer,
+  const bool *valid_symbols
+) {
+  bool is_start = !scanner->command_open;
+  if (is_start) {
+    if (!valid_symbols[COMMAND_START]) return false;
+  } else {
+    if (!valid_symbols[COMMAND_PART]) return false;
+  }
+
+  bool in_quote = false;
+  bool consumed = false;
+
+  while (!lexer->eof(lexer)) {
+    int32_t c = lexer->lookahead;
+
+    if (!in_quote) {
+      if (c == '#' || is_newline(c) || c == ' ' || c == '\t') {
+        break;
+      }
+
+      if (c == '\\') {
+        // A backslash + physical newline is a continuation only inside an
+        // already-open command. If command text precedes it in this token,
+        // finish the token immediately before the backslash; the next scan
+        // will consume the continuation as TRIVIA.
+        bool had_content = consumed;
+        advance(lexer);
+        if (is_newline(lexer->lookahead)) {
+          if (had_content) {
+            scanner->command_open = true;
+            lexer->result_symbol = is_start ? COMMAND_START : COMMAND_PART;
+            return true; // mark_end is still before the backslash.
+          }
+
+          if (!is_start) {
+            if (!valid_symbols[TRIVIA]) return false;
+            consume_newline(lexer);
+            scanner->continuation_pending = true;
+            lexer->mark_end(lexer);
+            lexer->result_symbol = TRIVIA;
+            return true;
+          }
+
+          // A backslash at the very beginning of a command is not a
+          // continuation because there is no preceding command text.
+          consumed = true;
+          lexer->mark_end(lexer);
+          continue;
+        }
+
+        consumed = true;
+        lexer->mark_end(lexer);
+        continue;
+      }
+
+      if (c == '"') {
+        in_quote = true;
+        advance(lexer);
+        consumed = true;
+        lexer->mark_end(lexer);
+        continue;
+      }
+
+      advance(lexer);
+      consumed = true;
+      lexer->mark_end(lexer);
+      continue;
+    }
+
+    // Inside a quoted string, comments and line continuations are inert.
+    if (is_newline(c)) {
+      break;
+    }
+
+    if (c == '\\') {
+      advance(lexer);
+      consumed = true;
+      if (!lexer->eof(lexer) && !is_newline(lexer->lookahead)) {
+        advance(lexer);
+      }
+      lexer->mark_end(lexer);
+      continue;
+    }
+
+    if (c == '"') {
+      in_quote = false;
+    }
+
+    advance(lexer);
+    consumed = true;
+    lexer->mark_end(lexer);
+  }
+
+  if (!consumed) return false;
+
+  scanner->command_open = true;
+  if (!is_start) {
+    scanner->continuation_pending = false;
+  } else {
+    scanner->continuation_pending = false;
+  }
+
+  lexer->result_symbol = is_start ? COMMAND_START : COMMAND_PART;
+  return true;
+}
 
 void *tree_sitter_mcflow_external_scanner_create(void) {
-    return calloc(1, sizeof(Scanner));
+  Scanner *scanner = calloc(1, sizeof(Scanner));
+  return scanner;
 }
 
 void tree_sitter_mcflow_external_scanner_destroy(void *payload) {
-    free(payload);
+  free(payload);
 }
 
 unsigned tree_sitter_mcflow_external_scanner_serialize(
-    void *payload,
-    char *buffer
+  void *payload,
+  char *buffer
 ) {
-    const Scanner *scanner = (const Scanner *)payload;
-
-    buffer[0] =
-        (scanner->in_command ? 1 : 0) |
-        (scanner->continuation_pending ? 2 : 0) |
-        (scanner->in_quote ? 4 : 0);
-
-    return 1;
+  Scanner *scanner = (Scanner *)payload;
+  buffer[0] = (scanner->command_open ? 1 : 0) |
+              (scanner->continuation_pending ? 2 : 0);
+  return 1;
 }
 
 void tree_sitter_mcflow_external_scanner_deserialize(
-    void *payload,
-    const char *buffer,
-    unsigned length
+  void *payload,
+  const char *buffer,
+  unsigned length
 ) {
-    Scanner *scanner = (Scanner *)payload;
+  Scanner *scanner = (Scanner *)payload;
+  scanner->command_open = false;
+  scanner->continuation_pending = false;
 
-    memset(scanner, 0, sizeof(Scanner));
-
-    if (length == 0) {
-        return;
-    }
-
-    scanner->in_command = (buffer[0] & 1) != 0;
-    scanner->continuation_pending = (buffer[0] & 2) != 0;
-    scanner->in_quote = (buffer[0] & 4) != 0;
+  if (length > 0) {
+    uint8_t flags = (uint8_t)buffer[0];
+    scanner->command_open = (flags & 1) != 0;
+    scanner->continuation_pending = (flags & 2) != 0;
+  }
 }
 
 bool tree_sitter_mcflow_external_scanner_scan(
-    void *payload,
-    TSLexer *lexer,
-    const bool *valid_symbols
+  void *payload,
+  TSLexer *lexer,
+  const bool *valid_symbols
 ) {
-    Scanner *scanner = (Scanner *)payload;
+  Scanner *scanner = (Scanner *)payload;
 
-    /*
-     * Tree-sitter may mark all symbols valid during error
-     * recovery. Do not mutate scanner state in that situation.
-     */
-    if (valid_symbols[ERROR_SENTINEL]) {
-        return false;
+  // Work on a copy: failed scans must not mutate persistent scanner state.
+  Scanner next = *scanner;
+
+  if (valid_symbols[TRIVIA] && (lexer->lookahead == '#' || is_newline(lexer->lookahead) || is_horizontal_space(lexer->lookahead))) {
+    if (scan_comment_or_trivia(&next, lexer, valid_symbols)) {
+      *scanner = next;
+      return true;
     }
-
-    /*
-     * Work on a copy. State is committed only when a token
-     * is successfully emitted.
-     */
-    Scanner next = *scanner;
-
-    /*
-     * Extras have priority because they can terminate a
-     * command or recognize a comment command.
-     */
-    if (valid_symbols[TRIVIA]) {
-        if (scan_trivia(&next, lexer, valid_symbols)) {
-            *scanner = next;
-            return true;
-        }
-    }
-
-    /*
-     * The trivia scanner did not consume anything.
-     * Try the token expected by the current command state.
-     */
-    next = *scanner;
-
-    if (next.in_command) {
-        if (valid_symbols[COMMAND_CONTENT] &&
-            scan_command_content(&next, lexer)) {
-            *scanner = next;
-            return true;
-        }
-
-        return false;
-    }
-
-    if (valid_symbols[COMMAND_START] &&
-        scan_command_start(&next, lexer)) {
-        *scanner = next;
-        return true;
-    }
-
+    // The scanner consumed input while checking a comment prefix. If the
+    // corresponding token is not valid in this parser state, do not continue
+    // scanning from the advanced position.
     return false;
+  }
+
+  // Ordinary command text is considered only after comment/newline handling.
+  if (valid_symbols[COMMAND_START] || valid_symbols[COMMAND_PART]) {
+    next = *scanner;
+    if (scan_command_content(&next, lexer, valid_symbols)) {
+      *scanner = next;
+      return true;
+    }
+  }
+
+  return false;
 }

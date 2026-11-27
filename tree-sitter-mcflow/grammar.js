@@ -2,25 +2,19 @@
 
 /// <reference types="tree-sitter-cli/dsl" />
 
-
-/// <reference types="tree-sitter-cli/dsl" />
-
 export default grammar({
-    name: 'mcflow',
+    name: "mcflow",
 
     externals: $ => [
         $._command_start,
-        $._command_content,
-
-        $._continued_comment_command,
-        $._standalone_comment_command,
-
+        $._command_part,
+        $._top_level_comment_command,
+        $._inner_comment_command,
         $._trivia,
-
-        // Error recovery 時のスキャナー誤動作を防ぐための番兵。
-        $._error_sentinel,
     ],
 
+    // Horizontal whitespace is handled by the ordinary lexer. Newlines,
+    // comments, and line continuations are handled by the external scanner.
     extras: $ => [
         $._trivia,
     ],
@@ -28,16 +22,15 @@ export default grammar({
     rules: {
         source_file: $ => repeat(choice(
             $.command_line,
-            alias($._standalone_comment_command, $.comment_command),
+            alias($._top_level_comment_command, $.comment_command),
         )),
 
         command_line: $ => seq(
             $._command_start,
-
             repeat(choice(
-                $._command_content,
-                alias($._continued_comment_command, $.comment_command),
+                $._command_part,
+                alias($._inner_comment_command, $.comment_command),
             )),
         ),
-    },
+    }
 });
