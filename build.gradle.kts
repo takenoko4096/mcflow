@@ -58,8 +58,14 @@ tasks {
         into("extension/server")
     }
 
+    register<Copy>("putTreeSitter") {
+        from(projectDir.resolve("tree-sitter-mcflow/tree-sitter-mcflow.dll"))
+
+        into("extension/native")
+    }
+
     named("shadowJar") {
-        finalizedBy("putJar")
+        finalizedBy("putJar", "putTreeSitter")
     }
 }
 

@@ -6,13 +6,19 @@ let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
     const jar = context.asAbsolutePath(path.join("server", "mcflow-lsp.jar"));
+    const native = context.asAbsolutePath(path.join("native"));
 
     client = new LanguageClient(
         "mcflow",
         "mcflow",
         {
             command: "java",
-            args: ["-jar", jar]
+            args: [
+                "--enable-native-access=ALL-UNNAMED",
+                `-Djava.library.path=${native}`,
+                "-jar",
+                jar
+            ]
         },
         {
             documentSelector: [

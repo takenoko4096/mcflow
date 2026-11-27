@@ -128,5 +128,5 @@ fun main() {
         """.trimIndent()
     ).orElseThrow()
 
-    println(tree)
+    println(tree.rootNode)
 }
