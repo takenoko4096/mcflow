@@ -6,6 +6,14 @@ plugins {
     application
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir("tree-sitter-mcflow/bindings/java/main")
+        }
+    }
+}
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -14,7 +22,7 @@ repositories {
 dependencies {
     // wasm にするには jvmMain/ にこのあたりは書かないといけない
     implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:1.0.0")
-    implementation("io.github.tree-sitter:ktreesitter:0.25.1")
+    implementation("io.github.tree-sitter:jtreesitter:0.26.1")
 
     testImplementation(kotlin("reflect"))
     testImplementation("io.github.takenoko4096:mojangson-bridge:0.2.0")
