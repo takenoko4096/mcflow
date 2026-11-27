@@ -6,6 +6,9 @@ import io.github.takenoko4096.bcl.tokenizer.BclTokenizer
 import io.github.takenoko4096.bcl.tokenizer.KeyChar
 import io.github.takenoko4096.bcl.tokenizer.SourcePosition
 import io.github.takenoko4096.bcl.tokenizer.SourceSpan
+import io.github.treesitter.jtreesitter.Language
+import io.github.treesitter.jtreesitter.Parser
+import io.github.treesitter.jtreesitter.mcflow.TreeSitterMcflow
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
@@ -110,4 +113,8 @@ class BclIncrementalTextDocumentService(private val server: BedrockCommandLangua
     override fun didClose(params: DidCloseTextDocumentParams) {}
 
     override fun didSave(params: DidSaveTextDocumentParams) {}
+
+    companion object {
+        val TREE_SITTER_MCFLOW_PARSER = Parser(Language(TreeSitterMcflow.language()))
+    }
 }
