@@ -1,0 +1,21 @@
+# standalone comment
+
+give @s apple # trailing comment
+
+#:: block
+comment ::#
+
+summon allay \
+    # continuation comment
+
+    "a" ^ ^ ^1
+
+#/ comment command
+
+give @s apple
+
+give @s \
+    #/first
+    apple \
+    #/second
+    1 0

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/grammar.schema.json",
+  "name": "mcflow",
+  "rules": {
+    "source_file": {
+      "type": "REPEAT",
+      "content": {
+        "type": "CHOICE",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "command_line"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "_standalone_comment_command"
+            },
+            "named": true,
+            "value": "comment_command"
+          }
+        ]
+      }
+    },
+    "command_line": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "_command_start"
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_command_content"
+              },
+              {
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_continued_comment_command"
+                },
+                "named": true,
+                "value": "comment_command"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "extras": [
+    {
+      "type": "SYMBOL",
+      "name": "_trivia"
+    }
+  ],
+  "conflicts": [],
+  "precedences": [],
+  "externals": [
+    {
+      "type": "SYMBOL",
+      "name": "_command_start"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_command_content"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_continued_comment_command"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_standalone_comment_command"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_trivia"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_error_sentinel"
+    }
+  ],
+  "inline": [],
+  "supertypes": [],
+  "reserved": {}
+}

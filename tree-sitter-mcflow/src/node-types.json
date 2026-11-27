@@ -1,0 +1,41 @@
+[
+  {
+    "type": "command_line",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "comment_command",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "source_file",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "command_line",
+          "named": true
+        },
+        {
+          "type": "comment_command",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "comment_command",
+    "named": true
+  }
+]
