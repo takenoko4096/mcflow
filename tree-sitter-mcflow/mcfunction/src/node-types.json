@@ -1,0 +1,69 @@
+[
+  {
+    "type": "command_line",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "command_content",
+          "named": true
+        },
+        {
+          "type": "comment_command",
+          "named": true
+        },
+        {
+          "type": "line_comment",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "source_file",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "command_line",
+          "named": true
+        },
+        {
+          "type": "comment_command",
+          "named": true
+        },
+        {
+          "type": "line_comment",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "command_content",
+    "named": true
+  },
+  {
+    "type": "comment_command",
+    "named": true
+  },
+  {
+    "type": "line_comment",
+    "named": true
+  },
+  {
+    "type": "string",
+    "named": true
+  }
+]

@@ -1,17 +1,16 @@
 {
-    "name": "tree-sitter-mcflow",
+    "name": "tree-sitter-mcfunction",
     "version": "0.1.0",
-    "description": "Mcflow grammar for tree-sitter",
+    "description": "McFunction grammar for tree-sitter",
     "type": "module",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/takenoko4096/mcflow.git"
     },
-    "funding": "",
     "license": "MIT",
     "author": {
         "name": "takenoko4096",
-        "url": ""
+        "url": "https://github.com/takenoko4096"
     },
     "main": "bindings/node",
     "types": "bindings/node",
@@ -19,7 +18,7 @@
         "incremental",
         "parsing",
         "tree-sitter",
-        "mcflow"
+        "mcfunction"
     ],
     "files": [
         "grammar.js",
@@ -27,7 +26,7 @@
         "binding.gyp",
         "prebuilds/**",
         "queries/*",
-        "src/**",
+        "mcfunction/src/**",
         "*.wasm"
     ],
     "dependencies": {},
@@ -47,6 +46,7 @@
     "scripts": {
         "prestart": "tree-sitter build --wasm",
         "start": "tree-sitter playground",
-        "test": "node --test bindings/node/*_test.js"
+        "test": "node --test bindings/node/*_test.js",
+        "generate-then-build": "tree-sitter generate && tree-sitter build -o \"./build/tree-sitter-mcfunction.dll\""
     }
 }
